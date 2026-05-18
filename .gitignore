@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+.tsbuild
+*.tsbuildinfo
+.DS_Store
+*.local
+.env*.local
+
+.tanstack
+src/routeTree.gen.ts

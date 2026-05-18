@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "src/routeTree.gen.ts",
+    "**/*.d.ts",
+    "**/dist/**",
+    "**/build/**",
+    "**/.tsbuild/**",
+    "**/node_modules/**"
+  ],
+  "plugins": ["typescript", "react", "import", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error"
+  },
+  "rules": {
+    "typescript/ban-ts-comment": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-non-null-asserted-nullish-coalescing": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "no-console": "warn",
+    "react/react-in-jsx-scope": "off",
+    "unicorn/prefer-query-selector": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/services/**/*.ts", "**/services/**/*.tsx", "scripts/**/*.mjs"],
+      "rules": { "no-console": "off" }
+    }
+  ],
+  "settings": { "react": { "version": "19" } },
+  "env": { "browser": true, "es2024": true }
+}

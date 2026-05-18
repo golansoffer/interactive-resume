@@ -1,0 +1,10 @@
+import type { JSX } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/')({
+  component: IndexPage,
+});
+
+function IndexPage(): JSX.Element {
+  return <main>interactive resume — scaffolding</main>;
+}
