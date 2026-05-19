@@ -1,4 +1,3 @@
-// src/features/scene/services/renderer/deepSpacePalette.ts
 export type NebulaPalette = {
   readonly base: readonly [number, number, number];
   readonly accent: readonly [number, number, number];
