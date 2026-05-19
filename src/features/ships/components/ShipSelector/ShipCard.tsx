@@ -35,7 +35,7 @@ export const ShipCard = (props: ShipCardProps): JSX.Element => (
   >
     <div className={thumbClassName}>
       <View className="absolute inset-0">
-        <ShipViewport ship={props.ship} isHovered={props.isHovered} />
+        <ShipViewport kind="thumbnail" ship={props.ship} isHovered={props.isHovered} />
       </View>
     </div>
     <span className={labelClassName}>{props.ship.displayName}</span>
