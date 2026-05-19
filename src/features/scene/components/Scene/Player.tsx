@@ -89,9 +89,11 @@ export const Player = (props: PlayerProps): JSX.Element => {
 
   return (
     <group ref={props.meshRef} scale={SHIP_SCALE}>
-      <Center>
-        <primitive object={scene} />
-      </Center>
+      <group rotation={[0, Math.PI, 0]}>
+        <Center>
+          <primitive object={scene} />
+        </Center>
+      </group>
     </group>
   );
 };
