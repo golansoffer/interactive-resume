@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HERO_SWAY_AMPLITUDE,
+  HERO_SWAY_FREQ_HZ,
   HOVER_SPEED,
   REST_LERP,
   STATIC_ANGLE_Y,
+  TWO_PI,
+  heroSwayY,
   tickRotation,
 } from './tickRotation';
-
-const TWO_PI = Math.PI * 2;
 
 describe('tickRotation', () => {
   it('spins forward at HOVER_SPEED while hovered', () => {
@@ -27,8 +29,6 @@ describe('tickRotation', () => {
   });
 
   it('takes the short path back through the +pi seam', () => {
-    // current is just past pi; static angle is small positive; the lerp
-    // should pull *negatively* (toward 0 via -pi side), not +2pi the other way.
     const current = Math.PI + 0.1;
     const next = tickRotation(current, false, 0);
     expect(next).toBeLessThan(current);
@@ -51,5 +51,39 @@ describe('tickRotation', () => {
     expect(REST_LERP).toBeLessThanOrEqual(1);
     expect(STATIC_ANGLE_Y).toBeGreaterThanOrEqual(0);
     expect(STATIC_ANGLE_Y).toBeLessThan(TWO_PI);
+  });
+});
+
+describe('heroSwayY', () => {
+  it('returns STATIC_ANGLE_Y at t=0 (sin(0) = 0)', () => {
+    expect(heroSwayY(0)).toBeCloseTo(STATIC_ANGLE_Y, 10);
+  });
+
+  it('returns STATIC_ANGLE_Y at one full period', () => {
+    const period = 1 / HERO_SWAY_FREQ_HZ;
+    expect(heroSwayY(period)).toBeCloseTo(STATIC_ANGLE_Y, 10);
+  });
+
+  it('reaches maximum +amplitude at quarter period', () => {
+    const quarter = 1 / (HERO_SWAY_FREQ_HZ * 4);
+    expect(heroSwayY(quarter)).toBeCloseTo(STATIC_ANGLE_Y + HERO_SWAY_AMPLITUDE, 10);
+  });
+
+  it('reaches minimum -amplitude at three-quarter period', () => {
+    const threeQuarter = 3 / (HERO_SWAY_FREQ_HZ * 4);
+    expect(heroSwayY(threeQuarter)).toBeCloseTo(STATIC_ANGLE_Y - HERO_SWAY_AMPLITUDE, 10);
+  });
+
+  it('stays within ±amplitude of STATIC_ANGLE_Y for all sampled times', () => {
+    for (let t = 0; t < 60; t += 0.05) {
+      const y = heroSwayY(t);
+      expect(y).toBeGreaterThanOrEqual(STATIC_ANGLE_Y - HERO_SWAY_AMPLITUDE - 1e-9);
+      expect(y).toBeLessThanOrEqual(STATIC_ANGLE_Y + HERO_SWAY_AMPLITUDE + 1e-9);
+    }
+  });
+
+  it('exposes positive amplitude and frequency', () => {
+    expect(HERO_SWAY_AMPLITUDE).toBeGreaterThan(0);
+    expect(HERO_SWAY_FREQ_HZ).toBeGreaterThan(0);
   });
 });
