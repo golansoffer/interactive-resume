@@ -28,7 +28,7 @@ export const DeepSpace = (): JSX.Element => (
     <color attach="background" args={[FALLBACK_COLOR]} />
     <EnvironmentBoundary>
       <Suspense fallback={null}>
-        <Environment files={HDR_PATH} background="only" />
+        <Environment files={HDR_PATH} background="only" resolution={2048} />
       </Suspense>
     </EnvironmentBoundary>
     <StarsField />
