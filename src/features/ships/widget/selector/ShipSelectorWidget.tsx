@@ -62,7 +62,7 @@ const cornerBottomLeft = cn(cornerClassName, 'bottom-4 left-4 border-b border-l'
 const cornerBottomRight = cn(cornerClassName, 'bottom-4 right-4 border-b border-r');
 
 export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element => {
-  const { ships, hover, heroPhase, onHoverEnter, onHoverLeave } = useShipSelector();
+  const { ships, hover, onHoverEnter, onHoverLeave } = useShipSelector();
   return (
     <div className={containerClassName} style={BACKDROP_STYLE}>
       <span className={cornerTopLeft} aria-hidden="true" />
@@ -80,7 +80,6 @@ export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element 
         <ShipSelector
           ships={ships}
           hover={hover}
-          heroPhase={heroPhase}
           onHoverEnter={onHoverEnter}
           onHoverLeave={onHoverLeave}
           onPick={props.onPick}

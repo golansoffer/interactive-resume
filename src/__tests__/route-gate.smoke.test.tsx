@@ -85,7 +85,6 @@ vi.mock('@react-three/drei', () => ({
 vi.mock('@react-three/postprocessing', () => ({
   EffectComposer: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Bloom: (): null => null,
-  Vignette: (): null => null,
   ChromaticAberration: (): null => null,
 }));
 
