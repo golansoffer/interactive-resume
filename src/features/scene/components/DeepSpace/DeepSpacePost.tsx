@@ -1,14 +1,8 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import {
-  Bloom,
-  ChromaticAberration,
-  EffectComposer,
-  Vignette,
-} from '@react-three/postprocessing';
-import type { VignetteEffect } from 'postprocessing';
-import { Vector2 } from 'three';
+import { Bloom, ChromaticAberration, EffectComposer } from '@react-three/postprocessing';
+import { VignetteEffect } from 'postprocessing';
 import type { Kinematics } from '../../services/renderer/integrateMotion';
 import { MAX_SPEED } from '../../services/renderer/integrateMotion';
 
@@ -28,10 +22,13 @@ type DeepSpacePostProps = {
 };
 
 export const DeepSpacePost = (props: DeepSpacePostProps): JSX.Element => {
-  const vignetteRef = useRef<VignetteEffect | null>(null);
   const currentDarkness = useRef(VIGNETTE_BASE);
-  const caOffset = useMemo(
-    () => new Vector2(CA_OFFSET_SCALE * props.intensity, CA_OFFSET_SCALE * props.intensity),
+  const vignetteEffect = useMemo(
+    () => new VignetteEffect({ offset: VIGNETTE_OFFSET, darkness: VIGNETTE_BASE }),
+    [],
+  );
+  const caOffset = useMemo<[number, number]>(
+    () => [CA_OFFSET_SCALE * props.intensity, CA_OFFSET_SCALE * props.intensity],
     [props.intensity],
   );
 
@@ -41,9 +38,7 @@ export const DeepSpacePost = (props: DeepSpacePostProps): JSX.Element => {
     const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
     const target = VIGNETTE_BASE + VIGNETTE_SPEED_GAIN * speedRatio * props.motionResponse;
     currentDarkness.current += (target - currentDarkness.current) * VIGNETTE_LERP;
-    const v = vignetteRef.current;
-    if (v === null) return;
-    v.darkness = currentDarkness.current;
+    vignetteEffect.darkness = currentDarkness.current;
   });
 
   return (
@@ -54,7 +49,7 @@ export const DeepSpacePost = (props: DeepSpacePostProps): JSX.Element => {
         luminanceSmoothing={BLOOM_LUMINANCE_SMOOTHING}
         mipmapBlur
       />
-      <Vignette ref={vignetteRef} offset={VIGNETTE_OFFSET} darkness={VIGNETTE_BASE} />
+      <primitive object={vignetteEffect} />
       <ChromaticAberration offset={caOffset} />
     </EffectComposer>
   );
