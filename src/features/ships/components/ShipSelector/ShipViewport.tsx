@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { Center, PerspectiveCamera, useGLTF } from '@react-three/drei';
 import type { Group } from 'three';
 import type { ShipEntry } from '../../types/ship';
-import { heroSwayY, tickRotation } from './tickRotation';
+import { tickRotation } from './tickRotation';
 
 // Studio lighting — 3-point + hemisphere rig. Key (warm), fill (cool),
 // rim (cyan accent matching the engine wake), ground bounce.
@@ -67,10 +67,10 @@ const useThumbnailFrame = (
 };
 
 const useHeroFrame = (groupRef: RefObject<Group | null>): void => {
-  useFrame((state) => {
+  useFrame((_, delta) => {
     const g = groupRef.current;
     if (g === null) return;
-    g.rotation.y = heroSwayY(state.clock.elapsedTime);
+    g.rotation.y = tickRotation(g.rotation.y, true, delta);
   });
 };
 
