@@ -86,6 +86,8 @@ const applyColorsheet = (sourceScene: Object3D, texture: Texture): Object3D => {
     if (obj instanceof Mesh && obj.material instanceof MeshStandardMaterial) {
       const newMaterial = obj.material.clone();
       newMaterial.map = texture;
+      newMaterial.roughness = 0.45;
+      newMaterial.metalness = 0.05;
       newMaterial.needsUpdate = true;
       obj.material = newMaterial;
     }
