@@ -56,7 +56,12 @@ const PLANET_PATHS: Record<PlanetAssetId, string> = {
   venus_b: '/models/planets/EA05_Planets_Venus_01b.glb',
 };
 
-const COLORSHEET_PATH = '/models/planets/Texture/Planet_Colorsheet_v1.jpg';
+// Pastel-tinted variant of the original Planet_Colorsheet_v1.jpg:
+// each pixel had its lightness lifted toward mid (preserving pure white)
+// and its saturation reduced ~45%. Pixel-wise transform, so the GLB UV
+// layout is unchanged — same UVs sample the same cells, just softer
+// colors. The original JPG remains under the same folder for reference.
+const COLORSHEET_PATH = '/models/planets/Texture/Planet_Colorsheet_pastel_v1.png';
 
 // Apply the GLB/palette-correct settings to the colorsheet texture.
 // GLB convention is flipY=false; useTexture defaults to flipY=true
