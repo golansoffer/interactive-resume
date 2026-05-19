@@ -68,6 +68,10 @@ vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Html: (): null => null,
+  Stars: (): null => null,
+  Sparkles: (): null => null,
+  Cloud: (): null => null,
+  Clouds: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
     (): { readonly scene: MockScene } => ({ scene: mockScene }),
     { preload: (): void => {} },
@@ -76,6 +80,13 @@ vi.mock('@react-three/drei', () => ({
     (): MockTexture => mockTexture,
     { preload: (): void => {} },
   ),
+}));
+
+vi.mock('@react-three/postprocessing', () => ({
+  EffectComposer: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+  Bloom: (): null => null,
+  Vignette: (): null => null,
+  ChromaticAberration: (): null => null,
 }));
 
 const mountAt = (initial: string) => {

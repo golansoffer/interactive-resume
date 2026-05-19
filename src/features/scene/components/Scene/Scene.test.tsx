@@ -55,6 +55,10 @@ vi.mock('@react-three/drei', () => ({
   Html: (): null => null,
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+  Stars: (): null => null,
+  Sparkles: (): null => null,
+  Cloud: (): null => null,
+  Clouds: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
     (): { readonly scene: MockScene } => ({ scene: mockScene }),
     { preload: (): void => {} },
@@ -63,6 +67,13 @@ vi.mock('@react-three/drei', () => ({
     (): MockTexture => mockTexture,
     { preload: (): void => {} },
   ),
+}));
+
+vi.mock('@react-three/postprocessing', () => ({
+  EffectComposer: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+  Bloom: (): null => null,
+  Vignette: (): null => null,
+  ChromaticAberration: (): null => null,
 }));
 
 const acme = asCompanyId('acme');
