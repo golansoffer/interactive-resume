@@ -6,6 +6,7 @@ import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { Vector3 } from 'three';
 import { MAX_SPEED } from '../../services/renderer/integrateMotion';
 import type { Kinematics } from '../../services/renderer/integrateMotion';
+import type { Vec3 } from '../../services/renderer/vec3';
 
 type FollowCameraProps = {
   readonly kinematicsRef: RefObject<Kinematics>;
@@ -20,6 +21,8 @@ type ChaseMemory = {
   readonly springScratch: Vector3;
   readonly dragScratch: Vector3;
   bank: number;
+  followHeading: number;
+  followAngularVelocity: number;
   snapped: boolean;
 };
 
@@ -43,9 +46,11 @@ const FOV_LERP = 0.04;
 const MAX_CAMERA_BANK = Math.PI / 60;
 const BANK_LERP = 0.08;
 
-// Velocity-driven world-space offsets on the chase target.
-// Lateral: strafing right slides the camera right of the chase axis.
-// Longitudinal: moving forward drags the camera back so it lags on acceleration.
+// Velocity-driven ship-local offsets on the chase target.
+// Lateral: strafing right (in ship-frame) slides the camera right of the
+// chase axis — reads as "leaning into the turn" after rotation.
+// Longitudinal: moving forward (in ship-frame) drags the camera back so it
+// lags on acceleration.
 const LATERAL_OFFSET_FACTOR = 0.10;
 const LONGITUDINAL_OFFSET_FACTOR = -0.07;
 
@@ -55,7 +60,99 @@ const LONGITUDINAL_OFFSET_FACTOR = -0.07;
 const SPRING_STIFFNESS = 8;
 const SPRING_DAMPING = 4.2;
 
+// Heading-follow spring — camera rotates around the ship to stay behind
+// its velocity direction. Softer than the position spring; damping ratio
+// ~0.71 (critical at stiffness 6 is 2*sqrt(6) ≈ 4.9). Visible swing on
+// hard turns, no oscillation. Below HEADING_THRESHOLD the heading is
+// held — prevents jitter at near-zero speed when atan2 of tiny velocity
+// would flip wildly.
+const HEADING_STIFFNESS = 6;
+const HEADING_DAMPING = 3.5;
+const HEADING_THRESHOLD = 0.5;
+const TWO_PI = Math.PI * 2;
+
 const cameraInitial: readonly [number, number, number] = [0, 6, -10];
+
+const wrapAngle = (delta: number): number => {
+  let wrapped = delta;
+  while (wrapped > Math.PI) {
+    wrapped -= TWO_PI;
+  }
+  while (wrapped < -Math.PI) {
+    wrapped += TWO_PI;
+  }
+  return wrapped;
+};
+
+// Steps the camera's follow-heading by one frame. Above the speed
+// threshold the heading springs toward atan2(vx, vz); below it the
+// angular velocity damps to zero so the camera settles cleanly when
+// the ship stops, rather than drifting on residual momentum.
+const advanceFollowHeading = (velocity: Vec3, memory: ChaseMemory, delta: number): void => {
+  const speed = Math.hypot(velocity.x, velocity.z);
+  if (speed > HEADING_THRESHOLD) {
+    const desiredHeading = Math.atan2(velocity.x, velocity.z);
+    const headingDelta = wrapAngle(desiredHeading - memory.followHeading);
+    const angularAccel = headingDelta * HEADING_STIFFNESS - memory.followAngularVelocity * HEADING_DAMPING;
+    memory.followAngularVelocity += angularAccel * delta;
+    memory.followHeading += memory.followAngularVelocity * delta;
+    return;
+  }
+  const damp = Math.max(0, 1 - HEADING_DAMPING * delta);
+  memory.followAngularVelocity *= damp;
+  memory.followHeading += memory.followAngularVelocity * delta;
+};
+
+// Writes memory.desired with the chase-cam target position: ship position
+// plus CHASE_OFFSET rotated by followHeading, plus ship-local lateral and
+// longitudinal offsets derived from the ship-frame velocity components.
+// Returns the local-right velocity component so callers can drive the
+// bank without recomputing the basis.
+const writeDesiredChasePosition = (
+  position: Vec3,
+  velocity: Vec3,
+  memory: ChaseMemory,
+): number => {
+  const cosH = Math.cos(memory.followHeading);
+  const sinH = Math.sin(memory.followHeading);
+  const rotatedX = CHASE_OFFSET.x * cosH + CHASE_OFFSET.z * sinH;
+  const rotatedZ = -CHASE_OFFSET.x * sinH + CHASE_OFFSET.z * cosH;
+  const shipForwardX = sinH;
+  const shipForwardZ = cosH;
+  const shipRightX = cosH;
+  const shipRightZ = -sinH;
+  const localForward = velocity.x * shipForwardX + velocity.z * shipForwardZ;
+  const localRight = velocity.x * shipRightX + velocity.z * shipRightZ;
+  const forwardComponent = Math.max(0, localForward) * LONGITUDINAL_OFFSET_FACTOR;
+  const rightComponent = localRight * LATERAL_OFFSET_FACTOR;
+  memory.desired.set(
+    position.x + rotatedX + shipRightX * rightComponent + shipForwardX * forwardComponent,
+    position.y + CHASE_OFFSET.y,
+    position.z + rotatedZ + shipRightZ * rightComponent + shipForwardZ * forwardComponent,
+  );
+  return localRight;
+};
+
+// On the first frame, snaps the camera to memory.desired and zeroes spring
+// velocity. Afterwards, advances camera.position via a spring-damper step
+// toward memory.desired.
+const stepPositionSpring = (
+  camera: PerspectiveCameraImpl,
+  memory: ChaseMemory,
+  delta: number,
+): void => {
+  if (memory.snapped) {
+    memory.springScratch.subVectors(memory.desired, camera.position).multiplyScalar(SPRING_STIFFNESS);
+    memory.dragScratch.copy(memory.velocity).multiplyScalar(-SPRING_DAMPING);
+    memory.springScratch.add(memory.dragScratch);
+    memory.velocity.addScaledVector(memory.springScratch, delta);
+    camera.position.addScaledVector(memory.velocity, delta);
+    return;
+  }
+  camera.position.copy(memory.desired);
+  memory.velocity.set(0, 0, 0);
+  memory.snapped = true;
+};
 
 // Both chase target and look target read from the integrator position
 // (kinematics.position), NOT from the rendered mesh. The mesh adds an
@@ -75,20 +172,9 @@ const updateChaseCamera = (
   const speed = Math.hypot(velocity.x, velocity.z);
   const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
 
-  memory.desired.copy(position).add(CHASE_OFFSET);
-  memory.desired.x += velocity.x * LATERAL_OFFSET_FACTOR;
-  memory.desired.z += Math.max(0, velocity.z) * LONGITUDINAL_OFFSET_FACTOR;
-  if (memory.snapped) {
-    memory.springScratch.subVectors(memory.desired, camera.position).multiplyScalar(SPRING_STIFFNESS);
-    memory.dragScratch.copy(memory.velocity).multiplyScalar(-SPRING_DAMPING);
-    memory.springScratch.add(memory.dragScratch);
-    memory.velocity.addScaledVector(memory.springScratch, delta);
-    camera.position.addScaledVector(memory.velocity, delta);
-  } else {
-    camera.position.copy(memory.desired);
-    memory.velocity.set(0, 0, 0);
-    memory.snapped = true;
-  }
+  advanceFollowHeading(velocity, memory, delta);
+  const localRight = writeDesiredChasePosition(position, velocity, memory);
+  stepPositionSpring(camera, memory, delta);
 
   const directionScale = speed === 0 ? 0 : 1 / speed;
   const targetAheadX = velocity.x * directionScale * speedRatio * MAX_LOOK_AHEAD;
@@ -101,7 +187,7 @@ const updateChaseCamera = (
   camera.fov += (targetFov - camera.fov) * FOV_LERP;
   camera.updateProjectionMatrix();
 
-  const targetBank = -(velocity.x / MAX_SPEED) * MAX_CAMERA_BANK;
+  const targetBank = -(localRight / MAX_SPEED) * MAX_CAMERA_BANK;
   memory.bank += (targetBank - memory.bank) * BANK_LERP;
   memory.cameraUp.set(Math.sin(memory.bank), Math.cos(memory.bank), 0);
   camera.up.copy(memory.cameraUp);
@@ -122,6 +208,8 @@ const createMemory = (): ChaseMemory => ({
   springScratch: new Vector3(),
   dragScratch: new Vector3(),
   bank: 0,
+  followHeading: 0,
+  followAngularVelocity: 0,
   snapped: false,
 });
 
