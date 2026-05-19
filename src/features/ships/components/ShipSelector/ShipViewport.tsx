@@ -1,5 +1,5 @@
 import type { JSX, RefObject } from 'react';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Center, PerspectiveCamera, useGLTF } from '@react-three/drei';
 import type { Group } from 'three';
@@ -23,15 +23,26 @@ const RIM_INTENSITY = 1.8;
 const AMBIENT_INTENSITY = 0.6;
 const HEMI_INTENSITY = 0.3;
 
-type ThumbnailFraming = {
-  readonly cameraZ: number;
-  readonly cameraY: number;
+type CameraFraming = {
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number];
   readonly fov: number;
 };
-type HeroFraming = ThumbnailFraming;
 
-const THUMB_FRAMING: ThumbnailFraming = { cameraZ: 4, cameraY: 1.2, fov: 35 };
-const HERO_FRAMING: HeroFraming = { cameraZ: 5.6, cameraY: 1.4, fov: 28 };
+// Camera is mounted slightly above the model and tilted down ~4° so the
+// ship sits centered (or slightly above center) in frame. Pure forward
+// (default lookAt -Z) would put the ship visibly low because the camera
+// eye is above origin.
+const THUMB_FRAMING: CameraFraming = {
+  position: [0, 0.4, 4],
+  rotation: [-0.07, 0, 0],
+  fov: 35,
+};
+const HERO_FRAMING: CameraFraming = {
+  position: [0, 0.4, 5.6],
+  rotation: [-0.07, 0, 0],
+  fov: 28,
+};
 
 export type ShipViewportProps =
   | {
@@ -73,24 +84,35 @@ const StudioLights = ({ keyIntensity }: { readonly keyIntensity: number }): JSX.
   </>
 );
 
+// useGLTF returns a Three.js scene that is *shared* across every consumer
+// of the same path. Object3D has a single parent, so two `<primitive
+// object={scene}>` mounts re-parent the object and one of them renders
+// empty. Clone per instance — static Kenney meshes need no skinning
+// fixup; `clone(true)` is the correct recursive clone.
+const useClonedScene = (glbPath: string): Group => {
+  const { scene } = useGLTF(glbPath);
+  return useMemo(() => scene.clone(true), [scene]);
+};
+
 const ThumbnailViewport = (props: {
   readonly ship: ShipEntry;
   readonly isHovered: boolean;
 }): JSX.Element => {
   const groupRef = useRef<Group>(null);
-  const { scene } = useGLTF(props.ship.glbPath);
+  const clonedScene = useClonedScene(props.ship.glbPath);
   useThumbnailFrame(groupRef, props.isHovered);
   return (
     <>
       <PerspectiveCamera
         makeDefault
-        position={[0, THUMB_FRAMING.cameraY, THUMB_FRAMING.cameraZ]}
+        position={THUMB_FRAMING.position}
+        rotation={THUMB_FRAMING.rotation}
         fov={THUMB_FRAMING.fov}
       />
       <StudioLights keyIntensity={KEY_INTENSITY_THUMB} />
       <group ref={groupRef} scale={props.ship.scale}>
         <Center>
-          <primitive object={scene} />
+          <primitive object={clonedScene} />
         </Center>
       </group>
     </>
@@ -99,19 +121,20 @@ const ThumbnailViewport = (props: {
 
 const HeroViewport = (props: { readonly ship: ShipEntry }): JSX.Element => {
   const groupRef = useRef<Group>(null);
-  const { scene } = useGLTF(props.ship.glbPath);
+  const clonedScene = useClonedScene(props.ship.glbPath);
   useHeroFrame(groupRef);
   return (
     <>
       <PerspectiveCamera
         makeDefault
-        position={[0, HERO_FRAMING.cameraY, HERO_FRAMING.cameraZ]}
+        position={HERO_FRAMING.position}
+        rotation={HERO_FRAMING.rotation}
         fov={HERO_FRAMING.fov}
       />
       <StudioLights keyIntensity={KEY_INTENSITY_HERO} />
       <group ref={groupRef} scale={props.ship.scale}>
         <Center>
-          <primitive object={scene} />
+          <primitive object={clonedScene} />
         </Center>
       </group>
     </>
