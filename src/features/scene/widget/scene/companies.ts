@@ -1,7 +1,8 @@
-import { type Company, asCompanyId } from '../../types/company';
+import { asCompanyId } from '../../types/company';
+import type { CompanyEntry } from '../../types/company';
 
-const RING_RADIUS = 12;
-const RING_COUNT = 8;
+const RING_RADIUS = 14;
+const RING_COUNT = 5;
 
 const ringPosition = (index: number): readonly [number, number, number] => {
   const angle = (index / RING_COUNT) * Math.PI * 2;
@@ -10,15 +11,83 @@ const ringPosition = (index: number): readonly [number, number, number] => {
   return [x, 0, z];
 };
 
-const FOUNDATION_COMPANIES: ReadonlyArray<Company> = [
-  { id: asCompanyId('aether-systems'), position: ringPosition(0) },
-  { id: asCompanyId('borealis-labs'), position: ringPosition(1) },
-  { id: asCompanyId('cinder-collective'), position: ringPosition(2) },
-  { id: asCompanyId('drift-dynamics'), position: ringPosition(3) },
-  { id: asCompanyId('ember-works'), position: ringPosition(4) },
-  { id: asCompanyId('flux-foundry'), position: ringPosition(5) },
-  { id: asCompanyId('glacier-grove'), position: ringPosition(6) },
-  { id: asCompanyId('helix-haus'), position: ringPosition(7) },
+const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
+  {
+    id: asCompanyId('mave'),
+    planet: { assetId: 'planet00', placement: ringPosition(0) },
+    info: {
+      companyName: 'Mave',
+      logoSrc: '/logos/mave.svg',
+      role: 'Head of Platform',
+      period: { kind: 'ongoing', start: { year: 2025, month: 1 } },
+      description:
+        "Employee #1, responsible for building the company's end-to-end product execution pipeline from ideation to production. Built the platform from scratch while defining the architecture, standards, and practices behind it. Partnered across product, design, R&D, and QA to drive technical decisions and scalable execution.",
+    },
+  },
+  {
+    id: asCompanyId('8fig'),
+    planet: { assetId: 'planet01', placement: ringPosition(1) },
+    info: {
+      companyName: '8fig',
+      logoSrc: '/logos/8fig.svg',
+      role: 'Software Architect',
+      period: {
+        kind: 'closed',
+        start: { year: 2023, month: 7 },
+        end: { year: 2025, month: 1 },
+      },
+      description:
+        "Owned critical product systems end to end, building the company's design system and turning ambiguous ideas into production-ready features. Re-architected the back-office platform and rebuilt the main dashboard, reducing load times from 8+ seconds to near-instant. Also set frontend quality standards, mentored engineers, and shaped the engineering interview process.",
+    },
+  },
+  {
+    id: asCompanyId('riverside'),
+    planet: { assetId: 'planet02', placement: ringPosition(2) },
+    info: {
+      companyName: 'Riverside',
+      logoSrc: '/logos/riverside.svg',
+      role: 'Group Lead',
+      period: {
+        kind: 'closed',
+        start: { year: 2022, month: 5 },
+        end: { year: 2023, month: 4 },
+      },
+      description:
+        'Joined as the sole engineer on the Editor team and rebuilt a neglected product from scratch, creating a stable foundation for scale. Partnered with leadership on the roadmap and long-term vision, and introduced a clear workflow for feature scoping, delivery, and approval across teams. Also built the engineering interview process and served as technical and execution lead as the product scaled from roughly 100 users to nearly 1M.',
+    },
+  },
+  {
+    id: asCompanyId('streamelements'),
+    planet: { assetId: 'planet03', placement: ringPosition(3) },
+    info: {
+      companyName: 'StreamElements',
+      logoSrc: '/logos/streamelements.svg',
+      role: 'Senior Frontend Engineer',
+      period: {
+        kind: 'closed',
+        start: { year: 2019, month: 10 },
+        end: { year: 2022, month: 5 },
+      },
+      description:
+        "Early engineer during the company's formative stage, building multiple products from scratch and leading rapid pivots as market conditions and priorities changed. During COVID-19, remained the sole engineer in the department after a major downsizing and owned critical initiatives during a high-pressure period. That work became foundational to the company's later growth, scale, and $100M SoftBank investment.",
+    },
+  },
+  {
+    id: asCompanyId('tgs'),
+    planet: { assetId: 'planet04', placement: ringPosition(4) },
+    info: {
+      companyName: 'TGS',
+      logoSrc: '/logos/tgs.svg',
+      role: 'Frontend Engineer',
+      period: {
+        kind: 'closed',
+        start: { year: 2018, month: 5 },
+        end: { year: 2019, month: 10 },
+      },
+      description:
+        'Frontend engineer on a complex, high-traffic travel engine used by major airline customers, including EasyJet and Singapore Airlines. Built a white-label frontend architecture for multiple enterprise clients.',
+    },
+  },
 ];
 
-export const getFoundationCompanies = (): ReadonlyArray<Company> => FOUNDATION_COMPANIES;
+export const getCompanyEntries = (): ReadonlyArray<CompanyEntry> => COMPANY_ENTRIES;

@@ -11,14 +11,15 @@ describe('useScene — composition root smoke', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns { state, companies, intents, onEvent } with the expected shapes', () => {
+  it('returns { state, entries, intents, onEvent, revealProjection } with the expected shapes', () => {
     const { result } = renderHook(() => useScene());
 
     expect(typeof result.current.state.kind).toBe('string');
-    expect(Array.isArray(result.current.companies)).toBe(true);
-    expect(result.current.companies.length).toBeGreaterThan(0);
+    expect(Array.isArray(result.current.entries)).toBe(true);
+    expect(result.current.entries.length).toBeGreaterThan(0);
     expect(result.current.intents.current).toBeInstanceOf(Set);
     expect(typeof result.current.onEvent).toBe('function');
+    expect(result.current.revealProjection.kind).toBe('hidden');
   });
 
   it('transitions from loading to playing after the start effect fires', () => {

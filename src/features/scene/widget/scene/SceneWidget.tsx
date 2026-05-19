@@ -9,15 +9,16 @@ const CANVAS_WRAPPER_STYLE: CSSProperties = {
 };
 
 export const SceneWidget = (): JSX.Element => {
-  const { state, companies, intents, onEvent } = useScene();
+  const { state, entries, intents, onEvent, revealProjection } = useScene();
 
   return (
     <Canvas style={CANVAS_WRAPPER_STYLE} dpr={[1, 2]}>
       <Scene
         state={state}
-        companies={companies}
+        entries={entries}
         intents={intents}
         onEvent={onEvent}
+        revealProjection={revealProjection}
       />
     </Canvas>
   );
