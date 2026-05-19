@@ -31,13 +31,16 @@ const ORIENT_LERP = 0.1;
 // Engine trail — cyan wake behind the speeder. Anchored to TAIL_OFFSET_Z
 // inside the flip group so heading lerp carries the trail along.
 // drei applies lineWidth = 0.1 * TRAIL_WIDTH; buffer holds TRAIL_LENGTH * 10
-// samples; at TRAIL_DECAY=4 and 60fps, ~0.625s of history (~8.7 world units
-// at MAX_SPEED). Attenuation pinches the tail to a point.
+// samples; at TRAIL_DECAY=1 and 60fps, ~0.667s of history (~9.3 world units
+// at MAX_SPEED). decay > 1 writes the same sample N times per frame
+// (Trail.js:52), which is invisible at thin widths but causes visible
+// banding/graininess at thick widths — keep decay = 1. Attenuation
+// pinches the tail to a point.
 const TAIL_OFFSET_Z = 0.4;
-const TRAIL_WIDTH = 2.0;
-const TRAIL_LENGTH = 15;
+const TRAIL_WIDTH = 6.0;
+const TRAIL_LENGTH = 4;
 const TRAIL_COLOR = '#5fd6ff';
-const TRAIL_DECAY = 4;
+const TRAIL_DECAY = 1;
 const TRAIL_ATTENUATION = (t: number): number => t * t;
 
 // Idle motion — sine oscillations always present, scaled down with speed
