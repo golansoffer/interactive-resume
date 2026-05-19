@@ -21,12 +21,22 @@ vi.mock('@react-three/fiber', () => {
   };
 });
 
+type MockScene = {
+  readonly placeholder: true;
+  readonly clone: () => MockScene;
+};
+
+const mockScene: MockScene = {
+  placeholder: true,
+  clone: (): MockScene => mockScene,
+};
+
 vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
-    (): { readonly scene: { readonly placeholder: true } } => ({ scene: { placeholder: true } }),
+    (): { readonly scene: MockScene } => ({ scene: mockScene }),
     { preload: (): void => {} },
   ),
 }));
@@ -36,7 +46,7 @@ const globex = asCompanyId('globex');
 
 const acmeEntry: CompanyEntry = {
   id: acme,
-  planet: { color: '#2dd4bf', placement: [5, 0, 0] },
+  planet: { assetId: 'earth_b', placement: [5, 0, 0] },
   info: {
     companyName: 'Acme',
     logoSrc: '/logos/acme.svg',
@@ -48,7 +58,7 @@ const acmeEntry: CompanyEntry = {
 
 const globexEntry: CompanyEntry = {
   id: globex,
-  planet: { color: '#f59e0b', placement: [-5, 0, 0] },
+  planet: { assetId: 'saturn_b', placement: [-5, 0, 0] },
   info: {
     companyName: 'Globex',
     logoSrc: '/logos/globex.svg',

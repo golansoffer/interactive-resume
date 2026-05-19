@@ -55,15 +55,28 @@ The "no information leaks" guarantee comes from the **prop-type narrowness of ea
 ### `PlanetConfig` — `src/features/scene/types/planet.ts`
 
 ```typescript
+export type PlanetAssetId =
+  | 'earth_a' | 'earth_b'
+  | 'jupiter_a' | 'jupiter_b'
+  | 'mars_a' | 'mars_b'
+  | 'mercury_a' | 'mercury_b'
+  | 'moon_a' | 'moon_b'
+  | 'neptune_a' | 'neptune_b'
+  | 'pluto_a' | 'pluto_b'
+  | 'saturn_a' | 'saturn_b'
+  | 'sun_a' | 'sun_b'
+  | 'uranus_a' | 'uranus_b'
+  | 'venus_a' | 'venus_b';
+
 export type PlanetConfig = {
-  readonly color: string;
+  readonly assetId: PlanetAssetId;
   readonly placement: readonly [number, number, number];
 };
 ```
 
 Decisions:
 
-- **Interim: `color` over a sprite asset id.** Originally `assetId: PlanetAssetId` (closed literal union of 10 Kenney sprites). The 2D sprite rendering proved too flat for the spaceflight feel; the wave that lands real 3D planet assets will replace `color` with an asset reference. Until then, each company carries a hex color and renders as a 3D sphere with that color — `meshStandardMaterial`, slow Y-axis spin.
+- **Closed literal union for `PlanetAssetId`.** Restored after the brief interim where `PlanetConfig.color: string` stood in for missing 3D planet assets. With real GLBs now under `public/models/planets/`, the asset id is a 22-member closed string-literal union — typos and non-existent planet names do not compile. Iron Law 3 fully covers this field.
 - **Placement on `PlanetConfig`.** Where a planet renders is intrinsic to its visual identity in the scene. Splitting placement into a separate `Placement` type would create a one-field record and add a layer for nothing (Iron Law 4).
 - **No `scale`, `rotation`, `tint`, `glow`, `ring` fields.** Iron Law 4 (design discipline): no flexibility knobs until they earn their place. Add when a renderer actually needs them.
 - **Tuple shape for `placement`.** Matches the existing `Company.position` tuple form. R3F components consume tuples directly via `<mesh position={...} />`. Math services convert to plain records `{ x, y, z }` at their own boundary (see `services/renderer/vec3.ts`).
@@ -152,7 +165,7 @@ type CompaniesProps = {
 };
 ```
 
-Cannot access `companyName`, `logoSrc`, `role`, `period`, or `description`. Renders one 3D sphere per entry using `planet.color` and `planet.placement`, with a slow Y-axis spin.
+Cannot access `companyName`, `logoSrc`, `role`, `period`, or `description`. Renders one planet GLB per entry — the file is selected by `planet.assetId`, placed at `planet.placement`, with a slow Y-axis spin and gentle idle bob/sway.
 
 ### Always-visible label — new component (suggested: `<PlanetLabels />`)
 
@@ -277,7 +290,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   // Mave — Head of Platform — Jan 2025 - Present
   {
     id: asCompanyId('mave'),
-    planet: { assetId: 'planet00', placement: [/* tuned during impl */] },
+    planet: { assetId: 'earth_b', placement: [/* tuned during impl */] },
     info: {
       companyName: 'Mave',
       logoSrc: '/logos/mave.svg',
@@ -297,7 +310,7 @@ Decisions:
 - **Hardcoded TS array, not JSON/MDX/API.** Resume data is static, owned by the author, version-controlled with the code. No external boundary, no parser, no `schema/`, no `api/`.
 - **Function-wrapped export.** `getCompanyEntries()` matches the existing `getFoundationCompanies()` shape. If a future parser layer is added (e.g., to load from a JSON file the user maintains separately), the export signature doesn't change — only the implementation behind the function does. Consumers are insulated from the source change.
 - **Five entries replace the existing eight foundation stubs.** Mave, 8fig, Riverside, StreamElements, TGS.
-- **Placements and color assignments are tunable in implementation.** The spec doesn't lock specific coordinates or per-company hex colors — author choice.
+- **Placements and asset-id assignments are tunable in implementation.** The spec doesn't lock specific coordinates or per-company GLB choices — author choice from the 22-member `PlanetAssetId` union.
 
 ---
 
@@ -307,7 +320,7 @@ Decisions:
 |---|---|
 | **1 Hexagonal** | Types live in `features/scene/types/`. Each file owns one concern (`planet.ts`, `period.ts`, `company-info.ts`, `company.ts`). Pure-data consumers (planet renderer, label, reveal overlay) receive narrow projections via prop types — they cannot reach across the visual/info split. The proximity-event producer (`ProximityWatcher`) operates on full entries because it is the gateway through which info enters the event channel; downstream still sees only narrow slices. Core (`src/core/scene/sceneMachine.ts`) is untouched; FSM continues to carry `CompanyId` only, never `CompanyInfo`. |
 | **2 Discriminated unions** | `Period` is `closed \| ongoing`. `RevealProjection` is `hidden \| visible`. Every variant is a flat object tagged by `kind`. No optional fields acting as state flags. |
-| **3 Illegal states unrepresentable** | `CompanyId` is branded with a single minter (existing). `Period.ongoing` has no `end`; `Period.closed` has both — "Present" cannot exist as `endDate: undefined`. One root (`CompanyEntry`) → orphan ids impossible. `SceneEvent.entered_proximity` carries `info` + `placement` directly — the producer attaches the payload at emission, eliminating every downstream `CompanyId → CompanyInfo` lookup and the nullable-suppressor patterns those lookups would require. **Known interim regression:** `PlanetConfig.color: string` is unconstrained — invalid hex like `"#zz0000"` or empty string compiles. The follow-up wave that lands real 3D planet assets replaces `color` with a closed asset reference, restoring full Iron Law 3 coverage. The weakness is bounded, time-limited, and acknowledged here rather than masked. |
+| **3 Illegal states unrepresentable** | `CompanyId` is branded with a single minter. `PlanetAssetId` is a 22-member closed literal union — only known planet GLB names compile. `Period.ongoing` has no `end`; `Period.closed` has both — "Present" cannot exist as `endDate: undefined`. One root (`CompanyEntry`) → orphan ids impossible. `SceneEvent.entered_proximity` carries `info` + `placement` directly — the producer attaches the payload at emission, eliminating every downstream `CompanyId → CompanyInfo` lookup and the nullable-suppressor patterns those lookups would require. |
 | **4 Design discipline** | One root, narrow ports. No `scale`/`rotation`/`tint` until earned. No `schema/`/`api/` until externalized data exists. No fallback `logoSrc?` — every company has one. No two `Company` types coexisting during migration. No TotalMap or lookup-infrastructure introduced — the proof is data flow (info travels with the event), not type-level wizardry. |
 
 ---
@@ -318,7 +331,7 @@ This spec ships only the design doc. The implementation wave (next session via w
 
 | File | Change |
 |---|---|
-| `src/features/scene/types/planet.ts` | **New.** `PlanetConfig` ( `color` + `placement` ). |
+| `src/features/scene/types/planet.ts` | **New.** `PlanetAssetId` (22-member closed literal union) + `PlanetConfig` (`assetId` + `placement`). |
 | `src/features/scene/types/period.ts` | **New.** `Month`, `YearMonth`, `Period`. |
 | `src/features/scene/types/company-info.ts` | **New.** `CompanyInfo`. |
 | `src/features/scene/types/reveal-projection.ts` | **New.** `RevealProjection` (discriminated `hidden \| visible`). |
@@ -334,7 +347,7 @@ This spec ships only the design doc. The implementation wave (next session via w
 | `src/features/scene/services/renderer/proximityCheck.ts` | **Updated.** Generic signature `<T extends { placement }>(player, targets, radius) → ReadonlyArray<T>`. Math unchanged. |
 | `src/features/scene/services/renderer/proximityCheck.test.ts` | **Updated.** Test fixtures use the generic shape; existing scenarios reuse the new return type. |
 | `src/features/scene/components/Scene/Companies.tsx` | **Rewritten.** Consumes `PlanetProjection[]`; delegates to `<Planet />` child (one element per planet). Replaces the placeholder cube + HSL-from-id stub. |
-| `src/features/scene/components/Scene/Planet.tsx` | **New.** Single-planet 3D sphere renderer (`sphereGeometry` + `meshStandardMaterial`) tinted by `planet.color`, with a slow Y-axis rotation driven by `useFrame`. |
+| `src/features/scene/components/Scene/Planet.tsx` | **New.** Single-planet GLB renderer — `useGLTF` loads the file selected by `planet.assetId`, `scene.clone()` per instance keeps multi-mount safe, `<Center>` recenters bounds, slow Y-axis rotation + idle bob/sway driven by `useFrame`. |
 | `src/features/scene/components/Scene/PlanetLabels.tsx` | **New.** Renders always-visible name + logo above each planet, anchored to `placement` (drei `<Html>`). |
 | `src/features/scene/components/Scene/RevealOverlay.tsx` | **Updated.** Prop type changes from `{ objectId }` to `{ info, placement }`. Renders a basic info card (drei `<Html>`); polish lands later. |
 | `src/features/scene/components/Scene/Scene.tsx` | **Updated.** New prop shape (`state`, `entries`, `intents`, `onEvent`, `revealProjection`); internally projects `planets` + `labels` via `useMemo` and distributes to children. |
@@ -348,7 +361,7 @@ The implementation plan (writing-plans output) sequences these into a working or
 
 ## Out of scope
 
-- 3D planet assets (GLB or PBR-textured spheres) — interim rendering uses a colored 3D sphere per company. The real assets land in a follow-up wave that replaces `PlanetConfig.color` with an asset reference and rewrites `Planet.tsx`.
+- Future planet visual variation (atmosphere ring, glow, axial tilt, scale-per-planet) — 3D planet GLBs under `public/models/planets/` are now the renderer; `PlanetConfig.assetId` selects which of the 22 GLBs each company uses.
 - Logo asset files (acquired separately by the author).
 - Reveal overlay UI layout, typography, animation.
 - Label rendering technique (drei `<Text>` SDF vs `<Html>` overlay) — chosen during implementation.
@@ -400,7 +413,8 @@ The 5 companies and their content, transcribed from `public/resume.pdf`. The imp
 
 - **CompanyEntry** — the composite root: identity + planet visual + info content. One per company.
 - **CompanyInfo** — info content (name, logo, role, period, description). One per CompanyEntry.
-- **PlanetConfig** — visual config (color, placement). One per CompanyEntry.
+- **PlanetConfig** — visual config (`assetId` + `placement`). One per CompanyEntry.
+- **PlanetAssetId** — closed literal union of 22 planet GLB ids under `public/models/planets/` (11 planets × 2 variants `_a`/`_b`). Typos and unknown planet names fail to compile.
 - **Period** — discriminated union: `closed` (start + end) or `ongoing` (start only).
 - **YearMonth** — `{ year, month }` with `month: Month` (literal union `1 | … | 12`).
 - **Month** — closed literal union `1 | 2 | … | 12`. Used in `YearMonth`.
