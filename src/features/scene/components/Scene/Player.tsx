@@ -8,16 +8,15 @@ import { integrateMotion, MAX_SPEED } from '../../services/renderer/integrateMot
 import type { CameraBasis, Kinematics } from '../../services/renderer/integrateMotion';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
+import type { ShipEntry } from '../../../ships/types/ship';
 
 type PlayerProps = {
+  readonly ship: ShipEntry;
   readonly sceneState: SceneState;
   readonly intents: IntentStream;
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly meshRef: RefObject<Object3D | null>;
 };
-
-const SHIP_PATH = '/models/kenney-space-kit/craft_speederA.glb';
-const SHIP_SCALE: readonly [number, number, number] = [0.6, 0.6, 0.6];
 
 // Visual feel — banking and pitch derived from velocity in the camera basis.
 // Heading is held at the JSX-set base yaw (no input-driven yaw — camera-relative motion).
@@ -171,10 +170,14 @@ const usePlayerFrame = (props: PlayerProps): void => {
 };
 
 export const Player = (props: PlayerProps): JSX.Element => {
-  const { scene } = useGLTF(SHIP_PATH);
+  const { scene } = useGLTF(props.ship.glbPath);
+  const shipScale = useMemo<readonly [number, number, number]>(
+    () => [props.ship.scale, props.ship.scale, props.ship.scale],
+    [props.ship.scale],
+  );
   usePlayerFrame(props);
   return (
-    <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
+    <group ref={props.meshRef} scale={shipScale} rotation={[0, 0, 0, 'YXZ']}>
       <group rotation={[0, Math.PI, 0]}>
         <Center>
           <primitive object={scene} />
@@ -192,5 +195,3 @@ export const Player = (props: PlayerProps): JSX.Element => {
     </group>
   );
 };
-
-useGLTF.preload(SHIP_PATH);

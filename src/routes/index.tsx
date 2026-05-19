@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { SceneWidget } from '../features/scene/widget/scene/SceneWidget';
-import { lookupShip } from '../features/ships/types/shipRegistry';
+import { SHIP_REGISTRY, lookupShip } from '../features/ships/types/shipRegistry';
 import type { ShipId, ShipSelection } from '../features/ships/types/ship';
 
 export const Route = createFileRoute('/')({
@@ -14,5 +14,5 @@ export const toSelection = (shipId: ShipId | undefined): ShipSelection =>
     : { kind: 'selected', ship: lookupShip(shipId) };
 
 function IndexPage(): JSX.Element {
-  return <SceneWidget />;
+  return <SceneWidget ship={SHIP_REGISTRY.speederA} />;
 }

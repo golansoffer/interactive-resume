@@ -7,6 +7,7 @@ import type { IntentStream } from '../../types/intent';
 import type { RevealProjection } from '../../types/reveal-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
+import type { ShipEntry } from '../../../ships/types/ship';
 import { Scene } from './Scene';
 
 vi.mock('@react-three/fiber', () => {
@@ -101,6 +102,13 @@ const twoEntries = (): ReadonlyArray<CompanyEntry> => [acmeEntry, globexEntry];
 
 const hidden: RevealProjection = { kind: 'hidden' };
 
+const testShip: ShipEntry = {
+  id: 'speederA',
+  displayName: 'Speeder A',
+  glbPath: '/models/kenney-space-kit/craft_speederA.glb',
+  scale: 0.6,
+};
+
 const mount = (
   state: SceneState,
   entries: ReadonlyArray<CompanyEntry>,
@@ -110,6 +118,7 @@ const mount = (
 ): void => {
   render(
     <Scene
+      ship={testShip}
       state={state}
       entries={entries}
       intents={intents}

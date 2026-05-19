@@ -6,6 +6,7 @@ import type { LabelProjection, PlanetProjection } from '../../types/projections'
 import type { RevealProjection } from '../../types/reveal-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
+import type { ShipEntry } from '../../../ships/types/ship';
 import { Companies } from './Companies';
 import { FollowCamera } from './FollowCamera';
 import { PlanetLabels } from './PlanetLabels';
@@ -15,6 +16,7 @@ import { RevealOverlay } from './RevealOverlay';
 import { useSceneRefs } from './useSceneRefs';
 
 type SceneProps = {
+  readonly ship: ShipEntry;
   readonly state: SceneState;
   readonly entries: ReadonlyArray<CompanyEntry>;
   readonly intents: IntentStream;
@@ -51,6 +53,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
       <directionalLight position={[-8, 6, -10]} intensity={0.2} castShadow={false} />
       <FollowCamera kinematicsRef={kinematicsRef} />
       <Player
+        ship={props.ship}
         sceneState={props.state}
         intents={props.intents}
         kinematicsRef={kinematicsRef}
