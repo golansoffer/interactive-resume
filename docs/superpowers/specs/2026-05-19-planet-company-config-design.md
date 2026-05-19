@@ -297,7 +297,7 @@ Decisions:
 - **Hardcoded TS array, not JSON/MDX/API.** Resume data is static, owned by the author, version-controlled with the code. No external boundary, no parser, no `schema/`, no `api/`.
 - **Function-wrapped export.** `getCompanyEntries()` matches the existing `getFoundationCompanies()` shape. If a future parser layer is added (e.g., to load from a JSON file the user maintains separately), the export signature doesn't change — only the implementation behind the function does. Consumers are insulated from the source change.
 - **Five entries replace the existing eight foundation stubs.** Mave, 8fig, Riverside, StreamElements, TGS.
-- **Placements and sprite assignments are tunable in implementation.** The spec doesn't lock specific coordinates or sprite indices — author choice.
+- **Placements and color assignments are tunable in implementation.** The spec doesn't lock specific coordinates or per-company hex colors — author choice.
 
 ---
 
@@ -306,8 +306,8 @@ Decisions:
 | Law | How it's met |
 |---|---|
 | **1 Hexagonal** | Types live in `features/scene/types/`. Each file owns one concern (`planet.ts`, `period.ts`, `company-info.ts`, `company.ts`). Pure-data consumers (planet renderer, label, reveal overlay) receive narrow projections via prop types — they cannot reach across the visual/info split. The proximity-event producer (`ProximityWatcher`) operates on full entries because it is the gateway through which info enters the event channel; downstream still sees only narrow slices. Core (`src/core/scene/sceneMachine.ts`) is untouched; FSM continues to carry `CompanyId` only, never `CompanyInfo`. |
-| **2 Discriminated unions** | `Period` is `closed \| ongoing`. `PlanetAssetId` is a closed literal union. `RevealProjection` is `hidden \| visible`. Every variant is a flat object tagged by `kind` (or its own narrow shape for literal values). No optional fields acting as state flags. |
-| **3 Illegal states unrepresentable** | `CompanyId` is branded with a single minter (existing). `PlanetAssetId` allows only the 10 known sprites — typos don't compile. `Period.ongoing` has no `end`; `Period.closed` has both — "Present" cannot exist as `endDate: undefined`. One root (`CompanyEntry`) → orphan ids impossible. `SceneEvent.entered_proximity` carries `info` + `placement` directly — the producer attaches the payload at emission, eliminating every downstream `CompanyId → CompanyInfo` lookup and the nullable-suppressor patterns those lookups would require. |
+| **2 Discriminated unions** | `Period` is `closed \| ongoing`. `RevealProjection` is `hidden \| visible`. Every variant is a flat object tagged by `kind`. No optional fields acting as state flags. |
+| **3 Illegal states unrepresentable** | `CompanyId` is branded with a single minter (existing). `Period.ongoing` has no `end`; `Period.closed` has both — "Present" cannot exist as `endDate: undefined`. One root (`CompanyEntry`) → orphan ids impossible. `SceneEvent.entered_proximity` carries `info` + `placement` directly — the producer attaches the payload at emission, eliminating every downstream `CompanyId → CompanyInfo` lookup and the nullable-suppressor patterns those lookups would require. **Known interim regression:** `PlanetConfig.color: string` is unconstrained — invalid hex like `"#zz0000"` or empty string compiles. The follow-up wave that lands real 3D planet assets replaces `color` with a closed asset reference, restoring full Iron Law 3 coverage. The weakness is bounded, time-limited, and acknowledged here rather than masked. |
 | **4 Design discipline** | One root, narrow ports. No `scale`/`rotation`/`tint` until earned. No `schema/`/`api/` until externalized data exists. No fallback `logoSrc?` — every company has one. No two `Company` types coexisting during migration. No TotalMap or lookup-infrastructure introduced — the proof is data flow (info travels with the event), not type-level wizardry. |
 
 ---
@@ -327,7 +327,7 @@ This spec ships only the design doc. The implementation wave (next session via w
 | `src/features/scene/types/company.test.ts` | **Unchanged.** Existing `CompanyId` grep invariants continue to pass. |
 | `src/features/scene/types/scene-event.ts` | **Updated.** `entered_proximity` carries `info` and `placement`; `exited_proximity` stays id-only. |
 | `src/features/scene/widget/scene/companies.ts` | **Rewritten.** 5 `CompanyEntry` entries (Mave, 8fig, Riverside, StreamElements, TGS) replacing 8 foundation stubs. |
-| `src/features/scene/widget/scene/companies.test.ts` | **New.** Sanity test for `getCompanyEntries()` — 5 entries, unique ids, valid asset ids, period ordering. |
+| `src/features/scene/widget/scene/companies.test.ts` | **New.** Sanity test for `getCompanyEntries()` — 5 entries, unique ids, non-empty info fields, period ordering. |
 | `src/features/scene/widget/scene/useScene.ts` | **Updated.** Reads `CompanyEntry[]`, exposes `entries` + `revealProjection`, manages reveal projection from `SceneEvent` stream. |
 | `src/features/scene/widget/scene/useScene.smoke.test.ts` | **Updated.** Assertions use the new return shape (`entries` instead of `companies`; `revealProjection` present). |
 | `src/features/scene/widget/scene/SceneWidget.tsx` | **Updated.** Threads the new `useScene` fields into `<Scene />`. |
@@ -351,8 +351,8 @@ The implementation plan (writing-plans output) sequences these into a working or
 - 3D planet assets (GLB or PBR-textured spheres) — interim rendering uses a colored 3D sphere per company. The real assets land in a follow-up wave that replaces `PlanetConfig.color` with an asset reference and rewrites `Planet.tsx`.
 - Logo asset files (acquired separately by the author).
 - Reveal overlay UI layout, typography, animation.
-- Label rendering technique (drei `<Text>` SDF vs `<Html>` overlay vs sprite atlas) — chosen during implementation.
-- Planet visual variation beyond sprite choice (scale, rotation, tint, glow).
+- Label rendering technique (drei `<Text>` SDF vs `<Html>` overlay) — chosen during implementation.
+- Planet visual variation beyond per-company color (scale, axial tilt, atmosphere ring, glow).
 - FSM changes — none needed.
 - Parsing layer for externalized resume data — added if/when the data leaves source.
 - Localization of company/role/description text.
