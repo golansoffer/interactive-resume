@@ -26,11 +26,11 @@ export const ShipViewport = (props: ShipViewportProps): JSX.Element => {
       <PerspectiveCamera makeDefault position={[0, 1.2, 4]} fov={35} />
       <ambientLight intensity={0.45} />
       <directionalLight position={[5, 6, 5]} intensity={1.4} />
-      <Center>
-        <group ref={groupRef} scale={props.ship.scale}>
+      <group ref={groupRef} scale={props.ship.scale}>
+        <Center>
           <primitive object={scene} />
-        </group>
-      </Center>
+        </Center>
+      </group>
     </>
   );
 };
