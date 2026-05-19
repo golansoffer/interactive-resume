@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #04050a;
+  --color-fg: #e6eaf2;
+  --color-accent: #5fd6ff;
+  --color-card: #0a0d18;
+  --color-card-hover: #11162a;
+  --color-card-ring: #5fd6ff44;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
