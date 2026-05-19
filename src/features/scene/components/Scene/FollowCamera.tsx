@@ -50,11 +50,11 @@ const BANK_LERP = 0.08;
 const LATERAL_OFFSET_FACTOR = 0.10;
 const LONGITUDINAL_OFFSET_FACTOR = -0.07;
 
-// Spring-damper follow — stiffness/damping tuned for damping ratio ~0.65
+// Spring-damper follow — stiffness/damping tuned for damping ratio ~0.74
 // (critical at stiffness 8 is 2*sqrt(8) ≈ 5.66). Visible glide on sudden
-// direction changes, no oscillation.
+// direction changes, less overshoot on reverse-to-forward transitions.
 const SPRING_STIFFNESS = 8;
-const SPRING_DAMPING = 3.7;
+const SPRING_DAMPING = 4.2;
 
 const cameraInitial: readonly [number, number, number] = [0, 6, -10];
 
@@ -86,7 +86,8 @@ const updateChaseCamera = (
 
   const directionScale = speed === 0 ? 0 : 1 / speed;
   const targetAheadX = velocity.x * directionScale * speedRatio * MAX_LOOK_AHEAD;
-  const targetAheadZ = velocity.z * directionScale * speedRatio * MAX_LOOK_AHEAD;
+  const forwardVz = Math.max(0, velocity.z);
+  const targetAheadZ = forwardVz * directionScale * speedRatio * MAX_LOOK_AHEAD;
   memory.lookAheadOffset.x += (targetAheadX - memory.lookAheadOffset.x) * LOOK_AHEAD_LERP;
   memory.lookAheadOffset.z += (targetAheadZ - memory.lookAheadOffset.z) * LOOK_AHEAD_LERP;
 

@@ -30,10 +30,17 @@ const ORIENT_LERP = 0.1;
 
 // Idle motion — sine oscillations gated by (1 - speedRatio); full at rest, zero at top speed.
 // Two distinct frequencies so bob and sway never lock into a single rhythm.
-const IDLE_BOB_AMPLITUDE = 0.15;
+const IDLE_BOB_AMPLITUDE = 0.10;
 const IDLE_BOB_FREQ_HZ = 0.7;
-const IDLE_SWAY_AMPLITUDE = Math.PI / 100;
+const IDLE_SWAY_AMPLITUDE = Math.PI / 140;
 const IDLE_SWAY_FREQ_HZ = 0.45;
+
+// Velocity-derived heading — outer yaw lerps toward atan2(vx, vz) so the
+// ship faces its motion direction on diagonal moves. Held below threshold
+// to avoid jitter at near-zero speed.
+const HEADING_LERP = 0.06;
+const HEADING_THRESHOLD = 0.5;
+const TWO_PI = Math.PI * 2;
 
 const FORWARD_EPSILON = 1e-6;
 
@@ -87,6 +94,23 @@ const computeRotationTargets = (
   };
 };
 
+const applyHeadingLerp = (
+  mesh: Object3D,
+  velocity: { readonly x: number; readonly z: number },
+  speed: number,
+): void => {
+  if (speed <= HEADING_THRESHOLD) return;
+  const targetHeading = Math.atan2(velocity.x, velocity.z);
+  let headingDelta = targetHeading - mesh.rotation.y;
+  while (headingDelta > Math.PI) {
+    headingDelta -= TWO_PI;
+  }
+  while (headingDelta < -Math.PI) {
+    headingDelta += TWO_PI;
+  }
+  mesh.rotation.y += headingDelta * HEADING_LERP;
+};
+
 export const Player = (props: PlayerProps): JSX.Element => {
   const { scene } = useGLTF(SHIP_PATH);
   const camera = useThree((three) => three.camera);
@@ -118,6 +142,8 @@ export const Player = (props: PlayerProps): JSX.Element => {
     const idle = computeIdleMotion(speedRatio, state.clock.elapsedTime);
     mesh.position.set(next.position.x, next.position.y + idle.bobY, next.position.z);
 
+    applyHeadingLerp(mesh, next.velocity, speed);
+
     const target = computeRotationTargets(next.velocity, basis);
     baselinePitch.current += (target.pitch - baselinePitch.current) * ORIENT_LERP;
     baselineRoll.current += (target.roll - baselineRoll.current) * ORIENT_LERP;
@@ -126,7 +152,7 @@ export const Player = (props: PlayerProps): JSX.Element => {
   });
 
   return (
-    <group ref={props.meshRef} scale={SHIP_SCALE}>
+    <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
       <group rotation={[0, Math.PI, 0]}>
         <Center>
           <primitive object={scene} />
