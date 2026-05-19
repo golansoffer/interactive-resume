@@ -23,10 +23,10 @@ const ROTATION_RAD_PER_SEC = 0.07;
 // Idle wobble — planets are always "at rest" (no acceleration), so the
 // wobble runs at full amplitude. Slower than the ship's idle for a
 // heavier feel. Phase derived from CompanyId so planets don't bob in unison.
-const PLANET_BOB_AMPLITUDE = 0.08;
-const PLANET_BOB_FREQ_HZ = 0.22;
-const PLANET_SWAY_AMPLITUDE = Math.PI / 180;
-const PLANET_SWAY_FREQ_HZ = 0.13;
+const PLANET_BOB_AMPLITUDE = 0.06;
+const PLANET_BOB_FREQ_HZ = 0.08;
+const PLANET_SWAY_AMPLITUDE = Math.PI / 220;
+const PLANET_SWAY_FREQ_HZ = 0.05;
 const TWO_PI = Math.PI * 2;
 
 // Exhaustive: PlanetAssetId is a closed literal union, so the TS checker

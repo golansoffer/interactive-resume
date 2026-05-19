@@ -28,12 +28,16 @@ const MAX_ROLL = Math.PI / 7;
 // ORIENT_LERP — ~300ms time-to-target; floaty and weighty.
 const ORIENT_LERP = 0.1;
 
-// Idle motion — sine oscillations gated by (1 - speedRatio); full at rest, zero at top speed.
-// Two distinct frequencies so bob and sway never lock into a single rhythm.
-const IDLE_BOB_AMPLITUDE = 0.10;
-const IDLE_BOB_FREQ_HZ = 0.7;
-const IDLE_SWAY_AMPLITUDE = Math.PI / 140;
-const IDLE_SWAY_FREQ_HZ = 0.45;
+// Idle motion — sine oscillations always present, scaled down with speed
+// (see IDLE_RATIO_FLOOR in computeIdleMotion). The aircraft is the LIGHT
+// object in the scene, so its flutter should always be visible — contrast
+// against the heavier, slower-bobbing planets. Two distinct frequencies
+// so bob and sway never lock into a single rhythm.
+const IDLE_BOB_AMPLITUDE = 0.12;
+const IDLE_BOB_FREQ_HZ = 0.85;
+const IDLE_SWAY_AMPLITUDE = Math.PI / 110;
+const IDLE_SWAY_FREQ_HZ = 0.55;
+const IDLE_RATIO_FLOOR = 0.4;
 
 // Velocity-derived heading — outer yaw lerps toward atan2(vx, vz) so the
 // ship faces its motion direction on diagonal moves. Held below threshold
@@ -73,7 +77,9 @@ const deriveBasis = (
 type IdleMotion = { readonly bobY: number; readonly swayZ: number };
 
 const computeIdleMotion = (speedRatio: number, time: number): IdleMotion => {
-  const idleRatio = 1 - speedRatio;
+  // Floor at IDLE_RATIO_FLOOR so the ship keeps fluttering during flight,
+  // not just at rest. Lighter object = always-visible micro-motion.
+  const idleRatio = IDLE_RATIO_FLOOR + (1 - IDLE_RATIO_FLOOR) * (1 - speedRatio);
   return {
     bobY: Math.sin(time * IDLE_BOB_FREQ_HZ * 2 * Math.PI) * IDLE_BOB_AMPLITUDE * idleRatio,
     swayZ: Math.sin(time * IDLE_SWAY_FREQ_HZ * 2 * Math.PI) * IDLE_SWAY_AMPLITUDE * idleRatio,
