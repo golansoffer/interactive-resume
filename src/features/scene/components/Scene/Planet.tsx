@@ -18,7 +18,7 @@ type PlanetProps = {
 };
 
 const PLANET_SCALE: readonly [number, number, number] = [1.5, 1.5, 1.5];
-const ROTATION_RAD_PER_SEC = 0.18;
+const ROTATION_RAD_PER_SEC = 0.07;
 
 // Idle wobble — planets are always "at rest" (no acceleration), so the
 // wobble runs at full amplitude. Slower than the ship's idle for a
