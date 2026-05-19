@@ -7,9 +7,17 @@ import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import { Scene } from './Scene';
 
-vi.mock('@react-three/fiber', () => ({
-  useFrame: (): null => null,
-}));
+vi.mock('@react-three/fiber', () => {
+  const fakeCamera = {
+    getWorldDirection: <T extends { set: (x: number, y: number, z: number) => T }>(target: T): T =>
+      target.set(0, 0, -1),
+  };
+  return {
+    useFrame: (): null => null,
+    useThree: <T,>(selector: (state: { camera: typeof fakeCamera }) => T): T =>
+      selector({ camera: fakeCamera }),
+  };
+});
 
 vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
