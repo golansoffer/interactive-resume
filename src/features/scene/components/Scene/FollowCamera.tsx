@@ -2,13 +2,12 @@ import type { JSX, RefObject } from 'react';
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
-import type { Object3D, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
+import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { Vector3 } from 'three';
 import { MAX_SPEED } from '../../services/renderer/integrateMotion';
 import type { Kinematics } from '../../services/renderer/integrateMotion';
 
 type FollowCameraProps = {
-  readonly targetMeshRef: RefObject<Object3D | null>;
   readonly kinematicsRef: RefObject<Kinematics>;
 };
 
@@ -58,18 +57,25 @@ const SPRING_DAMPING = 4.2;
 
 const cameraInitial: readonly [number, number, number] = [0, 6, -10];
 
+// Both chase target and look target read from the integrator position
+// (kinematics.position), NOT from the rendered mesh. The mesh adds an
+// idle-hover bob/sway on top of the integrator position; if the camera
+// tracked the mesh, the bob would cancel itself in the camera frame and
+// the world would appear to wobble instead of the ship. Reading kinematics
+// directly keeps the camera glued to controlled motion only, so the bob
+// reads as ship motion.
 const updateChaseCamera = (
   camera: PerspectiveCameraImpl,
-  target: Object3D,
   kinematics: Kinematics,
   memory: ChaseMemory,
   delta: number,
 ): void => {
   const velocity = kinematics.velocity;
+  const position = kinematics.position;
   const speed = Math.hypot(velocity.x, velocity.z);
   const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
 
-  memory.desired.copy(target.position).add(CHASE_OFFSET);
+  memory.desired.copy(position).add(CHASE_OFFSET);
   memory.desired.x += velocity.x * LATERAL_OFFSET_FACTOR;
   memory.desired.z += Math.max(0, velocity.z) * LONGITUDINAL_OFFSET_FACTOR;
   if (memory.snapped) {
@@ -100,7 +106,7 @@ const updateChaseCamera = (
   memory.cameraUp.set(Math.sin(memory.bank), Math.cos(memory.bank), 0);
   camera.up.copy(memory.cameraUp);
 
-  memory.lookTarget.copy(target.position);
+  memory.lookTarget.copy(position);
   memory.lookTarget.y += LOOK_HEIGHT;
   memory.lookTarget.x += memory.lookAheadOffset.x;
   memory.lookTarget.z += memory.lookAheadOffset.z;
@@ -125,9 +131,8 @@ export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
 
   useFrame((_root, delta) => {
     const camera = cameraRef.current;
-    const target = props.targetMeshRef.current;
-    if (camera === null || target === null) return;
-    updateChaseCamera(camera, target, props.kinematicsRef.current, memoryRef.current, delta);
+    if (camera === null) return;
+    updateChaseCamera(camera, props.kinematicsRef.current, memoryRef.current, delta);
   });
 
   return (

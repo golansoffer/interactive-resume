@@ -49,7 +49,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
       <ambientLight intensity={0.4} />
       <directionalLight position={[10, 18, 6]} intensity={1.6} castShadow={false} />
       <directionalLight position={[-8, 6, -10]} intensity={0.2} castShadow={false} />
-      <FollowCamera targetMeshRef={meshRef} kinematicsRef={kinematicsRef} />
+      <FollowCamera kinematicsRef={kinematicsRef} />
       <Player
         sceneState={props.state}
         intents={props.intents}
