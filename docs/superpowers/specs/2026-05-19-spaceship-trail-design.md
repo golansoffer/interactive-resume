@@ -70,6 +70,14 @@ If `<Trail>` were mounted outside the flip group (e.g., as a sibling of the ship
 
 The `target` prop is not used. drei's children-as-target fallback (`Trail.js:97`) finds the anchor via `ref.current.children.find(o => o instanceof Object3D)` on Trail's internal host group. No `useRef`, no `Group` import, no manual ref plumbing. The anchor's world position flows through the React-rendered transform tree exactly as any other child of the flip group would.
 
+### Forced decomposition: `usePlayerFrame` hook
+
+The pre-Trail `Player` function was at oxlint's `max-lines-per-function: 50` ceiling exactly. Adding any new JSX trips the rule. Suppressing the rule is banned (Iron Law 3); collapsing the JSX onto fewer lines does not save enough lines and fights prettier; bundling refs into options objects to extract a shallow helper is the banned "Extract Parameter Object" antipattern from CLAUDE.md.
+
+The Iron Law 4 fix is to *deepen the module*: extract the `useFrame` callback (and the camera + scratch refs that exist only to serve it) into a colocated `usePlayerFrame(props: PlayerProps): void` hook. Player's body becomes a thin shell — `useGLTF`, hook call, JSX return. Per-frame physics gets its own named contract; render output stays in the component. Two responsibilities, two functions, one file.
+
+`usePlayerFrame` takes a single `PlayerProps` argument — the natural input shape Player already receives, not an invented Cfg struct. The hook owns all per-frame state (camera handle, scratch vectors, baseline refs) internally and returns nothing; nothing flows back into Player. This is module deepening, not bundling.
+
 ## Trail tuning constants
 
 All added at file scope in `Player.tsx`, in the same style as the existing `MAX_PITCH`, `MAX_ROLL`, `HEADING_LERP` constants.
@@ -94,7 +102,7 @@ All added at file scope in `Player.tsx`, in the same style as the existing `MAX_
 There is no new data flow. The Trail is a write-only consumer of the rendered transform tree:
 
 ```
-Player useFrame
+usePlayerFrame's useFrame callback
   → mutates meshRef.current.position / .rotation
     → React-Three Fiber reconciles transforms down the tree
       → the anchor <group> (Trail's child, inside the flip group) gets a fresh world matrix
@@ -109,7 +117,7 @@ The anchor is discovered once at mount: drei's `Trail` runs an effect that reads
 - **Iron Law 1 (Hexagonal):** The trail is pure UI inside `components/Scene/`. It does not import from `api/`, `core/`, `routes/`, or any sibling component. It does not introduce a port. The renderer integrator stays untouched.
 - **Iron Law 2 (Discriminated Unions):** No new types. No optional flags. No boolean toggles.
 - **Iron Law 3 (Make Illegal States Unrepresentable):** No new states to model. The "moving / not moving" distinction is not represented at all — it's a continuous physical property handled by Trail's own sampling. There is nothing to gate, nothing to assert, nothing to default.
-- **Iron Law 4 (Design Discipline):** One file, six constants, no new ref, no helpers, no extracted component, no new props. The decoration sits with the thing it decorates. No "for now," no "stub," no `// TODO`.
+- **Iron Law 4 (Design Discipline):** One file, six constants, one colocated `usePlayerFrame` hook (extracted to satisfy the existing `max-lines-per-function` ceiling — the prescribed *deepen the module* response, not a cosmetic patch). No new ref, no extracted component, no new props. The decoration sits with the thing it decorates. No "for now," no "stub," no `// TODO`.
 
 No type-system suppressors. No `!`, no `as`, no `??` on lookups, no `eslint-disable`, no `any`. No `Group` import is needed at all — the anchor `<group>` element is reconciled by R3F without us touching the underlying type.
 

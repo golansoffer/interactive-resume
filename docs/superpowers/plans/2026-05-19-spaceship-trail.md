@@ -21,6 +21,7 @@ The spec contains drei-API discoveries that drive the constant values and the wi
 - **`attenuation`'s `t`** is `0` at the oldest sample (tail tip) and `1` at the newest sample (engine end). `(t) => t * t` therefore pinches the tail and keeps the engine full-width.
 - **Children-mode, not the `target` prop.** drei's `target?: React.RefObject<Object3D>` (non-nullable, `Trail.d.ts:16`) is incompatible with `useRef<Group>(null)` under `@types/react@19.2.14` — the React 19 overload `useRef<T>(initialValue: T | null): RefObject<T | null>` (`index.d.ts:1749`) returns a `T | null` ref, which is not assignable to `RefObject<Object3D>`. Avoiding this requires either a cast (banned by Iron Law 3) or imperative `new Group()` construction (more code). drei's children-fallback (`Trail.js:97`) — mounting the anchor as `<Trail>`'s child and letting drei find it via `children.find(o => o instanceof Object3D)` — sidesteps the typing issue entirely and is documented drei API, not a workaround. Use it.
 - **No `local`, `stride`, or `interval` props.** drei defaults are correct for our case (`local = false` samples via `anchor.getWorldPosition`, `stride = 0` and `interval = 1` sample every frame).
+- **`max-lines-per-function: 50` (oxlint, `pedantic` category) forces a `usePlayerFrame` hook extraction.** The pre-Trail `Player` function was 50 lines exactly. Any new JSX trips the rule. The Iron Law 4-prescribed fix is to deepen the module: extract Player's `useFrame` callback (plus the camera and scratch-ref setup that exists only to serve it) into a `usePlayerFrame(props: PlayerProps): void` hook colocated in `Player.tsx`. Player's body shrinks to roughly `const { scene } = useGLTF(...); usePlayerFrame(props); return (<group …>)`. Single param, no bundling — `PlayerProps` is the natural input shape, not an invented Cfg struct. Banned: param-object wrappers (`stepFrame({a, b, c, …})`), threading raw refs through positional args (>5 params), `oxlint-disable` to silence the rule.
 
 ---
 
@@ -131,25 +132,58 @@ The comment block above is the one place a `// why` comment is genuinely earned 
 
 **No new `useRef`, no new `useMemo`.** The Player component body adds no new lines in the hooks section. The anchor is purely a JSX element, discovered by drei via children-fallback after mount.
 
-- [ ] **Step 5: Replace the Player return JSX with the children-mode version.**
+- [ ] **Step 5: Extract `usePlayerFrame` hook and reshape Player's body.**
 
-The current return (around lines 160–168):
+The pre-Trail `Player` function was 50 lines exactly — the oxlint `max-lines-per-function` ceiling. Adding the Trail JSX trips the rule, and no suppressor is permitted. The Iron Law 4 fix is to *deepen the module*: move the `useFrame` callback (and the camera + scratch refs that exist only to serve it) into a colocated `usePlayerFrame(props: PlayerProps): void` hook.
 
-```tsx
-  return (
-    <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
-      <group rotation={[0, Math.PI, 0]}>
-        <Center>
-          <primitive object={scene} />
-        </Center>
-      </group>
-    </group>
-  );
+Below the existing module-scope helpers `applyHeadingLerp`, `computeRotationTargets`, etc., add the new hook *before* the `export const Player` line:
+
+```ts
+const usePlayerFrame = (props: PlayerProps): void => {
+  const camera = useThree((three) => three.camera);
+  const cameraWorldDir = useMemo(() => new Vector3(), []);
+  const forwardScratch = useMemo(() => new Vector3(), []);
+  const rightScratch = useMemo(() => new Vector3(), []);
+  const upScratch = useMemo(() => new Vector3(0, 1, 0), []);
+  const baselinePitch = useRef(0);
+  const baselineRoll = useRef(0);
+
+  useFrame((state, delta) => {
+    if (!integratesIn(props.sceneState)) return;
+    const mesh = props.meshRef.current;
+    if (mesh === null) return;
+    camera.getWorldDirection(cameraWorldDir);
+    const basis = deriveBasis(cameraWorldDir, forwardScratch, rightScratch, upScratch);
+    const next = integrateMotion(
+      props.kinematicsRef.current,
+      props.intents.current,
+      delta,
+      basis,
+    );
+    props.kinematicsRef.current = next;
+
+    const speed = Math.hypot(next.velocity.x, next.velocity.z);
+    const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
+    const idle = computeIdleMotion(speedRatio, state.clock.elapsedTime);
+    mesh.position.set(next.position.x, next.position.y + idle.bobY, next.position.z);
+
+    applyHeadingLerp(mesh, next.velocity, speed);
+
+    const target = computeRotationTargets(next.velocity, basis);
+    baselinePitch.current += (target.pitch - baselinePitch.current) * ORIENT_LERP;
+    baselineRoll.current += (target.roll - baselineRoll.current) * ORIENT_LERP;
+    mesh.rotation.x = baselinePitch.current;
+    mesh.rotation.z = baselineRoll.current + idle.swayZ;
+  });
+};
 ```
 
-Replace with:
+Then replace the entire `export const Player` function body with the new thin shell:
 
 ```tsx
+export const Player = (props: PlayerProps): JSX.Element => {
+  const { scene } = useGLTF(SHIP_PATH);
+  usePlayerFrame(props);
   return (
     <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
       <group rotation={[0, Math.PI, 0]}>
@@ -168,14 +202,16 @@ Replace with:
       </group>
     </group>
   );
+};
 ```
 
-Two key shape facts to honor:
+Three key shape facts to honor:
 
-1. **`<Trail>` is mounted inside the flip group**, not as a sibling of the ship's root group. This is structurally required: drei's children-fallback finds the anchor by walking Trail's internal host group children (`Trail.js:97`), and the anchor's world transform comes from its React parent chain. If Trail were outside the flip group, the anchor would no longer inherit ship motion or heading.
-2. **The anchor `<group position={[0, 0, TAIL_OFFSET_Z]} />` is `<Trail>`'s sole child.** No `target={ref}` prop. No `useRef`. drei finds the anchor by looking through its inner group's children for the first `Object3D`; an R3F `<group>` reconciles to `THREE.Group` (which extends `Object3D`), so the fallback selects it.
+1. **`usePlayerFrame` takes a single `PlayerProps` argument.** Not a bundled options object — `PlayerProps` is the natural input shape Player already receives. The hook owns its scratch refs, camera handle, and baselines internally; nothing flows back out (the hook's return is `void`).
+2. **`<Trail>` is mounted inside the flip group**, not as a sibling of the ship's root group. drei's children-fallback finds the anchor by walking Trail's internal host group children (`Trail.js:97`), and the anchor's world transform comes from its React parent chain. If Trail were outside the flip group, the anchor would no longer inherit ship motion or heading.
+3. **The anchor `<group position={[0, 0, TAIL_OFFSET_Z]} />` is `<Trail>`'s sole child.** No `target={ref}` prop. No `useRef`. drei finds the anchor by looking through its inner group's children for the first `Object3D`; an R3F `<group>` reconciles to `THREE.Group` (which extends `Object3D`), so the fallback selects it.
 
-No fragment is used. The root remains a single `<group ref={props.meshRef}>` exactly as before — only the inner JSX changes.
+No fragment is used. The root remains a single `<group ref={props.meshRef}>` exactly as before — only the inner JSX changes. After this step, `Player` itself is ~11 lines; `usePlayerFrame` is ~30 lines. Both under the 50-line ceiling.
 
 - [ ] **Step 6: Run the targeted smoke tests.**
 
@@ -226,6 +262,11 @@ small rear-offset <group> as its child (children-mode anchor —
 Trail.js:97). Heading lerp on the outer group carries the trail
 along automatically. 'When the ship is moving' is implicit in Trail's
 position sampling; no FSM gate, no opacity lerp.
+
+Extract Player's useFrame body into a colocated usePlayerFrame hook
+to keep both functions under the oxlint max-lines-per-function
+ceiling — Iron Law 4 'deepen the module'. Player's body becomes a
+thin shell; per-frame physics gets its own named contract.
 
 Constants chosen against drei/core/Trail.js source; children-mode
 chosen because drei's target?: RefObject<Object3D> (non-nullable) is
