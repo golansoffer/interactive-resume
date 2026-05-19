@@ -3,13 +3,13 @@ import { SHIP_IDS } from './ship';
 import type { ShipId } from './ship';
 
 describe('SHIP_IDS', () => {
-  it('lists exactly 8 ships', () => {
-    expect(SHIP_IDS).toHaveLength(8);
+  it('lists exactly 5 ships', () => {
+    expect(SHIP_IDS).toHaveLength(5);
   });
 
   it('contains the expected ids', () => {
     expect([...SHIP_IDS]).toEqual([
-      'speederA', 'speederB', 'speederC', 'speederD',
+      'speederA',
       'cargoA', 'cargoB',
       'racer', 'miner',
     ]);

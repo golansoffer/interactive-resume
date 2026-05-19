@@ -29,7 +29,7 @@ describe('ShipSelector', () => {
         onPick={noop}
       />,
     );
-    expect(screen.getAllByRole('button')).toHaveLength(8);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
   });
 
   it('marks only the hovered card with data-hovered=true', () => {

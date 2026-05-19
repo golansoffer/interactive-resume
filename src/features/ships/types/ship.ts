@@ -1,8 +1,5 @@
 export const SHIP_IDS = [
   'speederA',
-  'speederB',
-  'speederC',
-  'speederD',
   'cargoA',
   'cargoB',
   'racer',
