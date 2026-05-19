@@ -17,24 +17,74 @@ const CANVAS_STYLE: CSSProperties = {
   pointerEvents: 'none',
 };
 
+// Two soft radial pools (warm-ish top-left, cool bottom-right) over the
+// base bg — gives the page depth without going full starfield.
+const BACKDROP_STYLE: CSSProperties = {
+  background:
+    'radial-gradient(80% 60% at 30% 20%, #0b1422 0%, transparent 60%), ' +
+    'radial-gradient(60% 50% at 80% 80%, #0a1830 0%, transparent 70%), ' +
+    'linear-gradient(180deg, #04050a 0%, #060912 100%)',
+};
+
 const containerClassName = cn(
-  'relative flex h-screen w-screen flex-col items-center justify-center gap-8',
-  'bg-[--color-bg] text-[--color-fg] p-8 overflow-auto',
+  'relative flex h-screen w-screen flex-col items-stretch',
+  'text-[--color-fg] overflow-auto',
 );
-const titleClassName = 'text-3xl font-semibold tracking-tight';
+
+const headerClassName = cn(
+  'flex w-full max-w-6xl flex-col gap-2 self-center',
+  'px-8 pt-10 md:pt-14',
+);
+
+const eyebrowClassName = cn(
+  'font-mono text-[10px] tracking-[0.4em] uppercase text-[--color-accent]/70',
+);
+
+const titleClassName = cn(
+  'text-3xl md:text-4xl font-semibold tracking-tight text-[--color-fg]',
+);
+
+const subtitleClassName = cn(
+  'text-sm tracking-wide text-[--color-fg]/60',
+);
+
+const bodyClassName = cn(
+  'flex w-full flex-1 items-center justify-center self-center',
+  'px-8 py-10 md:py-12',
+);
+
+// HUD corner brackets — four L-shapes pinned to the edges. Pure
+// decoration; the accent color picks up the cyan ship-wake.
+const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-[--color-accent]/40');
+const cornerTopLeft = cn(cornerClassName, 'left-4 top-4 border-l border-t');
+const cornerTopRight = cn(cornerClassName, 'right-4 top-4 border-r border-t');
+const cornerBottomLeft = cn(cornerClassName, 'bottom-4 left-4 border-b border-l');
+const cornerBottomRight = cn(cornerClassName, 'bottom-4 right-4 border-b border-r');
 
 export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element => {
   const { ships, hover, onHoverEnter, onHoverLeave } = useShipSelector();
   return (
-    <div className={containerClassName}>
-      <h1 className={titleClassName}>Choose your ship</h1>
-      <ShipSelector
-        ships={ships}
-        hover={hover}
-        onHoverEnter={onHoverEnter}
-        onHoverLeave={onHoverLeave}
-        onPick={props.onPick}
-      />
+    <div className={containerClassName} style={BACKDROP_STYLE}>
+      <span className={cornerTopLeft} aria-hidden="true" />
+      <span className={cornerTopRight} aria-hidden="true" />
+      <span className={cornerBottomLeft} aria-hidden="true" />
+      <span className={cornerBottomRight} aria-hidden="true" />
+      <header className={headerClassName}>
+        <span className={eyebrowClassName}>{'// FLEET REGISTRY'}</span>
+        <h1 className={titleClassName}>Choose your ship</h1>
+        <p className={subtitleClassName}>
+          Five crafts. Pick one. Your runner for the tour.
+        </p>
+      </header>
+      <main className={bodyClassName}>
+        <ShipSelector
+          ships={ships}
+          hover={hover}
+          onHoverEnter={onHoverEnter}
+          onHoverLeave={onHoverLeave}
+          onPick={props.onPick}
+        />
+      </main>
       <Canvas style={CANVAS_STYLE} dpr={[1, 2]}>
         <View.Port />
       </Canvas>

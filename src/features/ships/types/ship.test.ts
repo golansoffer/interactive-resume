@@ -37,13 +37,13 @@ describe('shipCode', () => {
   });
 
   it('produces a unique code per ship', () => {
-    const codes = SHIP_IDS.map(shipCode);
+    const codes = SHIP_IDS.map((id) => shipCode(id));
     expect(new Set(codes).size).toBe(SHIP_IDS.length);
   });
 
   it('produces uppercase codes with only [A-Z-]', () => {
     for (const id of SHIP_IDS) {
-      expect(shipCode(id)).toMatch(/^[A-Z-]+$/);
+      expect(shipCode(id)).toMatch(/^[A-Z-]+$/u);
     }
   });
 });

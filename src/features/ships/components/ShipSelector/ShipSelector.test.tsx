@@ -19,7 +19,7 @@ const thumbnailButtons = (): ReadonlyArray<HTMLElement> =>
   screen.getAllByRole('button').filter((b) => b.dataset['hovered'] !== undefined);
 
 const launchButton = (): HTMLElement =>
-  screen.getByRole('button', { name: /launch this craft/i });
+  screen.getByRole('button', { name: /launch this craft/iu });
 
 afterEach(() => {
   cleanup();

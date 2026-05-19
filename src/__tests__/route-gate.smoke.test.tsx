@@ -112,14 +112,15 @@ describe('route gate', () => {
     expect(await screen.findByText('Choose your ship')).toBeDefined();
   });
 
-  it('clicking a card navigates to ?ship=<id>', async () => {
+  it('clicking the launch button navigates to ?ship=<id>', async () => {
     const { ui, router } = mountAt('/');
     render(ui);
-    const card = await screen.findByText('Speeder A');
-    fireEvent.click(card);
+    const launch = await screen.findByRole('button', { name: /launch this craft/iu });
+    fireEvent.click(launch);
     await new Promise((r) => {
       setTimeout(r, 0);
     });
+    // Default featured ship is Speeder A (no hover); launch commits that pick.
     expect(router.state.location.search).toEqual({ ship: 'speederA' });
   });
 });

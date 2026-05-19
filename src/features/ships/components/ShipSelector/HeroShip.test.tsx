@@ -31,19 +31,19 @@ describe('HeroShip', () => {
 
   it('renders the launch button labeled "Launch this craft"', () => {
     render(<HeroShip ship={SHIP} onPick={(): void => {}} />);
-    expect(screen.getByRole('button', { name: /launch this craft/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /launch this craft/iu })).toBeDefined();
   });
 
   it('button has type=button', () => {
     render(<HeroShip ship={SHIP} onPick={(): void => {}} />);
-    const btn = screen.getByRole('button', { name: /launch this craft/i });
+    const btn = screen.getByRole('button', { name: /launch this craft/iu });
     expect(btn.getAttribute('type')).toBe('button');
   });
 
   it('calls onPick(ship.id) when the launch button is clicked', () => {
     const onPick = vi.fn();
     render(<HeroShip ship={SHIP} onPick={onPick} />);
-    fireEvent.click(screen.getByRole('button', { name: /launch this craft/i }));
+    fireEvent.click(screen.getByRole('button', { name: /launch this craft/iu }));
     expect(onPick).toHaveBeenCalledTimes(1);
     expect(onPick).toHaveBeenCalledWith('cargoB');
   });
