@@ -97,7 +97,7 @@ describe('Scene — port purity at mount', () => {
   });
 
   it('does not replace the IntentStream object identity or write to its current set', () => {
-    const initialSet = new Set<'thrust_forward'>();
+    const initialSet = new Set<'move_forward'>();
     const intents: IntentStream = { current: initialSet };
     mount({ kind: 'playing' }, twoCompanies(), intents, vi.fn());
     expect(intents.current).toBe(initialSet);

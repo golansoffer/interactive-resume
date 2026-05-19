@@ -67,15 +67,14 @@ describe('subscribeToKeyboard', () => {
 
   describe('continuous keys — intent_down on press', () => {
     const cases: ReadonlyArray<{ code: string; intent: Intent['kind'] }> = [
-      { code: 'KeyW', intent: 'thrust_forward' },
-      { code: 'ArrowUp', intent: 'thrust_forward' },
-      { code: 'KeyS', intent: 'thrust_backward' },
-      { code: 'ArrowDown', intent: 'thrust_backward' },
-      { code: 'KeyA', intent: 'turn_left' },
-      { code: 'ArrowLeft', intent: 'turn_left' },
-      { code: 'KeyD', intent: 'turn_right' },
-      { code: 'ArrowRight', intent: 'turn_right' },
-      { code: 'Space', intent: 'brake' },
+      { code: 'KeyW', intent: 'move_forward' },
+      { code: 'ArrowUp', intent: 'move_forward' },
+      { code: 'KeyS', intent: 'move_backward' },
+      { code: 'ArrowDown', intent: 'move_backward' },
+      { code: 'KeyA', intent: 'strafe_left' },
+      { code: 'ArrowLeft', intent: 'strafe_left' },
+      { code: 'KeyD', intent: 'strafe_right' },
+      { code: 'ArrowRight', intent: 'strafe_right' },
     ];
 
     cases.forEach(({ code, intent }) => {
@@ -89,15 +88,14 @@ describe('subscribeToKeyboard', () => {
 
   describe('continuous keys — intent_up on release', () => {
     const cases: ReadonlyArray<{ code: string; intent: Intent['kind'] }> = [
-      { code: 'KeyW', intent: 'thrust_forward' },
-      { code: 'ArrowUp', intent: 'thrust_forward' },
-      { code: 'KeyS', intent: 'thrust_backward' },
-      { code: 'ArrowDown', intent: 'thrust_backward' },
-      { code: 'KeyA', intent: 'turn_left' },
-      { code: 'ArrowLeft', intent: 'turn_left' },
-      { code: 'KeyD', intent: 'turn_right' },
-      { code: 'ArrowRight', intent: 'turn_right' },
-      { code: 'Space', intent: 'brake' },
+      { code: 'KeyW', intent: 'move_forward' },
+      { code: 'ArrowUp', intent: 'move_forward' },
+      { code: 'KeyS', intent: 'move_backward' },
+      { code: 'ArrowDown', intent: 'move_backward' },
+      { code: 'KeyA', intent: 'strafe_left' },
+      { code: 'ArrowLeft', intent: 'strafe_left' },
+      { code: 'KeyD', intent: 'strafe_right' },
+      { code: 'ArrowRight', intent: 'strafe_right' },
     ];
 
     cases.forEach(({ code, intent }) => {
@@ -117,7 +115,7 @@ describe('subscribeToKeyboard', () => {
       target.dispatchEvent(keyDownEvent({ code: 'KeyW', repeat: true }));
       target.dispatchEvent(keyDownEvent({ code: 'KeyW', repeat: true }));
       const downCalls = onSignal.mock.calls.filter(
-        ([signal]) => signal.kind === 'intent_down' && signal.intent === 'thrust_forward',
+        ([signal]) => signal.kind === 'intent_down' && signal.intent === 'move_forward',
       );
       expect(downCalls).toHaveLength(1);
     });
@@ -127,7 +125,15 @@ describe('subscribeToKeyboard', () => {
       target.dispatchEvent(keyUpEvent({ code: 'KeyW' }));
       onSignal.mockClear();
       target.dispatchEvent(keyDownEvent({ code: 'KeyW' }));
-      expect(onSignal).toHaveBeenCalledWith({ kind: 'intent_down', intent: 'thrust_forward' });
+      expect(onSignal).toHaveBeenCalledWith({ kind: 'intent_down', intent: 'move_forward' });
+    });
+  });
+
+  describe('Space — unbound after switching to camera-relative controls', () => {
+    it('does not invoke onSignal when Space is pressed or released', () => {
+      target.dispatchEvent(keyDownEvent({ code: 'Space' }));
+      target.dispatchEvent(keyUpEvent({ code: 'Space' }));
+      expect(onSignal).not.toHaveBeenCalled();
     });
   });
 

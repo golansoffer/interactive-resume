@@ -1,10 +1,9 @@
 import type { Intent } from '../../types/intent';
 import type { Vec3 } from './vec3';
 
-export const MAX_SPEED = 20;
-export const ACCELERATION = 12;
-export const BRAKE_RATE = 8;
-export const TURN_RATE = Math.PI;
+export const MAX_SPEED = 14;
+export const ACCELERATION = 120;
+export const DECELERATION = 140;
 
 export type Kinematics = {
   readonly position: Vec3;
@@ -12,79 +11,67 @@ export type Kinematics = {
   readonly heading: number;
 };
 
-const forward = (heading: number): Vec3 => ({
-  x: Math.sin(heading),
-  y: 0,
-  z: Math.cos(heading),
-});
-
-const accelerationFromIntents = (
-  intents: ReadonlySet<Intent['kind']>,
-  heading: number,
-): Vec3 => {
-  const fwd = forward(heading);
-  const thrustForward = intents.has('thrust_forward') ? 1 : 0;
-  const thrustBackward = intents.has('thrust_backward') ? 1 : 0;
-  const net = thrustForward - thrustBackward;
-  return {
-    x: fwd.x * ACCELERATION * net,
-    y: fwd.y * ACCELERATION * net,
-    z: fwd.z * ACCELERATION * net,
-  };
+export type CameraBasis = {
+  readonly forward: Vec3;
+  readonly right: Vec3;
 };
 
-const applyBrake = (
-  velocity: Vec3,
+const ZERO_VEC: Vec3 = { x: 0, y: 0, z: 0 };
+
+const desiredDirection = (
   intents: ReadonlySet<Intent['kind']>,
+  basis: CameraBasis,
+): Vec3 => {
+  const f = (intents.has('move_forward') ? 1 : 0) - (intents.has('move_backward') ? 1 : 0);
+  const r = (intents.has('strafe_right') ? 1 : 0) - (intents.has('strafe_left') ? 1 : 0);
+  const x = basis.forward.x * f + basis.right.x * r;
+  const y = basis.forward.y * f + basis.right.y * r;
+  const z = basis.forward.z * f + basis.right.z * r;
+  const magnitude = Math.hypot(x, y, z);
+  if (magnitude === 0) return ZERO_VEC;
+  return { x: x / magnitude, y: y / magnitude, z: z / magnitude };
+};
+
+const stepToward = (current: number, target: number, maxStep: number): number => {
+  const delta = target - current;
+  if (delta > maxStep) return current + maxStep;
+  if (delta < -maxStep) return current - maxStep;
+  return target;
+};
+
+const snapVelocity = (
+  velocity: Vec3,
+  target: Vec3,
+  rate: number,
   dt: number,
 ): Vec3 => {
-  if (!intents.has('brake')) return velocity;
-  const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
-  if (speed === 0) return velocity;
-  const reduced = speed - BRAKE_RATE * dt;
-  const factor = reduced > 0 ? reduced / speed : 0;
+  const maxStep = rate * dt;
   return {
-    x: velocity.x * factor,
-    y: velocity.y * factor,
-    z: velocity.z * factor,
+    x: stepToward(velocity.x, target.x, maxStep),
+    y: stepToward(velocity.y, target.y, maxStep),
+    z: stepToward(velocity.z, target.z, maxStep),
   };
-};
-
-const clampSpeed = (velocity: Vec3): Vec3 => {
-  const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
-  if (speed <= MAX_SPEED) return velocity;
-  const factor = MAX_SPEED / speed;
-  return {
-    x: velocity.x * factor,
-    y: velocity.y * factor,
-    z: velocity.z * factor,
-  };
-};
-
-const turnDelta = (intents: ReadonlySet<Intent['kind']>, dt: number): number => {
-  const left = intents.has('turn_left') ? 1 : 0;
-  const right = intents.has('turn_right') ? 1 : 0;
-  return (left - right) * TURN_RATE * dt;
 };
 
 export const integrateMotion = (
   state: Kinematics,
   intents: ReadonlySet<Intent['kind']>,
   dt: number,
+  basis: CameraBasis,
 ): Kinematics => {
-  const accel = accelerationFromIntents(intents, state.heading);
-  const integrated: Vec3 = {
-    x: state.velocity.x + accel.x * dt,
-    y: state.velocity.y + accel.y * dt,
-    z: state.velocity.z + accel.z * dt,
+  const direction = desiredDirection(intents, basis);
+  const targetVelocity: Vec3 = {
+    x: direction.x * MAX_SPEED,
+    y: direction.y * MAX_SPEED,
+    z: direction.z * MAX_SPEED,
   };
-  const braked = applyBrake(integrated, intents, dt);
-  const velocity = clampSpeed(braked);
+  const pushing = intents.size > 0 && (direction.x !== 0 || direction.y !== 0 || direction.z !== 0);
+  const rate = pushing ? ACCELERATION : DECELERATION;
+  const velocity = snapVelocity(state.velocity, targetVelocity, rate, dt);
   const position: Vec3 = {
     x: state.position.x + velocity.x * dt,
     y: state.position.y + velocity.y * dt,
     z: state.position.z + velocity.z * dt,
   };
-  const heading = state.heading + turnDelta(intents, dt);
-  return { position, velocity, heading };
+  return { position, velocity, heading: state.heading };
 };

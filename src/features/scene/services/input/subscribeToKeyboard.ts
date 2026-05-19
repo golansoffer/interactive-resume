@@ -10,18 +10,16 @@ const classify = (code: string): KeyClassification => {
   switch (code) {
     case 'KeyW':
     case 'ArrowUp':
-      return { kind: 'continuous', intent: 'thrust_forward' };
+      return { kind: 'continuous', intent: 'move_forward' };
     case 'KeyS':
     case 'ArrowDown':
-      return { kind: 'continuous', intent: 'thrust_backward' };
+      return { kind: 'continuous', intent: 'move_backward' };
     case 'KeyA':
     case 'ArrowLeft':
-      return { kind: 'continuous', intent: 'turn_left' };
+      return { kind: 'continuous', intent: 'strafe_left' };
     case 'KeyD':
     case 'ArrowRight':
-      return { kind: 'continuous', intent: 'turn_right' };
-    case 'Space':
-      return { kind: 'continuous', intent: 'brake' };
+      return { kind: 'continuous', intent: 'strafe_right' };
     case 'KeyE':
       return { kind: 'discrete', command: { kind: 'interact' } };
     case 'Escape':
