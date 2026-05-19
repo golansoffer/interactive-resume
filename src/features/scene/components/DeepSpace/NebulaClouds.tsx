@@ -6,7 +6,7 @@ import { MeshBasicMaterial } from 'three';
 import type { Group } from 'three';
 import type { NebulaPalette } from '../../services/renderer/deepSpacePalette';
 
-const RING_RADIUS = 90;
+const RING_RADIUS = 300;
 const ROTATION_RATE = 0.01;
 
 type TintSelector = 'base' | 'accent' | 'highlight';
@@ -17,11 +17,8 @@ type CloudSlot = {
 };
 
 const CLOUD_LAYOUT: ReadonlyArray<CloudSlot> = [
-  { y: -12, tint: 'base' },
-  { y: -6, tint: 'accent' },
-  { y: 0, tint: 'highlight' },
-  { y: 6, tint: 'accent' },
-  { y: 12, tint: 'highlight' },
+  { y: -10, tint: 'accent' },
+  { y: 10,  tint: 'highlight' },
 ];
 
 type CloudPlacement = {
@@ -67,13 +64,13 @@ export const NebulaClouds = (props: NebulaCloudsProps): JSX.Element => {
             key={i}
             position={p.position}
             seed={i + 1}
-            segments={20}
-            bounds={[35, 12, 35]}
-            volume={45}
+            segments={30}
+            bounds={[120, 40, 120]}
+            volume={140}
             color={toHexColor(p.color)}
-            opacity={0.55 * props.intensity}
-            growth={4}
-            speed={0.08}
+            opacity={0.32 * props.intensity}
+            growth={6}
+            speed={0.04}
             concentrate="outside"
           />
         ))}

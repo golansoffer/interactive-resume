@@ -34,7 +34,7 @@ export const DeepSpace = (props: DeepSpaceProps): JSX.Element => {
     const g = anchorRef.current;
     if (g === null) return;
     g.position.copy(camera.position);
-  });
+  }, 1);
 
   return (
     <>
