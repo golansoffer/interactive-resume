@@ -30,7 +30,7 @@ No new props on `PlayerProps`. No changes to `Scene.tsx`, `useSceneRefs.ts`, or 
 
 ### JSX shape change
 
-Player's return changes from a single root `<group>` to a fragment containing the existing rig **plus** a sibling `<Trail …/>`. The Trail must sit outside the transformed parent because `drei` renders it in canvas-root space — nesting it under the ship's `<group ref={meshRef}>` would compound the ship's transform on top of the Trail's own sampling math.
+Player's return changes from a single root `<group>` to a fragment containing the existing rig **plus** a sibling `<Trail …/>`. drei internally `createPortal`s the line mesh into the canvas-root scene (`Trail.js:141`), so the rendered streak is always in world space regardless of where `<Trail>` itself is mounted. Placement is therefore a clarity choice, not a correctness one — we render `<Trail>` as a sibling of the ship's root group so the JSX reads as "ship rig, plus a world-space decoration that tracks part of the rig", not "ship rig containing a side-channel scene-root effect".
 
 ```tsx
 return (
@@ -77,16 +77,22 @@ The `Group` type is imported from `three`. The ref is read by `Trail` via its `t
 
 ## Trail tuning constants
 
-All added at file scope in `Player.tsx`, in the same style as the existing `MAX_PITCH`, `MAX_ROLL`, `HEADING_LERP` constants:
+All added at file scope in `Player.tsx`, in the same style as the existing `MAX_PITCH`, `MAX_ROLL`, `HEADING_LERP` constants.
+
+**Important drei-API notes that drive the values:**
+
+- `length` is **not** in seconds. drei allocates a position buffer of `length * 10` samples (`Trail.js:34`). At `decay = 4`, drei pushes 4 samples per frame (`Trail.js:52`). Effective trail duration at 60 fps = `(length * 10) / (decay * 60)`. To get ~0.6 s of memory at decay 4, length must be ~14.4.
+- `width` is **internally multiplied by 0.1** when drei builds the MeshLineMaterial (`Trail.js:108`). With `sizeAttenuation = 1` (perspective-scaled world units), the prop value `1` corresponds to a `0.1` world-unit MeshLine. To get a streak ~0.2 world units wide (≈ ⅙ ship width), the prop value must be ~2.0.
+- `attenuation`'s `t` is normalized position along the line: `t = 0` at the oldest sample (tail tip) and `t = 1` at the newest sample (engine end). `(t) => t * t` therefore pinches the tail and keeps the engine full-width — the engine-wake shape.
 
 | Constant | Value | Rationale |
 |---|---|---|
-| `TAIL_OFFSET_Z` | `0.4` | Empirically the rear of the speeder model post `Center` + scale 0.6. Visual tweakability is a one-line change. |
-| `TRAIL_WIDTH` | `0.18` | About ¼ of ship width. Focused streak, not a banner. |
-| `TRAIL_LENGTH` | `0.6` | Seconds of history retained. At `MAX_SPEED = 14`, that's ~8.4 world units of trail at full speed — roughly 7× ship length. Long enough to read, short enough not to fill the view. |
-| `TRAIL_COLOR` | `'#5fd6ff'` | Cyan engine glow on the `#04050a` space background. |
-| `TRAIL_DECAY` | `4` | Higher than the drei default of `1`. Trail collapses quickly when the ship slows → engine reads as responsive, not languid. |
-| `TRAIL_ATTENUATION` | `(t) => t * t` | Quadratic taper: full width at the engine end, sharp pinch to a point at the tail tip. Reads as an engine wake rather than a uniform-width line. |
+| `TAIL_OFFSET_Z` | `0.4` | Local +Z inside the flip group → the rear of the speeder model post `Center` + scale 0.6. Visually tunable in a one-line change. |
+| `TRAIL_WIDTH` | `2.0` | drei applies `lineWidth = 0.1 * width`. `2.0 → 0.2` world-unit lineWidth ≈ ⅙ ship width. Focused streak, not a banner. |
+| `TRAIL_LENGTH` | `15` | Buffer of `150` samples. At `decay = 4` and 60 fps, holds ~0.625 s of history. At `MAX_SPEED = 14`, that's ~8.7 world units of trail at full speed — roughly 7× ship length. |
+| `TRAIL_COLOR` | `'#5fd6ff'` | Cyan engine glow on the `#04050a` space background. Passed as `ColorRepresentation` string (drei accepts hex strings, numbers, or `Color` instances). |
+| `TRAIL_DECAY` | `4` | Samples-per-frame multiplier. Higher than the drei default of `1` so older samples are flushed faster — when the ship slows, the trail collapses snappily. Paired with the larger buffer (length 15) to keep the steady-state spatial extent the same. |
+| `TRAIL_ATTENUATION` | `(t) => t * t` | Quadratic taper: tail tip pinches to zero width, engine end at full width. Reads as an engine wake rather than a uniform line. |
 
 ## Data flow
 
@@ -111,6 +117,19 @@ No props, no events, no callbacks. The ship moves; the trail follows. The reduce
 - **Iron Law 4 (Design Discipline):** One file, one ref, six constants, no helpers, no extracted component, no new props. The decoration sits with the thing it decorates. No "for now," no "stub," no `// TODO`.
 
 No type-system suppressors. No `!`, no `as`, no `??` on lookups, no `eslint-disable`, no `any`. All new types are concrete (`Group` from `three`, the `Trail` props from `@react-three/drei`).
+
+## Library API conformance
+
+This section records explicit choices about using `@react-three/drei`'s `Trail` the way the library intends — not how a copy-pasted online snippet might suggest.
+
+- **`target` prop, not children-as-target.** drei supports two modes (`Trail.js:97`): pass `target={ref}` *or* let drei auto-pick the first `Object3D` child of `<Trail>`. We use `target` because the anchor must live inside the ship's flip group to inherit yaw lerp; the children mode would force the anchor to be a child of `<Trail>`, which would put it outside the ship rig and require us to reconstruct the heading transform manually. The `target` mode is the documented way to anchor a Trail to an Object3D elsewhere in the scene graph.
+- **`useRef<Group>(null)`, not `useRef<Object3D | null>` or a cast.** drei's prop is typed `React.RefObject<Object3D>` (`Trail.d.ts:16`). `Group` extends `Object3D` and `RefObject` is covariant (it has only a readonly `current`), so `RefObject<Group>` is structurally assignable to `RefObject<Object3D>`. No `as`, no `!`, no `as unknown as`. The narrower type (`Group`) is preferred so any future read of `tailRef.current` from inside Player gets the precise type.
+- **No `local` prop override.** drei's default is `local = false` → samples taken via `target.getWorldPosition()` (`Trail.js:49`). World-space sampling is what we want; the trail is a world-space wake. Setting `local = true` would sample `target.position` (the local position inside the flip group, a constant `[0, 0, 0.4]`) — the trail would never move. Leaving it at its default is correct.
+- **No `stride` or `interval` override.** Defaults (`stride = 0`, `interval = 1`) sample every frame regardless of distance moved. With our ship motion (continuous and smooth), neither knob earns its keep. They'd matter for very slow targets where you'd want to skip stationary samples — not us.
+- **No `<meshLineMaterial>` children override.** drei supports overriding the default material via a child `<meshLineMaterial>` element (`Trail.js:116–131`). We don't pass one because the top-level `color` prop is the documented way to set color, and we need no other material props. Passing children "just to be thorough" would add a moving part with no behavior change.
+- **One forwarded `ref` opportunity declined.** drei exports `Trail` as a `ForwardRefComponent<…, MeshLineGeometry>` (`Trail.d.ts:20`) — you can grab the underlying `MeshLineGeometry` via `ref`. We don't need it; we don't mutate the geometry, we don't query it. Skipping it keeps the API surface in Player one prop narrower.
+
+These choices are the path the drei API was designed around. No `@ts-ignore`, no `eslint-disable`, no patches over a mismatch, no "stub for X". If a future requirement needs a different mode (e.g. `local`-space sampling for a child rig), the spec for that change should re-evaluate from scratch.
 
 ## Testing
 
