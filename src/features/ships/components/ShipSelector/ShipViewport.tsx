@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { Center, PerspectiveCamera, useGLTF } from '@react-three/drei';
 import type { Group } from 'three';
 import type { ShipEntry } from '../../types/ship';
-import { tickRotation } from './ShipViewport';
+import { tickRotation } from './tickRotation';
 
 type ShipViewportProps = {
   readonly ship: ShipEntry;

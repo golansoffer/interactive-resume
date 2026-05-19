@@ -4,7 +4,7 @@ import {
   REST_LERP,
   STATIC_ANGLE_Y,
   tickRotation,
-} from './ShipViewport';
+} from './tickRotation';
 
 const TWO_PI = Math.PI * 2;
 
