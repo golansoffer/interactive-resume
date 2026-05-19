@@ -24,11 +24,29 @@ vi.mock('@react-three/fiber', () => {
 type MockScene = {
   readonly placeholder: true;
   readonly clone: () => MockScene;
+  readonly traverse: (callback: (obj: unknown) => void) => void;
 };
 
 const mockScene: MockScene = {
   placeholder: true,
   clone: (): MockScene => mockScene,
+  traverse: (): void => {
+    // no children in the mock; the callback is intentionally not invoked
+  },
+};
+
+type MockTexture = {
+  magFilter: number;
+  minFilter: number;
+  colorSpace: string;
+  needsUpdate: boolean;
+};
+
+const mockTexture: MockTexture = {
+  magFilter: 0,
+  minFilter: 0,
+  colorSpace: '',
+  needsUpdate: false,
 };
 
 vi.mock('@react-three/drei', () => ({
@@ -37,6 +55,10 @@ vi.mock('@react-three/drei', () => ({
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
     (): { readonly scene: MockScene } => ({ scene: mockScene }),
+    { preload: (): void => {} },
+  ),
+  useTexture: Object.assign(
+    (): MockTexture => mockTexture,
     { preload: (): void => {} },
   ),
 }));

@@ -1,8 +1,9 @@
 import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Center, useGLTF } from '@react-three/drei';
-import type { Object3D } from 'three';
+import { Center, useGLTF, useTexture } from '@react-three/drei';
+import { Mesh, MeshStandardMaterial, NearestFilter, SRGBColorSpace } from 'three';
+import type { Object3D, Texture } from 'three';
 import type { PlanetAssetId } from '../../types/planet';
 import type { PlanetProjection } from '../../types/projections';
 
@@ -49,6 +50,25 @@ const PLANET_PATHS: Record<PlanetAssetId, string> = {
   venus_b: '/models/planets/EA05_Planets_Venus_01b.glb',
 };
 
+const COLORSHEET_PATH = '/models/planets/Texture/Planet_Colorsheet_v1.jpg';
+
+// Clones the GLB scene tree and, per mesh whose material is a
+// MeshStandardMaterial, clones that material and assigns the colorsheet
+// texture. Per-instance material clones prevent two <Planet>s of the same
+// asset id from sharing material mutations through the drei useGLTF cache.
+const applyColorsheet = (sourceScene: Object3D, texture: Texture): Object3D => {
+  const cloned = sourceScene.clone();
+  cloned.traverse((obj) => {
+    if (obj instanceof Mesh && obj.material instanceof MeshStandardMaterial) {
+      const newMaterial = obj.material.clone();
+      newMaterial.map = texture;
+      newMaterial.needsUpdate = true;
+      obj.material = newMaterial;
+    }
+  });
+  return cloned;
+};
+
 const idEncoder = new TextEncoder();
 
 const phaseFromId = (id: string): number => {
@@ -62,10 +82,20 @@ const phaseFromId = (id: string): number => {
 export const Planet = (props: PlanetProps): JSX.Element => {
   const path = PLANET_PATHS[props.planet.planet.assetId];
   const { scene } = useGLTF(path);
+  const colorsheet = useTexture(COLORSHEET_PATH);
   // drei's useGLTF caches one THREE.Group per path. `<primitive object={...}>`
   // mounts the actual Object3D, so two <Planet>s sharing the same assetId would
   // otherwise mount the same node twice. Cloning per instance keeps them isolated.
-  const clonedScene = useMemo(() => scene.clone(), [scene]);
+  // Texture configuration lives inside the useMemo: the writes are idempotent
+  // across all Planet instances (drei's useTexture singleton-caches), and
+  // Planet is a component — useEffect is banned outside widget composition roots.
+  const clonedScene = useMemo(() => {
+    colorsheet.magFilter = NearestFilter;
+    colorsheet.minFilter = NearestFilter;
+    colorsheet.colorSpace = SRGBColorSpace;
+    colorsheet.needsUpdate = true;
+    return applyColorsheet(scene, colorsheet);
+  }, [scene, colorsheet]);
   const meshRef = useRef<Object3D | null>(null);
   const phase = useMemo(() => phaseFromId(props.planet.id), [props.planet.id]);
 
@@ -92,6 +122,7 @@ export const Planet = (props: PlanetProps): JSX.Element => {
 
 // Preload all 22 planet GLBs at module import so fetches start before
 // the first <Planet> mounts.
+useTexture.preload(COLORSHEET_PATH);
 for (const path of Object.values(PLANET_PATHS)) {
   useGLTF.preload(path);
 }
