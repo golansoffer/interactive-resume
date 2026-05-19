@@ -7,7 +7,7 @@ import {
   TWO_PI,
   easeOutCubic,
   tickRotation,
-  transitionScale,
+  transitionOpacity,
 } from './tickRotation';
 
 describe('tickRotation', () => {
@@ -74,29 +74,57 @@ describe('easeOutCubic', () => {
   });
 });
 
-describe('transitionScale', () => {
-  it('returns 0 at t = 0 (mesh starts invisible)', () => {
-    expect(transitionScale(1, 0)).toBe(0);
+describe('transitionOpacity', () => {
+  it('fading_in starts at 0 when t <= 0', () => {
+    expect(transitionOpacity('fading_in', 0)).toBe(0);
+    expect(transitionOpacity('fading_in', -100)).toBe(0);
   });
 
-  it('returns the target scale at and beyond the transition duration', () => {
-    expect(transitionScale(1, HERO_TRANSITION_MS)).toBe(1);
-    expect(transitionScale(0.6, HERO_TRANSITION_MS + 5000)).toBe(0.6);
+  it('fading_out starts at 1 when t <= 0', () => {
+    expect(transitionOpacity('fading_out', 0)).toBe(1);
+    expect(transitionOpacity('fading_out', -100)).toBe(1);
   });
 
-  it('clamps negative elapsed values to 0', () => {
-    expect(transitionScale(1, -100)).toBe(0);
+  it('fading_in lands at 1 at and beyond the transition duration', () => {
+    expect(transitionOpacity('fading_in', HERO_TRANSITION_MS)).toBe(1);
+    expect(transitionOpacity('fading_in', HERO_TRANSITION_MS + 5000)).toBe(1);
   });
 
-  it('scales the target value by the ease curve mid-transition', () => {
-    const half = transitionScale(1, HERO_TRANSITION_MS / 2);
-    expect(half).toBeGreaterThan(0.5);
-    expect(half).toBeLessThan(1);
+  it('fading_out lands at 0 at and beyond the transition duration', () => {
+    expect(transitionOpacity('fading_out', HERO_TRANSITION_MS)).toBe(0);
+    expect(transitionOpacity('fading_out', HERO_TRANSITION_MS + 5000)).toBe(0);
   });
 
-  it('respects target scale magnitude', () => {
-    const small = transitionScale(0.5, HERO_TRANSITION_MS / 2);
-    const large = transitionScale(1, HERO_TRANSITION_MS / 2);
-    expect(small).toBeCloseTo(large * 0.5, 10);
+  it('fading_in and fading_out are reflections — their sum is 1 across the interval', () => {
+    for (let t = 0; t <= HERO_TRANSITION_MS; t += 25) {
+      const sum = transitionOpacity('fading_in', t) + transitionOpacity('fading_out', t);
+      expect(sum).toBeCloseTo(1, 10);
+    }
+  });
+
+  it('fading_in is monotonically non-decreasing', () => {
+    let prev = transitionOpacity('fading_in', 0);
+    for (let t = 10; t <= HERO_TRANSITION_MS; t += 10) {
+      const v = transitionOpacity('fading_in', t);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('fading_out is monotonically non-increasing', () => {
+    let prev = transitionOpacity('fading_out', 0);
+    for (let t = 10; t <= HERO_TRANSITION_MS; t += 10) {
+      const v = transitionOpacity('fading_out', t);
+      expect(v).toBeLessThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('produces a value strictly inside (0, 1) at the midpoint', () => {
+    const mid = transitionOpacity('fading_in', HERO_TRANSITION_MS / 2);
+    expect(mid).toBeGreaterThan(0);
+    expect(mid).toBeLessThan(1);
+    // ease-out cubic at t=0.5 is past linear midpoint
+    expect(mid).toBeGreaterThan(0.5);
   });
 });

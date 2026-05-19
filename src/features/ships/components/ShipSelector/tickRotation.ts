@@ -7,22 +7,26 @@ export const HOVER_SPEED = 1.5;
 // ~300ms ease back
 export const REST_LERP = 0.1;
 
-// Hero swap animation — when the featured ship changes, the new mesh
-// grows from 0 to its target scale with an ease-out curve. Hides the
-// abrupt primitive swap behind a soft "fade-in by scale" reveal.
-export const HERO_TRANSITION_MS = 280;
+// Hero swap crossfade — outgoing mesh fades 1→0 and incoming mesh fades
+// 0→1 over the same window. The text block uses the same duration via
+// the matching CSS keyframes (fadeIn / fadeOut).
+export const HERO_TRANSITION_MS = 400;
 
 export const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
 
-// Scale during a hero swap. Clamped: t<=0 returns 0, t>=duration returns
-// targetScale. The eased curve in between gives a gentle landing.
-export const transitionScale = (
-  targetScale: number,
+export type HeroFadeRole = 'fading_in' | 'fading_out';
+
+// Opacity during a hero swap. Clamped at both ends so the consumer can
+// drive useFrame without re-clamping. fading_in: 0 → 1, fading_out: 1 → 0.
+// The two roles are exact reflections — fading_in(t) + fading_out(t) === 1.
+export const transitionOpacity = (
+  role: HeroFadeRole,
   elapsedMs: number,
 ): number => {
-  if (elapsedMs >= HERO_TRANSITION_MS) return targetScale;
-  if (elapsedMs <= 0) return 0;
-  return targetScale * easeOutCubic(elapsedMs / HERO_TRANSITION_MS);
+  if (elapsedMs <= 0) return role === 'fading_in' ? 0 : 1;
+  if (elapsedMs >= HERO_TRANSITION_MS) return role === 'fading_in' ? 1 : 0;
+  const t = easeOutCubic(elapsedMs / HERO_TRANSITION_MS);
+  return role === 'fading_in' ? t : 1 - t;
 };
 
 export const tickRotation = (
