@@ -74,7 +74,7 @@ export const ShipCard = (props: ShipCardProps): JSX.Element => (
     <span className={dividerClassName} aria-hidden="true" />
     <span className={thumbClassName}>
       <View className="absolute inset-0">
-        <ShipViewport kind="thumbnail" ship={props.ship} isHovered={props.isHovered} />
+        <ShipViewport ship={props.ship} isHovered={props.isHovered} />
       </View>
     </span>
     <span className={textColClassName}>
