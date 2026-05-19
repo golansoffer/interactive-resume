@@ -56,6 +56,7 @@ vi.mock('@react-three/drei', () => ({
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Stars: (): null => null,
+  Environment: (): null => null,
   Sparkles: (): null => null,
   Cloud: (): null => null,
   Clouds: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
