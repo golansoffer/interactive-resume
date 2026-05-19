@@ -313,9 +313,20 @@ Dev tooling: drei `<Stats>` overlay during development.
 6. Create `src/core/scene/sceneMachine.ts` — XState v5 stub machine:
    - States: `loading`, `playing`, `revealing` (with `objectId`), `paused` (with `resumeTo`).
    - Events (XState `type`): `start`, `interact`, `pause_toggle`, `entered_proximity { objectId }`, `exited_proximity { objectId }`.
-   - Transitions: `loading → playing` on `start`; `playing → revealing` on `entered_proximity`; `revealing → playing` on `exited_proximity` matching the held objectId; `playing/revealing → paused { resumeTo }` on `pause_toggle`; `paused → resumeTo` on `pause_toggle`.
+   - Transitions (full, defined for every (state, event) pair the machine receives):
+     - `loading + start → playing`. Other events in `loading` are no-ops.
+     - `playing + entered_proximity { id } → revealing { objectId: id }`.
+     - `playing + exited_proximity → playing` (no-op; we're not showing anything).
+     - `playing + pause_toggle → paused { resumeTo: { kind: 'playing' } }`.
+     - `playing + interact → playing` (no-op in foundations; the widget may `console.log('interact')` for demo verification).
+     - `revealing { currentId } + entered_proximity { newId } → revealing { objectId: newId }` — **newest wins**, even if `newId !== currentId`. If `newId === currentId`, the transition is a self-loop (idempotent).
+     - `revealing { currentId } + exited_proximity { exitedId } → playing` iff `exitedId === currentId`. If `exitedId !== currentId`, the event is a no-op (we're showing someone else; that other id's exit doesn't matter).
+     - `revealing { currentId } + pause_toggle → paused { resumeTo: { kind: 'revealing'; objectId: currentId } }`.
+     - `revealing + interact → revealing` (no-op in foundations).
+     - `paused { resumeTo } + pause_toggle → resumeTo` (restore the held variant).
+     - `paused + entered_proximity / exited_proximity / interact / start → paused` (no-ops).
    - Pure — no React, no R3F, no three imports. The machine's input/output types map to/from `features/scene/types/` via the widget.
-   - Unit tests on the pure machine (no React).
+   - Unit tests on the pure machine (no React). Cover every (state, event) pair above, plus the foundations-specific edge cases: re-entering the same `objectId` while in `revealing` (idempotent); exiting an unrelated id while revealing (no-op); resume from `paused` returns to the exact prior variant including `objectId`.
 7. Create every component in `src/features/scene/components/Scene/`. Placeholder geometry only — a sphere for the player, primitive cubes for companies. Smoke render-test for `Scene` (no canvas, mocked R3F — verify component mounts and the discriminated `SceneState` props don't crash).
 8. Create `src/features/scene/widget/scene/useScene.ts` and `SceneWidget.tsx`:
    - The ONE `useEffect`: subscribe to `subscribeToKeyboard`, route `intent_down`/`intent_up` to a Ref-backed `Set<Intent['kind']>`, route `command` to the machine actor.
