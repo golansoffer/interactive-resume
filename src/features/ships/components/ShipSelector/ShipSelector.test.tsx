@@ -40,7 +40,7 @@ describe('ShipSelector', () => {
         onPick={noop}
       />,
     );
-    expect(thumbnailButtons()).toHaveLength(5);
+    expect(thumbnailButtons()).toHaveLength(8);
   });
 
   it('marks only the hovered card with data-hovered=true', () => {

@@ -3,13 +3,13 @@ import { DEFAULT_SHIP_ID, SHIP_IDS, shipCode } from './ship';
 import type { ShipId } from './ship';
 
 describe('SHIP_IDS', () => {
-  it('lists exactly 5 ships', () => {
-    expect(SHIP_IDS).toHaveLength(5);
+  it('lists exactly 8 ships', () => {
+    expect(SHIP_IDS).toHaveLength(8);
   });
 
   it('contains the expected ids', () => {
     expect([...SHIP_IDS]).toEqual([
-      'speederA',
+      'speederA', 'speederB', 'speederC', 'speederD',
       'cargoA', 'cargoB',
       'racer', 'miner',
     ]);
@@ -30,6 +30,9 @@ describe('DEFAULT_SHIP_ID', () => {
 describe('shipCode', () => {
   it('maps each ship id to a short uppercase code', () => {
     expect(shipCode('speederA')).toBe('SPD-A');
+    expect(shipCode('speederB')).toBe('SPD-B');
+    expect(shipCode('speederC')).toBe('SPD-C');
+    expect(shipCode('speederD')).toBe('SPD-D');
     expect(shipCode('cargoA')).toBe('CRG-A');
     expect(shipCode('cargoB')).toBe('CRG-B');
     expect(shipCode('racer')).toBe('RAC');

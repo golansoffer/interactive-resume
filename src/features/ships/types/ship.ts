@@ -1,5 +1,8 @@
 export const SHIP_IDS = [
   'speederA',
+  'speederB',
+  'speederC',
+  'speederD',
   'cargoA',
   'cargoB',
   'racer',
@@ -31,6 +34,12 @@ export const shipCode = (id: ShipId): string => {
   switch (id) {
     case 'speederA':
       return 'SPD-A';
+    case 'speederB':
+      return 'SPD-B';
+    case 'speederC':
+      return 'SPD-C';
+    case 'speederD':
+      return 'SPD-D';
     case 'cargoA':
       return 'CRG-A';
     case 'cargoB':

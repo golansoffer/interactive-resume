@@ -4,7 +4,7 @@ import { SHIP_IDS } from '../../types/ship';
 import { useShipSelector } from './useShipSelector';
 
 describe('useShipSelector', () => {
-  it('starts with hover.kind === none and 5 ships in SHIP_IDS order', () => {
+  it('starts with hover.kind === none and 8 ships in SHIP_IDS order', () => {
     const { result } = renderHook(() => useShipSelector());
     expect(result.current.hover.kind).toBe('none');
     expect(result.current.ships.map((s) => s.id)).toEqual([...SHIP_IDS]);
