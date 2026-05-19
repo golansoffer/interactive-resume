@@ -1,10 +1,10 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
+import { Center, useGLTF } from '@react-three/drei';
 import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
-import { integrateMotion } from '../../services/renderer/integrateMotion';
+import { integrateMotion, MAX_SPEED } from '../../services/renderer/integrateMotion';
 import type { CameraBasis, Kinematics } from '../../services/renderer/integrateMotion';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
@@ -18,6 +18,16 @@ type PlayerProps = {
 
 const SHIP_PATH = '/models/kenney-space-kit/craft_speederA.glb';
 const SHIP_SCALE: readonly [number, number, number] = [0.6, 0.6, 0.6];
+
+// Visual feel — banking and pitch derived from velocity in the camera basis.
+// Heading is held at the JSX-set base yaw (no input-driven yaw — camera-relative motion).
+// MAX_PITCH ≈ 15° nose-down at full forward thrust.
+const MAX_PITCH = Math.PI / 12;
+// MAX_ROLL ≈ 30° wing-dip at full strafe.
+const MAX_ROLL = Math.PI / 6;
+// ORIENT_LERP — ~150ms time-to-target; snappy but smooth.
+const ORIENT_LERP = 0.18;
+
 const FORWARD_EPSILON = 1e-6;
 
 const DEFAULT_BASIS: CameraBasis = {
@@ -68,12 +78,20 @@ export const Player = (props: PlayerProps): JSX.Element => {
     );
     props.kinematicsRef.current = next;
     mesh.position.set(next.position.x, next.position.y, next.position.z);
-    mesh.rotation.y = next.heading;
+
+    const forwardSpeed = next.velocity.x * basis.forward.x + next.velocity.z * basis.forward.z;
+    const rightSpeed = next.velocity.x * basis.right.x + next.velocity.z * basis.right.z;
+    const targetPitch = -(forwardSpeed / MAX_SPEED) * MAX_PITCH;
+    const targetRoll = -(rightSpeed / MAX_SPEED) * MAX_ROLL;
+    mesh.rotation.x += (targetPitch - mesh.rotation.x) * ORIENT_LERP;
+    mesh.rotation.z += (targetRoll - mesh.rotation.z) * ORIENT_LERP;
   });
 
   return (
     <group ref={props.meshRef} scale={SHIP_SCALE}>
-      <primitive object={scene} />
+      <Center>
+        <primitive object={scene} />
+      </Center>
     </group>
   );
 };

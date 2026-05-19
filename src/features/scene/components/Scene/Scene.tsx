@@ -45,8 +45,9 @@ export const Scene = (props: SceneProps): JSX.Element => {
 
   return (
     <>
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[8, 12, 6]} intensity={1.1} />
+      <color attach="background" args={['#04050a']} />
+      <ambientLight intensity={0.15} />
+      <directionalLight position={[10, 18, 6]} intensity={1.8} castShadow={false} />
       <FollowCamera targetMeshRef={meshRef} />
       <Player
         sceneState={props.state}

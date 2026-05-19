@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { asCompanyId } from '../../types/company';
@@ -23,6 +24,7 @@ vi.mock('@react-three/fiber', () => {
 vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
+  Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
     (): { readonly scene: { readonly placeholder: true } } => ({ scene: { placeholder: true } }),
     { preload: (): void => {} },
