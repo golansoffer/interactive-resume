@@ -14,12 +14,19 @@ vi.mock('@react-three/fiber', () => ({ useFrame: (): null => null }));
 
 const noop = (): void => {};
 
+// Thumbnails carry data-hovered/data-featured; the launch button doesn't.
+const thumbnailButtons = (): ReadonlyArray<HTMLElement> =>
+  screen.getAllByRole('button').filter((b) => b.dataset['hovered'] !== undefined);
+
+const launchButton = (): HTMLElement =>
+  screen.getByRole('button', { name: /launch this craft/i });
+
 afterEach(() => {
   cleanup();
 });
 
 describe('ShipSelector', () => {
-  it('renders one button per ship', () => {
+  it('renders one thumbnail button per ship', () => {
     render(
       <ShipSelector
         ships={ALL_SHIPS}
@@ -29,7 +36,7 @@ describe('ShipSelector', () => {
         onPick={noop}
       />,
     );
-    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(thumbnailButtons()).toHaveLength(5);
   });
 
   it('marks only the hovered card with data-hovered=true', () => {
@@ -42,14 +49,12 @@ describe('ShipSelector', () => {
         onPick={noop}
       />,
     );
-    const hovered = screen.getAllByRole('button').filter(
-      (b) => b.dataset['hovered'] === 'true',
-    );
+    const hovered = thumbnailButtons().filter((b) => b.dataset['hovered'] === 'true');
     expect(hovered).toHaveLength(1);
     expect(hovered[0]?.textContent).toContain('Cargo A');
   });
 
-  it('marks zero cards when hover.kind === none', () => {
+  it('marks zero cards as hovered when hover.kind === none', () => {
     render(
       <ShipSelector
         ships={ALL_SHIPS}
@@ -59,9 +64,55 @@ describe('ShipSelector', () => {
         onPick={noop}
       />,
     );
-    const hovered = screen.getAllByRole('button').filter(
-      (b) => b.dataset['hovered'] === 'true',
-    );
+    const hovered = thumbnailButtons().filter((b) => b.dataset['hovered'] === 'true');
     expect(hovered).toHaveLength(0);
+  });
+
+  it('renders the hero launch button', () => {
+    render(
+      <ShipSelector
+        ships={ALL_SHIPS}
+        hover={{ kind: 'none' }}
+        onHoverEnter={noop}
+        onHoverLeave={noop}
+        onPick={noop}
+      />,
+    );
+    expect(launchButton()).toBeDefined();
+  });
+
+  it('features the first ship (Speeder A) when hover.kind === none', () => {
+    render(
+      <ShipSelector
+        ships={ALL_SHIPS}
+        hover={{ kind: 'none' }}
+        onHoverEnter={noop}
+        onHoverLeave={noop}
+        onPick={noop}
+      />,
+    );
+    // Hero heading reflects the featured ship's name.
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading.textContent).toBe('Speeder A');
+    const featured = thumbnailButtons().filter((b) => b.dataset['featured'] === 'true');
+    expect(featured).toHaveLength(1);
+    expect(featured[0]?.textContent).toContain('Speeder A');
+  });
+
+  it('features the hovered ship when hover.kind === hovering', () => {
+    render(
+      <ShipSelector
+        ships={ALL_SHIPS}
+        hover={{ kind: 'hovering', id: 'racer' }}
+        onHoverEnter={noop}
+        onHoverLeave={noop}
+        onPick={noop}
+      />,
+    );
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading.textContent).toBe('Racer');
+    const featured = thumbnailButtons().filter((b) => b.dataset['featured'] === 'true');
+    expect(featured).toHaveLength(1);
+    expect(featured[0]?.textContent).toContain('Racer');
   });
 });
