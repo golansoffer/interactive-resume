@@ -78,15 +78,15 @@ type PausedResume =
   | { readonly kind: 'revealing'; readonly objectId: CompanyId };
 
 // src/features/scene/types/intent.ts
-// Continuous kinematic intents — sampled per frame. Each variant is atomic;
-// no nested `axis`/`direction` fields, so `Set<Intent['kind']>` is a faithful
-// projection (no discriminator loss).
+// Continuous kinematic intents — sampled per frame. **Camera-relative**: the
+// player moves in the plane defined by the camera's forward and right basis
+// vectors. The player mesh has no input-driven heading; rotation (if any) is
+// a visual lag of the velocity direction, not a separate input axis.
 type Intent =
-  | { readonly kind: 'thrust_forward' }
-  | { readonly kind: 'thrust_backward' }
-  | { readonly kind: 'turn_left' }
-  | { readonly kind: 'turn_right' }
-  | { readonly kind: 'brake' };
+  | { readonly kind: 'move_forward' }    // along camera forward (XZ-projected)
+  | { readonly kind: 'move_backward' }   // opposite of camera forward
+  | { readonly kind: 'strafe_left' }     // opposite of camera right
+  | { readonly kind: 'strafe_right' };   // along camera right
 
 // Pull-based stream — sampled per frame inside useFrame.
 // Not a 60Hz prop diff. This is the load-bearing decision that keeps React quiet during play.
@@ -219,15 +219,48 @@ Foundations binds these keys; no remap config. Focus/IME handling is out of foun
 
 | Key | Output | Channel |
 |---|---|---|
-| `W` / `ArrowUp` | `thrust_forward` | continuous → IntentStream |
-| `S` / `ArrowDown` | `thrust_backward` | continuous → IntentStream |
-| `A` / `ArrowLeft` | `turn_left` | continuous → IntentStream |
-| `D` / `ArrowRight` | `turn_right` | continuous → IntentStream |
-| `Space` | `brake` | continuous → IntentStream |
+| `W` / `ArrowUp` | `move_forward` | continuous → IntentStream |
+| `S` / `ArrowDown` | `move_backward` | continuous → IntentStream |
+| `A` / `ArrowLeft` | `strafe_left` | continuous → IntentStream |
+| `D` / `ArrowRight` | `strafe_right` | continuous → IntentStream |
 | `E` | `{ kind: 'interact' }` | discrete → `KeyboardSignal.command` (on keydown only) |
 | `Escape` | `{ kind: 'pause_toggle' }` | discrete → `KeyboardSignal.command` (on keydown only) |
 
-Modifier keys ignored. Auto-repeat suppressed for discrete keys.
+Modifier keys ignored. Auto-repeat suppressed for discrete keys. Movement is **camera-relative** (see [§ Movement model](#movement-model)).
+
+## Movement model
+
+The player slides through the world in the plane defined by the camera's basis vectors. There is no input-driven rotation — `Intent` has no `turn_*` variants. The camera is locked to the player position with a fixed orientation (FollowCamera does not rotate at runtime in foundations).
+
+`integrateMotion` signature:
+
+```typescript
+type CameraBasis = {
+  readonly forward: Vec3;  // camera forward, XZ-projected, normalized
+  readonly right: Vec3;    // camera right, XZ-projected, normalized
+};
+
+const integrateMotion = (
+  state: Kinematics,
+  intents: ReadonlySet<Intent['kind']>,
+  dt: number,
+  basis: CameraBasis,
+): Kinematics;
+```
+
+Algorithm:
+
+1. Sum a desired direction vector from the held intents in the camera basis (each contributing intent adds or subtracts a basis vector in the XZ plane). Normalize if non-zero.
+2. Compute target velocity: `targetVelocity = desiredDirection * MAX_SPEED`.
+3. Snap-accelerate / snap-decelerate toward target velocity. Module-local constants tuned for **snappy** feel:
+   - `MAX_SPEED ≈ 14` world units / second (≈4.6×PROXIMITY_RADIUS / s — feels fast but not uncontrollable).
+   - `ACCELERATION ≈ 120` (time-to-max ≈ 120 ms when no opposing velocity).
+   - `DECELERATION ≈ 140` (time-to-stop ≈ 100 ms on key release).
+4. Integrate position: `position += velocity * dt` in the XZ plane. Y is held at 0.
+
+Velocity is the load-bearing internal state; heading is no longer used by the integrator. `Kinematics` may keep a `heading` field if the player mesh's facing is later derived from velocity direction, but the integrator does not consume it.
+
+The `Vec3.y` axis is preserved (unused for foundations movement; reserved for later flight).
 
 ---
 
