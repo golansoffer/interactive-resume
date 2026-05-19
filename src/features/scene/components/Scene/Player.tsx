@@ -1,7 +1,7 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Center, useGLTF } from '@react-three/drei';
+import { Center, Trail, useGLTF } from '@react-three/drei';
 import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
 import { integrateMotion, MAX_SPEED } from '../../services/renderer/integrateMotion';
@@ -27,6 +27,18 @@ const MAX_PITCH = Math.PI / 15;
 const MAX_ROLL = Math.PI / 7;
 // ORIENT_LERP — ~300ms time-to-target; floaty and weighty.
 const ORIENT_LERP = 0.1;
+
+// Engine trail — cyan wake behind the speeder. Anchored to TAIL_OFFSET_Z
+// inside the flip group so heading lerp carries the trail along.
+// drei applies lineWidth = 0.1 * TRAIL_WIDTH; buffer holds TRAIL_LENGTH * 10
+// samples; at TRAIL_DECAY=4 and 60fps, ~0.625s of history (~8.7 world units
+// at MAX_SPEED). Attenuation pinches the tail to a point.
+const TAIL_OFFSET_Z = 0.4;
+const TRAIL_WIDTH = 2.0;
+const TRAIL_LENGTH = 15;
+const TRAIL_COLOR = '#5fd6ff';
+const TRAIL_DECAY = 4;
+const TRAIL_ATTENUATION = (t: number): number => t * t;
 
 // Idle motion — sine oscillations always present, scaled down with speed
 // (see IDLE_RATIO_FLOOR in computeIdleMotion). The aircraft is the LIGHT
@@ -117,15 +129,12 @@ const applyHeadingLerp = (
   mesh.rotation.y += headingDelta * HEADING_LERP;
 };
 
-export const Player = (props: PlayerProps): JSX.Element => {
-  const { scene } = useGLTF(SHIP_PATH);
+const usePlayerFrame = (props: PlayerProps): void => {
   const camera = useThree((three) => three.camera);
   const cameraWorldDir = useMemo(() => new Vector3(), []);
   const forwardScratch = useMemo(() => new Vector3(), []);
   const rightScratch = useMemo(() => new Vector3(), []);
   const upScratch = useMemo(() => new Vector3(0, 1, 0), []);
-  // Baselines tracked separately from the rendered rotation so the sway
-  // oscillation cannot decay into the lerp state.
   const baselinePitch = useRef(0);
   const baselineRoll = useRef(0);
 
@@ -156,13 +165,26 @@ export const Player = (props: PlayerProps): JSX.Element => {
     mesh.rotation.x = baselinePitch.current;
     mesh.rotation.z = baselineRoll.current + idle.swayZ;
   });
+};
 
+export const Player = (props: PlayerProps): JSX.Element => {
+  const { scene } = useGLTF(SHIP_PATH);
+  usePlayerFrame(props);
   return (
     <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
       <group rotation={[0, Math.PI, 0]}>
         <Center>
           <primitive object={scene} />
         </Center>
+        <Trail
+          width={TRAIL_WIDTH}
+          length={TRAIL_LENGTH}
+          color={TRAIL_COLOR}
+          decay={TRAIL_DECAY}
+          attenuation={TRAIL_ATTENUATION}
+        >
+          <group position={[0, 0, TAIL_OFFSET_Z]} />
+        </Trail>
       </group>
     </group>
   );
