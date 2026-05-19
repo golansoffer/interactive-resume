@@ -1,11 +1,11 @@
 import type { RefObject } from 'react';
 import { useRef } from 'react';
-import type { Mesh } from 'three';
+import type { Object3D } from 'three';
 import type { Kinematics } from '../../services/renderer/integrateMotion';
 
 type SceneRefs = {
   readonly kinematicsRef: RefObject<Kinematics>;
-  readonly meshRef: RefObject<Mesh | null>;
+  readonly meshRef: RefObject<Object3D | null>;
 };
 
 const INITIAL_KINEMATICS: Kinematics = {
@@ -16,7 +16,7 @@ const INITIAL_KINEMATICS: Kinematics = {
 
 export const useSceneRefs = (): SceneRefs => {
   const kinematicsRef = useRef<Kinematics>(INITIAL_KINEMATICS);
-  const meshRef = useRef<Mesh | null>(null);
+  const meshRef = useRef<Object3D | null>(null);
   return { kinematicsRef, meshRef };
 };
 

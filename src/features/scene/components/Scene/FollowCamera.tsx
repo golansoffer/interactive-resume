@@ -2,11 +2,11 @@ import type { JSX, RefObject } from 'react';
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
-import type { Mesh, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
+import type { Object3D, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { Vector3 } from 'three';
 
 type FollowCameraProps = {
-  readonly targetMeshRef: RefObject<Mesh | null>;
+  readonly targetMeshRef: RefObject<Object3D | null>;
 };
 
 const CHASE_OFFSET = new Vector3(0, 6, -10);

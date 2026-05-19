@@ -52,25 +52,18 @@ The "no information leaks" guarantee comes from the **prop-type narrowness of ea
 
 ## Type definitions
 
-### `PlanetAssetId` + `PlanetConfig` — `src/features/scene/types/planet.ts`
+### `PlanetConfig` — `src/features/scene/types/planet.ts`
 
 ```typescript
-// Closed literal union of the 10 kenney-planets sprites under
-// public/sprites/kenney-planets/. Adding a sprite requires extending
-// the union; typo sprite names do not compile.
-export type PlanetAssetId =
-  | 'planet00' | 'planet01' | 'planet02' | 'planet03' | 'planet04'
-  | 'planet05' | 'planet06' | 'planet07' | 'planet08' | 'planet09';
-
 export type PlanetConfig = {
-  readonly assetId: PlanetAssetId;
+  readonly color: string;
   readonly placement: readonly [number, number, number];
 };
 ```
 
 Decisions:
 
-- **Literal union over branded string.** A branded `PlanetAssetId` with a single minter would still allow `asPlanetAssetId('typo99')` to compile. The literal union is strictly stronger (Iron Law 3).
+- **Interim: `color` over a sprite asset id.** Originally `assetId: PlanetAssetId` (closed literal union of 10 Kenney sprites). The 2D sprite rendering proved too flat for the spaceflight feel; the wave that lands real 3D planet assets will replace `color` with an asset reference. Until then, each company carries a hex color and renders as a 3D sphere with that color — `meshStandardMaterial`, slow Y-axis spin.
 - **Placement on `PlanetConfig`.** Where a planet renders is intrinsic to its visual identity in the scene. Splitting placement into a separate `Placement` type would create a one-field record and add a layer for nothing (Iron Law 4).
 - **No `scale`, `rotation`, `tint`, `glow`, `ring` fields.** Iron Law 4 (design discipline): no flexibility knobs until they earn their place. Add when a renderer actually needs them.
 - **Tuple shape for `placement`.** Matches the existing `Company.position` tuple form. R3F components consume tuples directly via `<mesh position={...} />`. Math services convert to plain records `{ x, y, z }` at their own boundary (see `services/renderer/vec3.ts`).
@@ -159,7 +152,7 @@ type CompaniesProps = {
 };
 ```
 
-Cannot access `companyName`, `logoSrc`, `role`, `period`, or `description`. Renders one sprite per entry using `planet.assetId` and `planet.placement`.
+Cannot access `companyName`, `logoSrc`, `role`, `period`, or `description`. Renders one 3D sphere per entry using `planet.color` and `planet.placement`, with a slow Y-axis spin.
 
 ### Always-visible label — new component (suggested: `<PlanetLabels />`)
 
@@ -325,7 +318,7 @@ This spec ships only the design doc. The implementation wave (next session via w
 
 | File | Change |
 |---|---|
-| `src/features/scene/types/planet.ts` | **New.** `PlanetAssetId`, `PlanetConfig`. |
+| `src/features/scene/types/planet.ts` | **New.** `PlanetConfig` ( `color` + `placement` ). |
 | `src/features/scene/types/period.ts` | **New.** `Month`, `YearMonth`, `Period`. |
 | `src/features/scene/types/company-info.ts` | **New.** `CompanyInfo`. |
 | `src/features/scene/types/reveal-projection.ts` | **New.** `RevealProjection` (discriminated `hidden \| visible`). |
@@ -341,7 +334,7 @@ This spec ships only the design doc. The implementation wave (next session via w
 | `src/features/scene/services/renderer/proximityCheck.ts` | **Updated.** Generic signature `<T extends { placement }>(player, targets, radius) → ReadonlyArray<T>`. Math unchanged. |
 | `src/features/scene/services/renderer/proximityCheck.test.ts` | **Updated.** Test fixtures use the generic shape; existing scenarios reuse the new return type. |
 | `src/features/scene/components/Scene/Companies.tsx` | **Rewritten.** Consumes `PlanetProjection[]`; delegates to `<Planet />` child (one element per planet). Replaces the placeholder cube + HSL-from-id stub. |
-| `src/features/scene/components/Scene/Planet.tsx` | **New.** Single-planet sprite renderer; loads its own texture via drei `useTexture`. Extracted because `useTexture` is a hook and cannot be called inside a `.map()`. |
+| `src/features/scene/components/Scene/Planet.tsx` | **New.** Single-planet 3D sphere renderer (`sphereGeometry` + `meshStandardMaterial`) tinted by `planet.color`, with a slow Y-axis rotation driven by `useFrame`. |
 | `src/features/scene/components/Scene/PlanetLabels.tsx` | **New.** Renders always-visible name + logo above each planet, anchored to `placement` (drei `<Html>`). |
 | `src/features/scene/components/Scene/RevealOverlay.tsx` | **Updated.** Prop type changes from `{ objectId }` to `{ info, placement }`. Renders a basic info card (drei `<Html>`); polish lands later. |
 | `src/features/scene/components/Scene/Scene.tsx` | **Updated.** New prop shape (`state`, `entries`, `intents`, `onEvent`, `revealProjection`); internally projects `planets` + `labels` via `useMemo` and distributes to children. |
@@ -355,6 +348,7 @@ The implementation plan (writing-plans output) sequences these into a working or
 
 ## Out of scope
 
+- 3D planet assets (GLB or PBR-textured spheres) — interim rendering uses a colored 3D sphere per company. The real assets land in a follow-up wave that replaces `PlanetConfig.color` with an asset reference and rewrites `Planet.tsx`.
 - Logo asset files (acquired separately by the author).
 - Reveal overlay UI layout, typography, animation.
 - Label rendering technique (drei `<Text>` SDF vs `<Html>` overlay vs sprite atlas) — chosen during implementation.
@@ -406,8 +400,7 @@ The 5 companies and their content, transcribed from `public/resume.pdf`. The imp
 
 - **CompanyEntry** — the composite root: identity + planet visual + info content. One per company.
 - **CompanyInfo** — info content (name, logo, role, period, description). One per CompanyEntry.
-- **PlanetConfig** — visual config (asset, placement). One per CompanyEntry.
-- **PlanetAssetId** — closed literal union of the 10 kenney-planets sprite identifiers.
+- **PlanetConfig** — visual config (color, placement). One per CompanyEntry.
 - **Period** — discriminated union: `closed` (start + end) or `ongoing` (start only).
 - **YearMonth** — `{ year, month }` with `month: Month` (literal union `1 | … | 12`).
 - **Month** — closed literal union `1 | 2 | … | 12`. Used in `YearMonth`.

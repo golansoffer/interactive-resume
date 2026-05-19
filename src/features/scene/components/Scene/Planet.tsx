@@ -1,19 +1,31 @@
 import type { JSX } from 'react';
-import { useTexture } from '@react-three/drei';
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import type { Mesh } from 'three';
 import type { PlanetProjection } from '../../types/projections';
 
 type PlanetProps = {
   readonly planet: PlanetProjection;
 };
 
-const PLANET_SCALE: readonly [number, number, number] = [2.5, 2.5, 1];
+const PLANET_RADIUS = 1.2;
+const PLANET_SEGMENTS_LON = 32;
+const PLANET_SEGMENTS_LAT = 24;
+const ROTATION_RAD_PER_SEC = 0.18;
 
 export const Planet = (props: PlanetProps): JSX.Element => {
-  const texture = useTexture(`/sprites/kenney-planets/${props.planet.planet.assetId}.png`);
+  const meshRef = useRef<Mesh | null>(null);
+
+  useFrame((_root, delta) => {
+    const mesh = meshRef.current;
+    if (mesh === null) return;
+    mesh.rotation.y += ROTATION_RAD_PER_SEC * delta;
+  });
 
   return (
-    <sprite position={props.planet.planet.placement} scale={PLANET_SCALE}>
-      <spriteMaterial map={texture} transparent />
-    </sprite>
+    <mesh ref={meshRef} position={props.planet.planet.placement}>
+      <sphereGeometry args={[PLANET_RADIUS, PLANET_SEGMENTS_LON, PLANET_SEGMENTS_LAT]} />
+      <meshStandardMaterial color={props.planet.planet.color} roughness={0.55} metalness={0.15} />
+    </mesh>
   );
 };

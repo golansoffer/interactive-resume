@@ -14,7 +14,7 @@ const ringPosition = (index: number): readonly [number, number, number] => {
 const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   {
     id: asCompanyId('mave'),
-    planet: { assetId: 'planet00', placement: ringPosition(0) },
+    planet: { color: '#2dd4bf', placement: ringPosition(0) },
     info: {
       companyName: 'Mave',
       logoSrc: '/logos/mave.svg',
@@ -26,7 +26,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('8fig'),
-    planet: { assetId: 'planet01', placement: ringPosition(1) },
+    planet: { color: '#f59e0b', placement: ringPosition(1) },
     info: {
       companyName: '8fig',
       logoSrc: '/logos/8fig.svg',
@@ -42,7 +42,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('riverside'),
-    planet: { assetId: 'planet02', placement: ringPosition(2) },
+    planet: { color: '#ef4444', placement: ringPosition(2) },
     info: {
       companyName: 'Riverside',
       logoSrc: '/logos/riverside.svg',
@@ -58,7 +58,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('streamelements'),
-    planet: { assetId: 'planet03', placement: ringPosition(3) },
+    planet: { color: '#8b5cf6', placement: ringPosition(3) },
     info: {
       companyName: 'StreamElements',
       logoSrc: '/logos/streamelements.svg',
@@ -74,7 +74,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('tgs'),
-    planet: { assetId: 'planet04', placement: ringPosition(4) },
+    planet: { color: '#06b6d4', placement: ringPosition(4) },
     info: {
       companyName: 'TGS',
       logoSrc: '/logos/tgs.svg',

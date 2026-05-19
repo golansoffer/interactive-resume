@@ -1,7 +1,8 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { Mesh, Vector3 as Vector3Impl } from 'three';
+import { useGLTF } from '@react-three/drei';
+import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
 import { integrateMotion } from '../../services/renderer/integrateMotion';
 import type { CameraBasis, Kinematics } from '../../services/renderer/integrateMotion';
@@ -12,12 +13,13 @@ type PlayerProps = {
   readonly sceneState: SceneState;
   readonly intents: IntentStream;
   readonly kinematicsRef: RefObject<Kinematics>;
-  readonly meshRef: RefObject<Mesh | null>;
+  readonly meshRef: RefObject<Object3D | null>;
 };
 
-const PLAYER_RADIUS = 0.5;
-const PLAYER_COLOR = '#5cf0ff';
+const SHIP_PATH = '/models/kenney-space-kit/craft_speederA.glb';
+const SHIP_SCALE: readonly [number, number, number] = [0.6, 0.6, 0.6];
 const FORWARD_EPSILON = 1e-6;
+
 const DEFAULT_BASIS: CameraBasis = {
   forward: { x: 0, y: 0, z: -1 },
   right: { x: 1, y: 0, z: 0 },
@@ -45,6 +47,7 @@ const deriveBasis = (
 };
 
 export const Player = (props: PlayerProps): JSX.Element => {
+  const { scene } = useGLTF(SHIP_PATH);
   const camera = useThree((three) => three.camera);
   const cameraWorldDir = useMemo(() => new Vector3(), []);
   const forwardScratch = useMemo(() => new Vector3(), []);
@@ -69,9 +72,10 @@ export const Player = (props: PlayerProps): JSX.Element => {
   });
 
   return (
-    <mesh ref={props.meshRef}>
-      <sphereGeometry args={[PLAYER_RADIUS, 24, 16]} />
-      <meshStandardMaterial color={PLAYER_COLOR} emissive={PLAYER_COLOR} emissiveIntensity={0.3} />
-    </mesh>
+    <group ref={props.meshRef} scale={SHIP_SCALE}>
+      <primitive object={scene} />
+    </group>
   );
 };
+
+useGLTF.preload(SHIP_PATH);

@@ -23,7 +23,10 @@ vi.mock('@react-three/fiber', () => {
 vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
-  useTexture: (): { readonly placeholder: true } => ({ placeholder: true }),
+  useGLTF: Object.assign(
+    (): { readonly scene: { readonly placeholder: true } } => ({ scene: { placeholder: true } }),
+    { preload: (): void => {} },
+  ),
 }));
 
 const acme = asCompanyId('acme');
@@ -31,7 +34,7 @@ const globex = asCompanyId('globex');
 
 const acmeEntry: CompanyEntry = {
   id: acme,
-  planet: { assetId: 'planet00', placement: [5, 0, 0] },
+  planet: { color: '#2dd4bf', placement: [5, 0, 0] },
   info: {
     companyName: 'Acme',
     logoSrc: '/logos/acme.svg',
@@ -43,7 +46,7 @@ const acmeEntry: CompanyEntry = {
 
 const globexEntry: CompanyEntry = {
   id: globex,
-  planet: { assetId: 'planet01', placement: [-5, 0, 0] },
+  planet: { color: '#f59e0b', placement: [-5, 0, 0] },
   info: {
     companyName: 'Globex',
     logoSrc: '/logos/globex.svg',
