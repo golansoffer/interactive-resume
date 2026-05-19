@@ -41,6 +41,10 @@
     {
       "files": ["**/features/*/components/**/*.tsx"],
       "rules": { "import/max-dependencies": "off" }
+    },
+    {
+      "files": ["src/main.tsx"],
+      "rules": { "import/no-unassigned-import": "off" }
     }
   ],
   "settings": { "react": { "version": "19" } },
