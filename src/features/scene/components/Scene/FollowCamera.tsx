@@ -25,7 +25,7 @@ type ChaseMemory = {
 };
 
 const CHASE_OFFSET = new Vector3(0, 6, -10);
-const LOOK_HEIGHT = 0;
+const LOOK_HEIGHT = 2.5;
 
 // Chase-cam dynamics — four layered effects, each with its own time constant
 // so they don't move in lockstep.
@@ -71,7 +71,7 @@ const updateChaseCamera = (
 
   memory.desired.copy(target.position).add(CHASE_OFFSET);
   memory.desired.x += velocity.x * LATERAL_OFFSET_FACTOR;
-  memory.desired.z += velocity.z * LONGITUDINAL_OFFSET_FACTOR;
+  memory.desired.z += Math.max(0, velocity.z) * LONGITUDINAL_OFFSET_FACTOR;
   if (memory.snapped) {
     memory.springScratch.subVectors(memory.desired, camera.position).multiplyScalar(SPRING_STIFFNESS);
     memory.dragScratch.copy(memory.velocity).multiplyScalar(-SPRING_DAMPING);
