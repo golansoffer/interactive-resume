@@ -9,21 +9,22 @@ describe('parseShipSearch', () => {
     }
   });
 
-  it('returns {} for unknown ship value', () => {
-    expect(parseShipSearch({ ship: 'foo' })).toEqual({});
+  it('returns { ship: undefined } for unknown ship value', () => {
+    expect(parseShipSearch({ ship: 'foo' })).toEqual({ ship: undefined });
   });
 
-  it('returns {} for non-string ship value', () => {
-    expect(parseShipSearch({ ship: 123 })).toEqual({});
-    expect(parseShipSearch({ ship: null })).toEqual({});
-    expect(parseShipSearch({ ship: undefined })).toEqual({});
+  it('returns { ship: undefined } for non-string ship value', () => {
+    expect(parseShipSearch({ ship: 123 })).toEqual({ ship: undefined });
+    expect(parseShipSearch({ ship: null })).toEqual({ ship: undefined });
+    expect(parseShipSearch({ ship: undefined })).toEqual({ ship: undefined });
   });
 
-  it('returns {} for empty input', () => {
+  it('returns {} for empty input (no bad key to clear)', () => {
     expect(parseShipSearch({})).toEqual({});
   });
 
-  it('strips unknown keys', () => {
+  it('strips unknown keys and clears bad ship', () => {
     expect(parseShipSearch({ ship: 'speederA', other: 'x' })).toEqual({ ship: 'speederA' });
+    expect(parseShipSearch({ ship: 'foo', other: 'x' })).toEqual({ ship: undefined });
   });
 });
