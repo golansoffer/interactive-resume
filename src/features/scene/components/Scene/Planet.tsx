@@ -2,7 +2,13 @@ import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Center, useGLTF, useTexture } from '@react-three/drei';
-import { Mesh, MeshStandardMaterial, NearestFilter, SRGBColorSpace } from 'three';
+import {
+  ClampToEdgeWrapping,
+  Mesh,
+  MeshStandardMaterial,
+  NearestFilter,
+  SRGBColorSpace,
+} from 'three';
 import type { Object3D, Texture } from 'three';
 import type { PlanetAssetId } from '../../types/planet';
 import type { PlanetProjection } from '../../types/projections';
@@ -52,6 +58,24 @@ const PLANET_PATHS: Record<PlanetAssetId, string> = {
 
 const COLORSHEET_PATH = '/models/planets/Texture/Planet_Colorsheet_v1.jpg';
 
+// Apply the GLB/palette-correct settings to the colorsheet texture.
+// GLB convention is flipY=false; useTexture defaults to flipY=true
+// (browser image-loading convention). Mismatch causes UVs to sample the
+// vertically-mirrored row of the palette — Saturn's narrow UV band landed
+// on green instead of yellow/tan. The other settings: never blur between
+// palette cells, never wrap past edges, skip mipmaps (a 96×96 palette has
+// nothing to gain from them and mipmap blurring would mush discrete colors).
+const configureColorsheet = (texture: Texture): void => {
+  texture.flipY = false;
+  texture.magFilter = NearestFilter;
+  texture.minFilter = NearestFilter;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.generateMipmaps = false;
+  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
+};
+
 // Clones the GLB scene tree and, per mesh whose material is a
 // MeshStandardMaterial, clones that material and assigns the colorsheet
 // texture. Per-instance material clones prevent two <Planet>s of the same
@@ -90,10 +114,7 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   // across all Planet instances (drei's useTexture singleton-caches), and
   // Planet is a component — useEffect is banned outside widget composition roots.
   const clonedScene = useMemo(() => {
-    colorsheet.magFilter = NearestFilter;
-    colorsheet.minFilter = NearestFilter;
-    colorsheet.colorSpace = SRGBColorSpace;
-    colorsheet.needsUpdate = true;
+    configureColorsheet(colorsheet);
     return applyColorsheet(scene, colorsheet);
   }, [scene, colorsheet]);
   const meshRef = useRef<Object3D | null>(null);
