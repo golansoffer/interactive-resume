@@ -4,23 +4,23 @@
 
 **Goal:** Add a cyan engine-wake `<Trail>` (from `@react-three/drei`) behind the speeder in `Player.tsx`, anchored to a small rear-of-ship offset inside the model's flip group so heading lerp carries the trail along.
 
-**Architecture:** Single-file UI change in `src/features/scene/components/Scene/Player.tsx`. One additional `useRef<Group>` for the rear anchor; six file-scope constants; `<Trail>` mounted as a sibling of the ship's root group inside a fragment. drei's `Trail` internally portals its line mesh into the canvas-root scene, so placement is a clarity choice, not a transform-correctness one. No new domain state, no FSM changes, no new props on `PlayerProps`.
+**Architecture:** Single-file UI change in `src/features/scene/components/Scene/Player.tsx`. Six file-scope constants; `<Trail>` mounted *inside* the flip group with an anchor `<group>` as its only child. drei's `Trail` walks its inner host group's children to find the first `Object3D` (the anchor); the line mesh is portalled into the canvas-root scene so it draws in world space regardless of where `<Trail>` sits in JSX. No new ref, no `useRef<Group>`, no `Group` import. No new domain state, no FSM changes, no new props on `PlayerProps`.
 
-**Tech Stack:** React 19, TypeScript, `@react-three/drei@10.7.7` (`Trail`, `useGLTF`, `Center`), `@react-three/fiber@9.6.1` (`useFrame`, `useThree`), `three@0.184` (`Group`, `Vector3`). Test runner: vitest. Lint: oxlint + custom suppressor scan via `scripts/check-suppressors.mjs`.
+**Tech Stack:** React 19 (`@types/react@19.2.14`), TypeScript, `@react-three/drei@10.7.7` (`Trail`, `useGLTF`, `Center`), `@react-three/fiber@9.6.1` (`useFrame`, `useThree`), `three@0.184` (`Vector3`). Test runner: vitest. Lint: oxlint + custom suppressor scan via `scripts/check-suppressors.mjs`.
 
-**Spec:** `docs/superpowers/specs/2026-05-19-spaceship-trail-design.md`. Read it once before starting — it covers *why* each constant value was chosen against drei's actual source code, not just *what* the values are.
+**Spec:** `docs/superpowers/specs/2026-05-19-spaceship-trail-design.md`. Read it once before starting — it covers *why* each constant value was chosen against drei's actual source code, and why we use the children-mode anchor instead of the `target` ref prop.
 
 ---
 
 ## Pre-flight (read once before starting)
 
-The spec contains drei-API discoveries that drive the constant values. The key ones (so you don't second-guess them while implementing):
+The spec contains drei-API discoveries that drive the constant values and the wiring shape. The key ones (so you don't second-guess them while implementing):
 
 - **`length` is buffer scaling, not seconds.** drei allocates a `length * 10` sample buffer (`Trail.js:34`). At `decay = 4`, 4 samples are pushed per frame (`Trail.js:52`). At 60 fps, effective trail duration ≈ `(length * 10) / (decay * 60)`. The values below are paired; changing one without the other will shift the visual.
 - **`width` is internally multiplied by 0.1.** drei builds `MeshLineMaterial({ lineWidth: 0.1 * width })` (`Trail.js:108`). With `sizeAttenuation = 1`, prop `2.0` becomes a `0.2` world-unit line.
 - **`attenuation`'s `t`** is `0` at the oldest sample (tail tip) and `1` at the newest sample (engine end). `(t) => t * t` therefore pinches the tail and keeps the engine full-width.
-- **`target` ref typing.** drei's prop is `React.RefObject<Object3D>` (`Trail.d.ts:16`). `useRef<Group>(null)` from React 19 returns `RefObject<Group>`, structurally assignable to `RefObject<Object3D>` because `Group extends Object3D` and `RefObject` is covariant (readonly `current`). No `as`, no `!`.
-- **No `local`, `stride`, or `interval` props.** drei defaults are correct for our case (`local = false` samples via `getWorldPosition`, `stride = 0` and `interval = 1` sample every frame).
+- **Children-mode, not the `target` prop.** drei's `target?: React.RefObject<Object3D>` (non-nullable, `Trail.d.ts:16`) is incompatible with `useRef<Group>(null)` under `@types/react@19.2.14` — the React 19 overload `useRef<T>(initialValue: T | null): RefObject<T | null>` (`index.d.ts:1749`) returns a `T | null` ref, which is not assignable to `RefObject<Object3D>`. Avoiding this requires either a cast (banned by Iron Law 3) or imperative `new Group()` construction (more code). drei's children-fallback (`Trail.js:97`) — mounting the anchor as `<Trail>`'s child and letting drei find it via `children.find(o => o instanceof Object3D)` — sidesteps the typing issue entirely and is documented drei API, not a workaround. Use it.
+- **No `local`, `stride`, or `interval` props.** drei defaults are correct for our case (`local = false` samples via `anchor.getWorldPosition`, `stride = 0` and `interval = 1` sample every frame).
 
 ---
 
@@ -85,7 +85,7 @@ vi.mock('@react-three/drei', () => ({
 
 No other changes in this file. No new test cases. The smoke tests already cover "scene mounts in every `SceneState`" — that's the right contract for a purely cosmetic addition.
 
-- [ ] **Step 3: Add the `Trail` import and `Group` type import to `Player.tsx`.**
+- [ ] **Step 3: Add the `Trail` import to the drei import line in `Player.tsx`.**
 
 Existing import lines (top of file):
 
@@ -98,18 +98,16 @@ import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
 ```
 
-Update the drei import to also bring in `Trail`, and add `Group` as a type-only import from `three`:
+Add `Trail` to the drei import only. No other import lines change — in particular, **do not add `Group`** from `three`. The anchor uses R3F's `<group>` element directly; no `useRef<Group>` is involved, so no type annotation for `Group` is needed:
 
 ```ts
 import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
-import type { Group, Object3D, Vector3 as Vector3Impl } from 'three';
+import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
 ```
-
-`Group` is type-only — we never construct one manually; R3F's `<group>` element creates it and the ref captures it.
 
 - [ ] **Step 4: Add the six Trail tuning constants to `Player.tsx`.**
 
@@ -131,21 +129,9 @@ const TRAIL_ATTENUATION = (t: number): number => t * t;
 
 The comment block above is the one place a `// why` comment is genuinely earned — the magic numbers' rationales sit inside drei's source code, not at the call site. Without this note, a future reader will think "0.625s" is just an opinion.
 
-- [ ] **Step 5: Add the `tailRef` alongside the existing scratch refs.**
+**No new `useRef`, no new `useMemo`.** The Player component body adds no new lines in the hooks section. The anchor is purely a JSX element, discovered by drei via children-fallback after mount.
 
-Inside the `Player` component body, scroll to the existing scratch refs (around the current `const cameraWorldDir = useMemo…` block). Add `tailRef` near them:
-
-```ts
-const tailRef = useRef<Group>(null);
-const cameraWorldDir = useMemo(() => new Vector3(), []);
-const forwardScratch = useMemo(() => new Vector3(), []);
-const rightScratch = useMemo(() => new Vector3(), []);
-const upScratch = useMemo(() => new Vector3(0, 1, 0), []);
-```
-
-Note: `tailRef` is declared but Player itself never reads `tailRef.current`. drei's `Trail` reads it once after mount (`Trail.js:96–103`). No `useFrame` interaction.
-
-- [ ] **Step 6: Replace the Player return JSX with the fragment version.**
+- [ ] **Step 5: Replace the Player return JSX with the children-mode version.**
 
 The current return (around lines 160–168):
 
@@ -165,32 +151,33 @@ Replace with:
 
 ```tsx
   return (
-    <>
-      <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
-        <group rotation={[0, Math.PI, 0]}>
-          <Center>
-            <primitive object={scene} />
-          </Center>
-          <group ref={tailRef} position={[0, 0, TAIL_OFFSET_Z]} />
-        </group>
+    <group ref={props.meshRef} scale={SHIP_SCALE} rotation={[0, 0, 0, 'YXZ']}>
+      <group rotation={[0, Math.PI, 0]}>
+        <Center>
+          <primitive object={scene} />
+        </Center>
+        <Trail
+          width={TRAIL_WIDTH}
+          length={TRAIL_LENGTH}
+          color={TRAIL_COLOR}
+          decay={TRAIL_DECAY}
+          attenuation={TRAIL_ATTENUATION}
+        >
+          <group position={[0, 0, TAIL_OFFSET_Z]} />
+        </Trail>
       </group>
-      <Trail
-        target={tailRef}
-        width={TRAIL_WIDTH}
-        length={TRAIL_LENGTH}
-        color={TRAIL_COLOR}
-        decay={TRAIL_DECAY}
-        attenuation={TRAIL_ATTENUATION}
-      />
-    </>
+    </group>
   );
 ```
 
-Two changes:
-1. The anchor `<group ref={tailRef} position={[0, 0, TAIL_OFFSET_Z]} />` is added as a child of the flip group. Local +Z inside the flip group is "behind the ship's tail" in world terms after all parent transforms apply — yaw lerp on the outer group, the 180° flip on the inner group, then the offset.
-2. `<Trail>` is rendered as a sibling of the ship's root group. The outer `<>` fragment makes the two children siblings instead of demanding a parent `<group>`.
+Two key shape facts to honor:
 
-- [ ] **Step 7: Run the targeted smoke tests.**
+1. **`<Trail>` is mounted inside the flip group**, not as a sibling of the ship's root group. This is structurally required: drei's children-fallback finds the anchor by walking Trail's internal host group children (`Trail.js:97`), and the anchor's world transform comes from its React parent chain. If Trail were outside the flip group, the anchor would no longer inherit ship motion or heading.
+2. **The anchor `<group position={[0, 0, TAIL_OFFSET_Z]} />` is `<Trail>`'s sole child.** No `target={ref}` prop. No `useRef`. drei finds the anchor by looking through its inner group's children for the first `Object3D`; an R3F `<group>` reconciles to `THREE.Group` (which extends `Object3D`), so the fallback selects it.
+
+No fragment is used. The root remains a single `<group ref={props.meshRef}>` exactly as before — only the inner JSX changes.
+
+- [ ] **Step 6: Run the targeted smoke tests.**
 
 ```bash
 pnpm test --run src/features/scene/components/Scene/Scene.test.tsx
@@ -202,15 +189,15 @@ If a test fails with "Element type is invalid: expected a string … but got: un
 
 If a test fails with anything else, stop and investigate — do not "fix forward".
 
-- [ ] **Step 8: Run typecheck.**
+- [ ] **Step 7: Run typecheck.**
 
 ```bash
 pnpm typecheck
 ```
 
-Expected: no errors. If `useRef<Group>(null)` produces a "not assignable to RefObject<Object3D>" error against drei's `target` prop, the React/drei type versions are out of sync in this environment — stop and surface the version mismatch rather than reaching for a cast.
+Expected: no errors. The children-mode JSX avoids the React 19 / drei 10.7.7 type-incompatibility entirely — there is no `useRef<Group>(null)` to begin with. If typecheck reports any error, **stop and report** — do not reach for any cast, `!`, or `as`.
 
-- [ ] **Step 9: Run lint and the suppressor scan.**
+- [ ] **Step 8: Run lint and the suppressor scan.**
 
 ```bash
 pnpm lint
@@ -219,7 +206,7 @@ pnpm lint:suppressors
 
 Expected: both green. The suppressor scan is the project's hard gate against `!`, `as`, `??` on lookups, `@ts-ignore`, etc. — none of the new code uses any of these, so this must pass.
 
-- [ ] **Step 10: Run the full test suite once.**
+- [ ] **Step 9: Run the full test suite once.**
 
 ```bash
 pnpm test
@@ -227,20 +214,23 @@ pnpm test
 
 Expected: all tests pass, not just the scene smoke tests.
 
-- [ ] **Step 11: Commit.**
+- [ ] **Step 10: Commit.**
 
 ```bash
 git add src/features/scene/components/Scene/Player.tsx \
         src/features/scene/components/Scene/Scene.test.tsx
 git commit -m "feat(scene): cyan engine wake trail behind the speeder
 
-Add a drei <Trail> anchored to a rear-of-ship offset inside the
-flip group, so heading lerp carries the trail along automatically.
-'When the ship is moving' is implicit in Trail's position sampling;
-no FSM gate, no opacity lerp.
+Add a drei <Trail> mounted inside the speeder's flip group, with a
+small rear-offset <group> as its child (children-mode anchor —
+Trail.js:97). Heading lerp on the outer group carries the trail
+along automatically. 'When the ship is moving' is implicit in Trail's
+position sampling; no FSM gate, no opacity lerp.
 
-Constants chosen against drei/core/Trail.js source — see
-docs/superpowers/specs/2026-05-19-spaceship-trail-design.md."
+Constants chosen against drei/core/Trail.js source; children-mode
+chosen because drei's target?: RefObject<Object3D> (non-nullable) is
+incompatible with React 19's useRef<T>(null) → RefObject<T | null>.
+See docs/superpowers/specs/2026-05-19-spaceship-trail-design.md."
 ```
 
 ---
@@ -284,7 +274,7 @@ While moving forward, strafe sideways or turn so the camera-relative heading cha
 
 Pass criterion: the trail traces the curved path the ship has taken. If the trail follows a straight line through the ship while the ship rotates around it, the anchor is in the wrong layer — back to the spec, re-read "Why the anchor lives inside the flip group".
 
-This is *the* visual proof that `<group ref={tailRef}>` is correctly nested inside the flip group.
+This is *the* visual proof that `<Trail>` is correctly nested inside the flip group (so its child anchor `<group>` inherits ship + flip + yaw transforms).
 
 - [ ] **Step 5: Check #4 — releasing input collapses the trail quickly.**
 
@@ -325,13 +315,13 @@ If no tuning was needed, skip this step — no second commit.
 
 **1. Spec coverage:**
 
-- Goal (cyan wake behind moving speeder) → Task 1, Steps 4–6.
+- Goal (cyan wake behind moving speeder) → Task 1, Steps 4–5.
 - Non-goals (no bloom, no second trail, no FSM changes, no new tests) → Task 1 contains no edits to anything outside the two specified files; no FSM, no bloom passes, no new test cases.
-- Architecture (single-file, fragment, anchor inside flip group) → Task 1, Step 6 JSX matches the spec's JSX verbatim.
+- Architecture (single-file, anchor inside flip group, children-mode) → Task 1, Step 5 JSX matches the spec's JSX verbatim.
 - Trail tuning constants table → Task 1, Step 4 lists all six with the spec's values.
-- Library API conformance choices (target prop; no local/stride/interval/material override/forwarded ref) → Task 1, Step 6 JSX uses only the props the spec lists; none of the declined-API props appear.
+- Library API conformance choices (children-mode; no local/stride/interval/material override/forwarded ref) → Task 1, Step 5 JSX uses only the props the spec lists; none of the declined-API props appear.
 - Testing (no new tests, one mock patch) → Task 1, Step 2.
-- Verification before declaring done (`pnpm check` + four visual checks) → Task 1, Steps 7–10 cover automated; Task 2 covers manual.
+- Verification before declaring done (`pnpm check` + four visual checks) → Task 1, Steps 6–9 cover automated; Task 2 covers manual.
 
 No gaps.
 
@@ -343,9 +333,9 @@ No gaps.
 
 **3. Type consistency:**
 
-- `tailRef` is `useRef<Group>(null)` in Step 5 and consumed via `target={tailRef}` in Step 6. ✓
-- `TRAIL_ATTENUATION` is `(t: number) => number` in Step 4 and used as `attenuation={TRAIL_ATTENUATION}` in Step 6 — matches `(width: number) => number` in drei's `TrailProps`. ✓
-- `Group` is type-only import in Step 3 and used only in `useRef<Group>` in Step 5. ✓
+- `TRAIL_ATTENUATION` is `(t: number) => number` in Step 4 and used as `attenuation={TRAIL_ATTENUATION}` in Step 5 — matches `(width: number) => number` in drei's `TrailProps`. ✓
+- No `useRef`, no `Group` import — children-mode means the anchor is a JSX element only; nothing to type. ✓
+- The drei `Trail` import in Step 3 is consumed in Step 5 JSX. ✓
 
 ---
 
