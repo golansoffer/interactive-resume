@@ -1,5 +1,5 @@
 import type { JSX, RefObject } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Center, useGLTF } from '@react-three/drei';
 import type { Object3D, Vector3 as Vector3Impl } from 'three';
@@ -21,12 +21,19 @@ const SHIP_SCALE: readonly [number, number, number] = [0.6, 0.6, 0.6];
 
 // Visual feel — banking and pitch derived from velocity in the camera basis.
 // Heading is held at the JSX-set base yaw (no input-driven yaw — camera-relative motion).
-// MAX_PITCH ≈ 15° nose-down at full forward thrust.
-const MAX_PITCH = Math.PI / 12;
-// MAX_ROLL ≈ 30° wing-dip at full strafe.
-const MAX_ROLL = Math.PI / 6;
-// ORIENT_LERP — ~150ms time-to-target; snappy but smooth.
-const ORIENT_LERP = 0.18;
+// MAX_PITCH ≈ 12° nose-down at full forward thrust.
+const MAX_PITCH = Math.PI / 15;
+// MAX_ROLL ≈ 26° wing-dip at full strafe.
+const MAX_ROLL = Math.PI / 7;
+// ORIENT_LERP — ~300ms time-to-target; floaty and weighty.
+const ORIENT_LERP = 0.1;
+
+// Idle motion — sine oscillations gated by (1 - speedRatio); full at rest, zero at top speed.
+// Two distinct frequencies so bob and sway never lock into a single rhythm.
+const IDLE_BOB_AMPLITUDE = 0.15;
+const IDLE_BOB_FREQ_HZ = 0.7;
+const IDLE_SWAY_AMPLITUDE = Math.PI / 100;
+const IDLE_SWAY_FREQ_HZ = 0.45;
 
 const FORWARD_EPSILON = 1e-6;
 
@@ -56,6 +63,30 @@ const deriveBasis = (
   };
 };
 
+type IdleMotion = { readonly bobY: number; readonly swayZ: number };
+
+const computeIdleMotion = (speedRatio: number, time: number): IdleMotion => {
+  const idleRatio = 1 - speedRatio;
+  return {
+    bobY: Math.sin(time * IDLE_BOB_FREQ_HZ * 2 * Math.PI) * IDLE_BOB_AMPLITUDE * idleRatio,
+    swayZ: Math.sin(time * IDLE_SWAY_FREQ_HZ * 2 * Math.PI) * IDLE_SWAY_AMPLITUDE * idleRatio,
+  };
+};
+
+type RotationTargets = { readonly pitch: number; readonly roll: number };
+
+const computeRotationTargets = (
+  velocity: { readonly x: number; readonly z: number },
+  basis: CameraBasis,
+): RotationTargets => {
+  const forwardSpeed = velocity.x * basis.forward.x + velocity.z * basis.forward.z;
+  const rightSpeed = velocity.x * basis.right.x + velocity.z * basis.right.z;
+  return {
+    pitch: -(forwardSpeed / MAX_SPEED) * MAX_PITCH,
+    roll: -(rightSpeed / MAX_SPEED) * MAX_ROLL,
+  };
+};
+
 export const Player = (props: PlayerProps): JSX.Element => {
   const { scene } = useGLTF(SHIP_PATH);
   const camera = useThree((three) => three.camera);
@@ -63,8 +94,12 @@ export const Player = (props: PlayerProps): JSX.Element => {
   const forwardScratch = useMemo(() => new Vector3(), []);
   const rightScratch = useMemo(() => new Vector3(), []);
   const upScratch = useMemo(() => new Vector3(0, 1, 0), []);
+  // Baselines tracked separately from the rendered rotation so the sway
+  // oscillation cannot decay into the lerp state.
+  const baselinePitch = useRef(0);
+  const baselineRoll = useRef(0);
 
-  useFrame((_root, delta) => {
+  useFrame((state, delta) => {
     if (!integratesIn(props.sceneState)) return;
     const mesh = props.meshRef.current;
     if (mesh === null) return;
@@ -77,14 +112,17 @@ export const Player = (props: PlayerProps): JSX.Element => {
       basis,
     );
     props.kinematicsRef.current = next;
-    mesh.position.set(next.position.x, next.position.y, next.position.z);
 
-    const forwardSpeed = next.velocity.x * basis.forward.x + next.velocity.z * basis.forward.z;
-    const rightSpeed = next.velocity.x * basis.right.x + next.velocity.z * basis.right.z;
-    const targetPitch = -(forwardSpeed / MAX_SPEED) * MAX_PITCH;
-    const targetRoll = -(rightSpeed / MAX_SPEED) * MAX_ROLL;
-    mesh.rotation.x += (targetPitch - mesh.rotation.x) * ORIENT_LERP;
-    mesh.rotation.z += (targetRoll - mesh.rotation.z) * ORIENT_LERP;
+    const speed = Math.hypot(next.velocity.x, next.velocity.z);
+    const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
+    const idle = computeIdleMotion(speedRatio, state.clock.elapsedTime);
+    mesh.position.set(next.position.x, next.position.y + idle.bobY, next.position.z);
+
+    const target = computeRotationTargets(next.velocity, basis);
+    baselinePitch.current += (target.pitch - baselinePitch.current) * ORIENT_LERP;
+    baselineRoll.current += (target.roll - baselineRoll.current) * ORIENT_LERP;
+    mesh.rotation.x = baselinePitch.current;
+    mesh.rotation.z = baselineRoll.current + idle.swayZ;
   });
 
   return (
