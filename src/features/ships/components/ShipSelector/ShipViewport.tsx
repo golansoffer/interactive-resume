@@ -3,8 +3,8 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Center, PerspectiveCamera, useGLTF } from '@react-three/drei';
 import type { Group } from 'three';
-import type { ShipEntry } from '../../types/ship';
-import { tickRotation } from './tickRotation';
+import type { ShipEntry, ShipId } from '../../types/ship';
+import { tickRotation, transitionScale } from './tickRotation';
 
 // Studio lighting — 3-point + hemisphere rig. Key (warm), fill (cool),
 // rim (cyan accent matching the engine wake), ground bounce.
@@ -66,14 +66,6 @@ const useThumbnailFrame = (
   });
 };
 
-const useHeroFrame = (groupRef: RefObject<Group | null>): void => {
-  useFrame((_, delta) => {
-    const g = groupRef.current;
-    if (g === null) return;
-    g.rotation.y = tickRotation(g.rotation.y, true, delta);
-  });
-};
-
 const StudioLights = ({ keyIntensity }: { readonly keyIntensity: number }): JSX.Element => (
   <>
     <ambientLight intensity={AMBIENT_INTENSITY} />
@@ -119,10 +111,33 @@ const ThumbnailViewport = (props: {
   );
 };
 
+type HeroTransition = { readonly shipId: ShipId; readonly startedAt: number };
+
+const useHeroSwapTransition = (
+  groupRef: RefObject<Group | null>,
+  ship: ShipEntry,
+): void => {
+  const transition = useRef<HeroTransition>({
+    shipId: ship.id,
+    startedAt: performance.now(),
+  });
+  useFrame((_, delta) => {
+    const g = groupRef.current;
+    if (g === null) return;
+    if (transition.current.shipId !== ship.id) {
+      transition.current = { shipId: ship.id, startedAt: performance.now() };
+    }
+    g.rotation.y = tickRotation(g.rotation.y, true, delta);
+    const elapsed = performance.now() - transition.current.startedAt;
+    const s = transitionScale(ship.scale, elapsed);
+    g.scale.setScalar(s);
+  });
+};
+
 const HeroViewport = (props: { readonly ship: ShipEntry }): JSX.Element => {
   const groupRef = useRef<Group>(null);
   const clonedScene = useClonedScene(props.ship.glbPath);
-  useHeroFrame(groupRef);
+  useHeroSwapTransition(groupRef, props.ship);
   return (
     <>
       <PerspectiveCamera
@@ -132,7 +147,7 @@ const HeroViewport = (props: { readonly ship: ShipEntry }): JSX.Element => {
         fov={HERO_FRAMING.fov}
       />
       <StudioLights keyIntensity={KEY_INTENSITY_HERO} />
-      <group ref={groupRef} scale={props.ship.scale}>
+      <group ref={groupRef}>
         <Center>
           <primitive object={clonedScene} />
         </Center>

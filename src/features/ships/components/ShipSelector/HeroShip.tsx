@@ -26,7 +26,7 @@ const viewportClassName = cn(
 
 const infoBlockClassName = cn(
   'shrink-0 flex flex-col items-start gap-2 md:gap-3',
-  'animate-[fadeIn_240ms_ease-out]',
+  'animate-[fadeIn_360ms_cubic-bezier(0.16,1,0.3,1)]',
 );
 
 const codeClassName = cn(

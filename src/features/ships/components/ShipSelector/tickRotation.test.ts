@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HERO_TRANSITION_MS,
   HOVER_SPEED,
   REST_LERP,
   STATIC_ANGLE_Y,
   TWO_PI,
+  easeOutCubic,
   tickRotation,
+  transitionScale,
 } from './tickRotation';
 
 describe('tickRotation', () => {
@@ -51,3 +54,49 @@ describe('tickRotation', () => {
   });
 });
 
+describe('easeOutCubic', () => {
+  it('maps 0 → 0 and 1 → 1', () => {
+    expect(easeOutCubic(0)).toBe(0);
+    expect(easeOutCubic(1)).toBe(1);
+  });
+
+  it('is monotonically increasing across the unit interval', () => {
+    let prev = easeOutCubic(0);
+    for (let t = 0.01; t <= 1; t += 0.01) {
+      const v = easeOutCubic(t);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('front-loads the curve (eased past the linear midpoint at t=0.5)', () => {
+    expect(easeOutCubic(0.5)).toBeGreaterThan(0.5);
+  });
+});
+
+describe('transitionScale', () => {
+  it('returns 0 at t = 0 (mesh starts invisible)', () => {
+    expect(transitionScale(1, 0)).toBe(0);
+  });
+
+  it('returns the target scale at and beyond the transition duration', () => {
+    expect(transitionScale(1, HERO_TRANSITION_MS)).toBe(1);
+    expect(transitionScale(0.6, HERO_TRANSITION_MS + 5000)).toBe(0.6);
+  });
+
+  it('clamps negative elapsed values to 0', () => {
+    expect(transitionScale(1, -100)).toBe(0);
+  });
+
+  it('scales the target value by the ease curve mid-transition', () => {
+    const half = transitionScale(1, HERO_TRANSITION_MS / 2);
+    expect(half).toBeGreaterThan(0.5);
+    expect(half).toBeLessThan(1);
+  });
+
+  it('respects target scale magnitude', () => {
+    const small = transitionScale(0.5, HERO_TRANSITION_MS / 2);
+    const large = transitionScale(1, HERO_TRANSITION_MS / 2);
+    expect(small).toBeCloseTo(large * 0.5, 10);
+  });
+});
