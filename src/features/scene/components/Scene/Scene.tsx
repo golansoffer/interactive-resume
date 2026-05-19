@@ -7,6 +7,7 @@ import type { RevealProjection } from '../../types/reveal-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import { DeepSpace } from '../DeepSpace/DeepSpace';
 import { Companies } from './Companies';
 import { FollowCamera } from './FollowCamera';
 import { PlanetLabels } from './PlanetLabels';
@@ -47,7 +48,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
 
   return (
     <>
-      <color attach="background" args={['#04050a']} />
+      <DeepSpace />
       <ambientLight intensity={0.4} />
       <directionalLight position={[10, 18, 6]} intensity={1.6} castShadow={false} />
       <directionalLight position={[-8, 6, -10]} intensity={0.2} castShadow={false} />
