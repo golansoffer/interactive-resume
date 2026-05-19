@@ -10,11 +10,6 @@ void main() {
 }
 `;
 
-// 4-octave 3D fbm sampled along the view direction. Two thresholded
-// gradients select between base/accent/highlight palette colors. uTime
-// scrolls the noise field along one axis at ~0.05 units/sec so the gas
-// breathes without ever looping visibly. A subtle vertical brightening
-// gives the sky a top/bottom orientation, mimicking a faint horizon.
 const FRAGMENT_SHADER = `
 uniform float uTime;
 uniform float uIntensity;
