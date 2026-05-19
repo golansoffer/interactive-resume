@@ -42,6 +42,4 @@ export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element 
   );
 };
 
-// Side-effect preload: when this module loads, all 8 GLBs start fetching.
-// By the time the user picks, the chosen GLB is already cached.
 for (const ship of ALL_SHIPS) useGLTF.preload(ship.glbPath);
