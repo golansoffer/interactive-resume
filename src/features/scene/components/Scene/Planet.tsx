@@ -20,11 +20,10 @@ type PlanetProps = {
 const PLANET_SCALE: readonly [number, number, number] = [1.5, 1.5, 1.5];
 const ROTATION_RAD_PER_SEC = 0.07;
 
-// Idle wobble — planets are always "at rest" (no acceleration), so the
-// wobble runs at full amplitude. Slower than the ship's idle for a
-// heavier feel. Phase derived from CompanyId so planets don't bob in unison.
-const PLANET_BOB_AMPLITUDE = 0.06;
-const PLANET_BOB_FREQ_HZ = 0.08;
+// Idle sway only — no bob. Planets are massive bodies in space; vertical
+// motion belongs to the aircraft, which actively hovers. Planets get a
+// barely-perceptible roll oscillation, phase-offset per CompanyId so
+// the five planets don't sway in unison.
 const PLANET_SWAY_AMPLITUDE = Math.PI / 220;
 const PLANET_SWAY_FREQ_HZ = 0.05;
 const TWO_PI = Math.PI * 2;
@@ -133,10 +132,8 @@ export const Planet = (props: PlanetProps): JSX.Element => {
     if (mesh === null) return;
     mesh.rotation.y += ROTATION_RAD_PER_SEC * delta;
     const time = state.clock.elapsedTime;
-    const bobY = Math.sin(time * PLANET_BOB_FREQ_HZ * TWO_PI + phase) * PLANET_BOB_AMPLITUDE;
     const swayZ =
       Math.sin(time * PLANET_SWAY_FREQ_HZ * TWO_PI + phase * 1.3) * PLANET_SWAY_AMPLITUDE;
-    mesh.position.y = props.planet.planet.placement[1] + bobY;
     mesh.rotation.z = swayZ;
   });
 
