@@ -53,7 +53,7 @@ vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
-  Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children ?? null,
+  Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   useGLTF: Object.assign(
     (): { readonly scene: MockScene } => ({ scene: mockScene }),
     { preload: (): void => {} },
