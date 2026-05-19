@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useActor } from '@xstate/react';
 import { getSceneState, sceneMachine } from '../../../../core/scene/sceneMachine';
-import { getFoundationCompanies } from '../../schema/companies';
+import { getFoundationCompanies } from './companies';
 import { subscribeToKeyboard } from '../../services/input/subscribeToKeyboard';
 import type { Company } from '../../types/company';
 import type { Intent, IntentStream } from '../../types/intent';

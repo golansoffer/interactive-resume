@@ -1,4 +1,4 @@
-import { type Company, asCompanyId } from '../types/company';
+import { type Company, asCompanyId } from '../../types/company';
 
 const RING_RADIUS = 12;
 const RING_COUNT = 8;
