@@ -37,6 +37,10 @@
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "max-lines-per-function": "off" }
+    },
+    {
+      "files": ["**/features/*/components/**/*.tsx"],
+      "rules": { "import/max-dependencies": "off" }
     }
   ],
   "settings": { "react": { "version": "19" } },

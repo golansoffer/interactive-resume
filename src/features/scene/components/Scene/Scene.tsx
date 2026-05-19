@@ -3,13 +3,11 @@ import type { Company } from '../../types/company';
 import type { IntentStream } from '../../types/intent';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
-import {
-  Companies,
-  FollowCamera,
-  Player,
-  ProximityWatcher,
-  RevealOverlay,
-} from './children';
+import { Companies } from './Companies';
+import { FollowCamera } from './FollowCamera';
+import { Player } from './Player';
+import { ProximityWatcher } from './ProximityWatcher';
+import { RevealOverlay } from './RevealOverlay';
 import { useSceneRefs } from './useSceneRefs';
 
 type SceneProps = {
