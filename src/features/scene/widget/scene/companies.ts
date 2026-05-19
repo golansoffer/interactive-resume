@@ -1,7 +1,7 @@
 import { asCompanyId } from '../../types/company';
 import type { CompanyEntry } from '../../types/company';
 
-const RING_RADIUS = 26;
+const RING_RADIUS = 80;
 const RING_COUNT = 5;
 
 const ringPosition = (index: number): readonly [number, number, number] => {

@@ -7,21 +7,24 @@ import type { CompanyEntry, CompanyId } from '../../types/company';
 import type { CompanyInfo } from '../../types/company-info';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
+import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
 
 type ProximityWatcherProps = {
   readonly sceneState: SceneState;
   readonly entries: ReadonlyArray<CompanyEntry>;
   readonly kinematicsRef: RefObject<Kinematics>;
+  readonly planetRadiiRef: RefObject<PlanetRadii>;
+  readonly planetActivationsRef: RefObject<PlanetActivations>;
   readonly onEvent: (event: SceneEvent) => void;
 };
 
-type ProximityTarget = {
+type StaticTargetFields = {
   readonly id: CompanyId;
   readonly info: CompanyInfo;
   readonly placement: readonly [number, number, number];
 };
 
-export const PROXIMITY_RADIUS = 3;
+type ProximityTarget = StaticTargetFields & { readonly radius: number };
 
 const EMPTY: ReadonlySet<CompanyId> = new Set<CompanyId>();
 
@@ -31,30 +34,45 @@ const emitsIn = (state: SceneState): boolean =>
 const suppressesEnter = (state: SceneState, id: CompanyId): boolean =>
   state.kind === 'revealing' && state.objectId === id;
 
-const projectTargets = (
+const projectStaticTargets = (
   entries: ReadonlyArray<CompanyEntry>,
-): ReadonlyArray<ProximityTarget> =>
+): ReadonlyArray<StaticTargetFields> =>
   entries.map((entry) => ({
     id: entry.id,
     info: entry.info,
     placement: entry.planet.placement,
   }));
 
+const resolveTargets = (
+  staticTargets: ReadonlyArray<StaticTargetFields>,
+  radii: PlanetRadii,
+): ReadonlyArray<ProximityTarget> =>
+  staticTargets.map((t) => ({ ...t, radius: radii.read(t.id) }));
+
 export const ProximityWatcher = (props: ProximityWatcherProps): JSX.Element => {
   const previousRef = useRef<ReadonlySet<CompanyId>>(EMPTY);
-
-  const targets = useMemo(() => projectTargets(props.entries), [props.entries]);
+  const staticTargets = useMemo(
+    () => projectStaticTargets(props.entries),
+    [props.entries],
+  );
 
   useFrame(() => {
     if (!emitsIn(props.sceneState)) {
       previousRef.current = EMPTY;
+      props.planetActivationsRef.current.publish(EMPTY);
       return;
     }
 
     const position = props.kinematicsRef.current.position;
-    const matches = proximityCheck(position, targets, PROXIMITY_RADIUS);
+    const targets = resolveTargets(staticTargets, props.planetRadiiRef.current);
+    const matches = proximityCheck(position, targets);
     const previous = previousRef.current;
     const current = new Set<CompanyId>(matches.map((m) => m.id));
+
+    // Visual activation publishes the full set every frame — every Planet
+    // whose own radius contains the player turns on, independently of the
+    // SceneMachine's single-target reveal selection.
+    props.planetActivationsRef.current.publish(current);
 
     for (const match of matches) {
       if (previous.has(match.id)) continue;

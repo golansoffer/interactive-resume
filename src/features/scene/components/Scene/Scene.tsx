@@ -40,7 +40,7 @@ const projectLabels = (
   }));
 
 export const Scene = (props: SceneProps): JSX.Element => {
-  const { kinematicsRef, meshRef } = useSceneRefs();
+  const { kinematicsRef, meshRef, planetRadiiRef, planetActivationsRef } = useSceneRefs();
 
   const planets = useMemo(() => projectPlanets(props.entries), [props.entries]);
   const labels = useMemo(() => projectLabels(props.entries), [props.entries]);
@@ -59,12 +59,18 @@ export const Scene = (props: SceneProps): JSX.Element => {
         kinematicsRef={kinematicsRef}
         meshRef={meshRef}
       />
-      <Companies planets={planets} />
+      <Companies
+        planets={planets}
+        planetRadiiRef={planetRadiiRef}
+        planetActivationsRef={planetActivationsRef}
+      />
       <PlanetLabels labels={labels} />
       <ProximityWatcher
         sceneState={props.state}
         entries={props.entries}
         kinematicsRef={kinematicsRef}
+        planetRadiiRef={planetRadiiRef}
+        planetActivationsRef={planetActivationsRef}
         onEvent={props.onEvent}
       />
       {props.revealProjection.kind === 'visible' ? (
