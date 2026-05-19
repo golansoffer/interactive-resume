@@ -11,20 +11,21 @@ type HeroShipProps = {
 };
 
 const containerClassName = cn(
-  'flex h-full w-full flex-col items-stretch justify-center gap-6',
+  'flex h-full min-h-0 w-full flex-col items-stretch gap-3 md:gap-4',
 );
 
-// Viewport — full bleed of the hero column; the ship breathes here.
-// Aspect set so the canvas reads as a 4:3 stage rather than a square card.
+// Viewport — fills all remaining vertical space in the hero column. No
+// aspect-ratio: the height is the parent's flex height (flex-1 min-h-0
+// chain). min-h-0 defeats the intrinsic-size floor that would otherwise
+// prevent the flex item from shrinking below its content.
 const viewportClassName = cn(
-  'relative w-full overflow-hidden rounded-lg',
+  'relative flex-1 min-h-0 w-full overflow-hidden rounded-lg',
   'bg-[radial-gradient(120%_80%_at_50%_40%,#0a1730_0%,#04070f_70%)]',
   'ring-1 ring-white/5',
-  'aspect-[4/3] max-h-[60vh]',
 );
 
 const infoBlockClassName = cn(
-  'flex flex-col items-start gap-3',
+  'shrink-0 flex flex-col items-start gap-2 md:gap-3',
   'animate-[fadeIn_240ms_ease-out]',
 );
 
@@ -33,7 +34,8 @@ const codeClassName = cn(
 );
 
 const nameClassName = cn(
-  'text-5xl md:text-6xl font-semibold tracking-tight text-[--color-fg]',
+  'text-3xl sm:text-4xl md:text-5xl xl:text-6xl',
+  'font-semibold tracking-tight text-[--color-fg] leading-none',
 );
 
 const separatorClassName = cn('h-px w-24 bg-[--color-accent]/40');
@@ -41,7 +43,7 @@ const separatorClassName = cn('h-px w-24 bg-[--color-accent]/40');
 const launchButtonClassName = cn(
   'inline-flex items-center gap-2 rounded-md',
   'border border-[--color-accent]/60 bg-[--color-accent]/10',
-  'px-6 py-3 text-sm font-medium tracking-wider uppercase',
+  'px-5 py-2 md:px-6 md:py-3 text-sm font-medium tracking-wider uppercase',
   'text-[--color-accent] transition-all duration-200',
   'hover:bg-[--color-accent]/20 hover:border-[--color-accent]',
   'hover:shadow-[0_0_24px_-4px_var(--color-accent)]',

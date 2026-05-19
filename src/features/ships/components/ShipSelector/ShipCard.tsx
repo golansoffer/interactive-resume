@@ -19,8 +19,13 @@ type ShipCardProps = {
 // formatting; no external dependency.
 const formatIndex = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
 
+// On mobile (horizontal strip) cards size to content and don't shrink;
+// on desktop (vertical strip) they fill the column width and pick up a
+// left accent border. The border-l-2 + transparent default is correct
+// for desktop; on mobile it's visually neutral.
 const cardClassName = cn(
-  'group relative flex w-full items-center gap-3 cursor-pointer',
+  'group relative flex shrink-0 items-center gap-3 cursor-pointer',
+  'md:w-full',
   'border-l-2 border-transparent bg-transparent',
   'px-3 py-2 text-left text-[--color-fg]',
   'transition-[background-color,border-color,transform] duration-200',

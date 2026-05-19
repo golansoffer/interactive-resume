@@ -4,12 +4,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SHIP_REGISTRY } from '../../types/shipRegistry';
 import { HeroShip } from './HeroShip';
 
-vi.mock('@react-three/drei', () => ({
-  View: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
-  useGLTF: (): { readonly scene: Record<string, never> } => ({ scene: {} }),
-  PerspectiveCamera: (): null => null,
-  Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
-}));
+vi.mock('@react-three/drei', () => {
+  type FakeScene = { readonly clone: () => FakeScene };
+  const makeFakeScene = (): FakeScene => ({ clone: (): FakeScene => makeFakeScene() });
+  return {
+    View: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+    useGLTF: (): { readonly scene: FakeScene } => ({ scene: makeFakeScene() }),
+    PerspectiveCamera: (): null => null,
+    Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+  };
+});
 vi.mock('@react-three/fiber', () => ({ useFrame: (): null => null }));
 
 const SHIP = SHIP_REGISTRY.cargoB;

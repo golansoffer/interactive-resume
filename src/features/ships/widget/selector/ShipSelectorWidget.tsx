@@ -28,12 +28,12 @@ const BACKDROP_STYLE: CSSProperties = {
 
 const containerClassName = cn(
   'relative flex h-screen w-screen flex-col items-stretch',
-  'text-[--color-fg] overflow-auto',
+  'text-[--color-fg] overflow-hidden',
 );
 
 const headerClassName = cn(
-  'flex w-full max-w-6xl flex-col gap-2 self-center',
-  'px-8 pt-10 md:pt-14',
+  'shrink-0 flex w-full max-w-6xl flex-col gap-1 self-center',
+  'px-8 pt-6 md:pt-8',
 );
 
 const eyebrowClassName = cn(
@@ -41,16 +41,16 @@ const eyebrowClassName = cn(
 );
 
 const titleClassName = cn(
-  'text-3xl md:text-4xl font-semibold tracking-tight text-[--color-fg]',
+  'text-2xl md:text-3xl font-semibold tracking-tight text-[--color-fg]',
 );
 
 const subtitleClassName = cn(
-  'text-sm tracking-wide text-[--color-fg]/60',
+  'text-xs md:text-sm tracking-wide text-[--color-fg]/60',
 );
 
 const bodyClassName = cn(
-  'flex w-full flex-1 items-center justify-center self-center',
-  'px-8 py-10 md:py-12',
+  'w-full min-h-0 flex-1 self-center',
+  'px-8 py-4 md:py-6',
 );
 
 // HUD corner brackets — four L-shapes pinned to the edges. Pure
