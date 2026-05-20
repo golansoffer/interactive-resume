@@ -79,7 +79,7 @@ describe('extractBody', () => {
     expect(result.mesh).toBe(bodyMesh);
     // Ring disc dims are (10, 0.05, 10) → smallest axis is y → normal points
     // along local Y. Auto-detection should pick 'y'.
-    expect(result.ringNormalAxis).toBe('y');
+    expect(result.poleAxis).toBe('y');
   });
 
   it('detects ring normal axis on the X axis when the disc is flat in YZ', () => {
@@ -91,7 +91,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('ringed_body');
     if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
-    expect(result.ringNormalAxis).toBe('x');
+    expect(result.poleAxis).toBe('x');
   });
 
   it('detects ring normal axis on the Z axis when the disc is flat in XY', () => {
@@ -103,7 +103,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('ringed_body');
     if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
-    expect(result.ringNormalAxis).toBe('z');
+    expect(result.poleAxis).toBe('z');
   });
 
   it('picks the single mesh when there is only one', () => {
@@ -114,6 +114,7 @@ describe('extractBody', () => {
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
     expect(result.mesh).toBe(mesh);
+    expect(['x', 'y', 'z']).toContain(result.poleAxis);
   });
 
   it('computes bounding sphere when null on the geometry', () => {
@@ -123,6 +124,41 @@ describe('extractBody', () => {
     root.add(new Mesh(geometry, new MeshBasicMaterial()));
     const result = extractBody(root);
     expect(result.kind).toBe('body');
+    if (result.kind !== 'body') throw new Error('expected body variant');
     expect(geometry.boundingSphere).not.toBeNull();
+    expect(['x', 'y', 'z']).toContain(result.poleAxis);
+  });
+
+  it('detects pole axis on X for a single non-ringed body flattened along X', () => {
+    const root = new Group();
+    // Dims (1.0, 1.1, 1.1) → sphericity ≈ 0.91, above SPHERICITY_THRESHOLD,
+    // so this lands in the 'body' variant (not 'ringed_body'). Smallest dim
+    // is X, so poleAxis must be 'x'.
+    const mesh = new Mesh(new BoxGeometry(1.0, 1.1, 1.1), new MeshBasicMaterial());
+    root.add(mesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('body');
+    if (result.kind !== 'body') throw new Error('expected body variant');
+    expect(result.poleAxis).toBe('x');
+  });
+
+  it('detects pole axis on Y for a single non-ringed body flattened along Y', () => {
+    const root = new Group();
+    const mesh = new Mesh(new BoxGeometry(1.1, 1.0, 1.1), new MeshBasicMaterial());
+    root.add(mesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('body');
+    if (result.kind !== 'body') throw new Error('expected body variant');
+    expect(result.poleAxis).toBe('y');
+  });
+
+  it('detects pole axis on Z for a single non-ringed body flattened along Z', () => {
+    const root = new Group();
+    const mesh = new Mesh(new BoxGeometry(1.1, 1.1, 1.0), new MeshBasicMaterial());
+    root.add(mesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('body');
+    if (result.kind !== 'body') throw new Error('expected body variant');
+    expect(result.poleAxis).toBe('z');
   });
 });

@@ -45,6 +45,10 @@
     {
       "files": ["src/main.tsx"],
       "rules": { "import/no-unassigned-import": "off" }
+    },
+    {
+      "files": ["**/services/renderer/starfieldSpec.ts"],
+      "rules": { "unicorn/prefer-math-trunc": "off" }
     }
   ],
   "settings": { "react": { "version": "19" } },

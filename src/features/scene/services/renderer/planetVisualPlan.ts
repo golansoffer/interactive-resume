@@ -7,8 +7,8 @@ import type {
   ClonedScene,
   PlanetLook,
   PlanetVisualPlan,
+  PoleAxis,
   RimSpec,
-  RingNormalAxis,
 } from './planetTypes';
 
 type Candidate = {
@@ -48,11 +48,12 @@ const computeCandidate = (mesh: Mesh): Candidate | null => {
   return { mesh, radius: sphere.radius, sphericity, dx, dy, dz };
 };
 
-// Picks the axis of the smallest bounding-box dimension. A ring disc has a
-// flat normal axis (its thinnest dimension), which is the rotation axis we
-// need to align with the planet's spin axis. Exhaustive: any three numbers
-// produce one of 'x' | 'y' | 'z'.
-const ringNormalAxisFromDims = (dx: number, dy: number, dz: number): RingNormalAxis => {
+// Picks the axis of the smallest bounding-box dimension. For a ring disc this
+// is the disc normal; for a non-ringed body it is the model pole (the axis the
+// asset was authored around — texture seams and the implied spin axis). In
+// both cases we want this axis aligned with world up. Exhaustive: any three
+// numbers produce one of 'x' | 'y' | 'z'.
+const poleAxisFromDims = (dx: number, dy: number, dz: number): PoleAxis => {
   if (dx <= dy && dx <= dz) return 'x';
   if (dy <= dx && dy <= dz) return 'y';
   return 'z';
@@ -99,17 +100,21 @@ export const extractBody = (root: Object3D): BodyExtraction => {
   // as siblings in the scene graph.
   const disc = pickRingDisc(candidates);
   if (spherical.length > 0 && disc.kind === 'found') {
-    const ringNormalAxis = ringNormalAxisFromDims(disc.dx, disc.dy, disc.dz);
-    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, ringNormalAxis };
+    const poleAxis = poleAxisFromDims(disc.dx, disc.dy, disc.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleAxis };
   }
   // Single-mesh case: body + ring are baked into one mesh (this asset set).
   // The merged mesh is non-spherical because the ring extends beyond the body
   // in its plane; the smallest bbox dim points along the ring normal.
   if (best.sphericity <= SPHERICITY_THRESHOLD) {
-    const ringNormalAxis = ringNormalAxisFromDims(best.dx, best.dy, best.dz);
-    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, ringNormalAxis };
+    const poleAxis = poleAxisFromDims(best.dx, best.dy, best.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleAxis };
   }
-  return { kind: 'body', mesh: best.mesh, radius: best.radius };
+  // Non-ringed body: pole axis is the body mesh's own thinnest bbox dim.
+  // Planet GLB assets are authored as near-spheres with a slight pole-axis
+  // flattening; this picks that axis so the pose reorients it to world up.
+  const poleAxis = poleAxisFromDims(best.dx, best.dy, best.dz);
+  return { kind: 'body', mesh: best.mesh, radius: best.radius, poleAxis };
 };
 
 export const cloneAndDress = (

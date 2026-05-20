@@ -33,16 +33,21 @@ export type PlanetLook =
   | { readonly kind: 'plain' }
   | { readonly kind: 'effects'; readonly pulse: PulseSpec; readonly rim: RimSpec };
 
-export type RingNormalAxis = 'x' | 'y' | 'z';
+export type PoleAxis = 'x' | 'y' | 'z';
 
 export type BodyExtraction =
   | { readonly kind: 'no_body' }
-  | { readonly kind: 'body'; readonly mesh: Mesh; readonly radius: number }
+  | {
+      readonly kind: 'body';
+      readonly mesh: Mesh;
+      readonly radius: number;
+      readonly poleAxis: PoleAxis;
+    }
   | {
       readonly kind: 'ringed_body';
       readonly mesh: Mesh;
       readonly radius: number;
-      readonly ringNormalAxis: RingNormalAxis;
+      readonly poleAxis: PoleAxis;
     };
 
 export type AtmospherePlan = {
