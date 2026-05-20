@@ -40,19 +40,23 @@ const SUN_LIGHT_DECAY = 2;
 const SUN_EMISSIVE_HEX = 0xffe9b0;
 const SUN_EMISSIVE_INTENSITY = 1.2;
 
-// Applies the warm emissive override to every MeshStandardMaterial on the
-// sun body so the sphere reads as a hot source under any tone-mapping setup.
-const overrideSunMaterials = (root: Object3D): void => {
-  root.traverse((obj) => {
+// Clones the GLB scene and replaces each MeshStandardMaterial with a cloned
+// copy carrying the warm emissive override. Cloning is required because
+// useGLTF caches and shares the source scene across consumers; mutating in
+// place would leak into any future second consumer of the same GLB.
+// Matches the cloneAndDress discipline in planetVisualPlan.ts.
+const cloneAndOverride = (source: Object3D): Object3D => {
+  const cloned = source.clone();
+  cloned.traverse((obj) => {
     if (!(obj instanceof Mesh)) return;
-    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const material of materials) {
-      if (!(material instanceof MeshStandardMaterial)) continue;
-      material.emissive = new Color(SUN_EMISSIVE_HEX);
-      material.emissiveIntensity = SUN_EMISSIVE_INTENSITY;
-      material.toneMapped = false;
-    }
+    if (!(obj.material instanceof MeshStandardMaterial)) return;
+    const m = obj.material.clone();
+    m.emissive = new Color(SUN_EMISSIVE_HEX);
+    m.emissiveIntensity = SUN_EMISSIVE_INTENSITY;
+    m.toneMapped = false;
+    obj.material = m;
   });
+  return cloned;
 };
 
 type Billboard = { readonly mesh: Mesh; readonly material: ShaderMaterial };
@@ -98,8 +102,7 @@ export const Sun = (props: SunProps): JSX.Element => {
 
   const prepared = useMemo(() => {
     configureColorsheet(colorsheet);
-    overrideSunMaterials(scene);
-    return scene;
+    return cloneAndOverride(scene);
   }, [scene, colorsheet]);
 
   const extraction = useMemo(() => extractBody(prepared), [prepared]);
