@@ -42,10 +42,13 @@ const SCALE_BREATH_FREQ_HZ = 0.05;
 // constant — proximity enter/exit translates to a smooth ~0.5 s ramp on the
 // rim and scale-breath effects.
 const ACTIVATION_LERP_RATE = 4.0;
-// Active-radius multiplier on each planet's visible body radius. 2.5× visible
-// radius = ~1.25× visible diameter, so the rim lights up about half a planet-
-// diameter before the player reaches the surface.
-const ACTIVATION_RADIUS_MULTIPLIER = 2.5;
+// Active-radius multiplier on each planet's visible body radius. With body
+// radius now computed as min(dx,dy,dz)/2 — the true ring-normal half-thickness
+// for merged ringed bodies — this lands the activation zone at ~32 world
+// units from each planet's center (calibrated against Mars's feel),
+// consistent across spherical and ringed planets where the old loose
+// half-diagonal sphere radius inflated Saturn and Uranus by 1.6×–2×.
+const ACTIVATION_RADIUS_MULTIPLIER = 4.5;
 const TWO_PI = Math.PI * 2;
 
 const idEncoder = new TextEncoder();

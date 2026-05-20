@@ -35,18 +35,24 @@ export const rotationRateFor = (phase: number): number =>
 
 const computeCandidate = (mesh: Mesh): Candidate | null => {
   const g = mesh.geometry;
-  if (g.boundingSphere === null) g.computeBoundingSphere();
   if (g.boundingBox === null) g.computeBoundingBox();
-  const sphere = g.boundingSphere;
   const box = g.boundingBox;
-  if (sphere === null || box === null) return null;
+  if (box === null) return null;
   const dx = box.max.x - box.min.x;
   const dy = box.max.y - box.min.y;
   const dz = box.max.z - box.min.z;
   const maxDim = Math.max(dx, dy, dz);
   const minDim = Math.min(dx, dy, dz);
   const sphericity = maxDim === 0 ? 0 : minDim / maxDim;
-  return { mesh, radius: sphere.radius, sphericity, dx, dy, dz };
+  // Body radius = half the smallest bbox dimension. Robust across spherical
+  // bodies, merged single-mesh ringed bodies (rings inflate two axes; the
+  // third holds the body's thickness), and slightly squashed bodies. The
+  // alternative — `geometry.boundingSphere.radius` — is unreliable here:
+  // GLTFLoader pre-seeds it from accessor min/max as the bbox half-diagonal
+  // (e.g. ~8.5 for a ~10-unit cube bbox), and even after explicit
+  // computeBoundingSphere() the rings still extend max-vertex-distance well
+  // past the body on Saturn and Uranus (single-mesh planets here).
+  return { mesh, radius: minDim / 2, sphericity, dx, dy, dz };
 };
 
 // Fallback pole direction from bounding-box dims: a cardinal unit vector

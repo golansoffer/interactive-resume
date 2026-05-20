@@ -119,15 +119,15 @@ describe('extractBody', () => {
     expect(len).toBeCloseTo(1, 6);
   });
 
-  it('computes bounding sphere when null on the geometry', () => {
+  it('computes bounding box when null on the geometry', () => {
     const root = new Group();
     const geometry = new BoxGeometry(3, 3, 3);
-    geometry.boundingSphere = null;
+    geometry.boundingBox = null;
     root.add(new Mesh(geometry, new MeshBasicMaterial()));
     const result = extractBody(root);
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
-    expect(geometry.boundingSphere).not.toBeNull();
+    expect(geometry.boundingBox).not.toBeNull();
     const [px, py, pz] = result.poleDirection;
     const len = Math.sqrt(px * px + py * py + pz * pz);
     expect(len).toBeCloseTo(1, 6);
@@ -164,5 +164,34 @@ describe('extractBody', () => {
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
     expect(result.poleDirection).toEqual([0, 0, 1]);
+  });
+
+  it('reports body radius as half the smallest bbox dimension on a merged ringed mesh — not the bounding-sphere half-diagonal that engulfs the rings', () => {
+    // Single-mesh body+ring: bbox extends 10 units across two axes (ring outer
+    // extent) and 2 units along the third (body thickness). The body's actual
+    // radius is the half-thickness (1); the bounding sphere from corner
+    // vertices would be sqrt(5²+1²+5²) ≈ 7.14, 7× larger, and that inflated
+    // value would scale the activation zone proportionally on Uranus and
+    // Saturn (both ship as single merged meshes).
+    const root = new Group();
+    const merged = new Mesh(new BoxGeometry(10, 2, 10), new MeshBasicMaterial());
+    root.add(merged);
+    const result = extractBody(root);
+    expect(result.kind).toBe('ringed_body');
+    if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
+    expect(result.radius).toBeCloseTo(1, 6);
+  });
+
+  it('reports body radius as half the smallest bbox dimension on a spherical body — independent of vertex distribution', () => {
+    // Even for a well-tessellated sphere mesh, the loose bounding-sphere
+    // bbox-center → corner-vertex measurement can drift; minDim/2 is the
+    // body radius regardless of how vertices land in the bbox.
+    const root = new Group();
+    const mesh = new Mesh(new SphereGeometry(5, 32, 16), new MeshBasicMaterial());
+    root.add(mesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('body');
+    if (result.kind !== 'body') throw new Error('expected body variant');
+    expect(result.radius).toBeCloseTo(5, 1);
   });
 });

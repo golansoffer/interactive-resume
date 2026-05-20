@@ -2,11 +2,12 @@ import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
-import type { Object3D, Vector3 as Vector3Impl } from 'three';
+import type { Group, Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
 import { clampOutOfSphere } from '../../services/renderer/clampOutOfSphere';
 import { integrateMotion } from '../../services/renderer/integrateMotion';
 import type { CameraBasis } from '../../services/renderer/integrateMotion';
+import { cloneAndDressShip } from '../../services/renderer/shipVisualPlan';
 import { MAX_SPEED, type Kinematics } from '../../types/kinematics';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
@@ -39,12 +40,26 @@ const ORIENT_LERP = 0.1;
 // (Trail.js:52), which is invisible at thin widths but causes visible
 // banding/graininess at thick widths — keep decay = 1. Attenuation
 // pinches the tail to a point.
-const TAIL_OFFSET_Z = 0.4;
+const TAIL_OFFSET_Z = 0.75;
 const TRAIL_WIDTH = 6.0;
 const TRAIL_LENGTH = 4;
 const TRAIL_COLOR = '#5fd6ff';
 const TRAIL_DECAY = 1;
 const TRAIL_ATTENUATION = (t: number): number => t * t;
+
+// Ship-local studio rig — additive on top of the scene's global ambient +
+// key light, so the craft carries its own warm/cool/rim signature in
+// ship-world axes regardless of where it flies relative to the sun.
+const RIG_KEY_COLOR = '#fff5e8';
+const RIG_FILL_COLOR = '#a8d4ff';
+const RIG_RIM_COLOR = '#5fd6ff';
+const RIG_HEMI_TOP = '#7aa8ff';
+const RIG_HEMI_BOTTOM = '#08111e';
+
+const RIG_KEY_INTENSITY = 2.4;
+const RIG_FILL_INTENSITY = 0.7;
+const RIG_RIM_INTENSITY = 1.4;
+const RIG_HEMI_INTENSITY = 0.35;
 
 // Idle motion — sine oscillations always present, scaled down with speed
 // (see IDLE_RATIO_FLOOR in computeIdleMotion). The aircraft is the LIGHT
@@ -136,7 +151,7 @@ const applyHeadingLerp = (
   mesh.rotation.y += headingDelta * HEADING_LERP;
 };
 
-const usePlayerFrame = (props: PlayerProps): void => {
+const usePlayerFrame = (props: PlayerProps, visualRef: RefObject<Group | null>): void => {
   const camera = useThree((three) => three.camera);
   const cameraWorldDir = useMemo(() => new Vector3(), []);
   const forwardScratch = useMemo(() => new Vector3(), []);
@@ -170,7 +185,10 @@ const usePlayerFrame = (props: PlayerProps): void => {
     const speed = Math.hypot(next.velocity.x, next.velocity.z);
     const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
     const idle = computeIdleMotion(speedRatio, state.clock.elapsedTime);
-    mesh.position.set(next.position.x, next.position.y + idle.bobY, next.position.z);
+    mesh.position.set(next.position.x, next.position.y, next.position.z);
+    // Bob lives on the visual sub-group so it doesn't pollute the trail anchor's transform.
+    const visual = visualRef.current;
+    if (visual !== null) visual.position.y = idle.bobY;
 
     applyHeadingLerp(mesh, next.velocity, speed);
 
@@ -182,19 +200,36 @@ const usePlayerFrame = (props: PlayerProps): void => {
   });
 };
 
+const ShipRig = (): JSX.Element => (
+  <>
+    <directionalLight position={[6, 8, 5]} intensity={RIG_KEY_INTENSITY} color={RIG_KEY_COLOR} />
+    <directionalLight position={[-5, 4, 3]} intensity={RIG_FILL_INTENSITY} color={RIG_FILL_COLOR} />
+    <directionalLight position={[0, 3, -6]} intensity={RIG_RIM_INTENSITY} color={RIG_RIM_COLOR} />
+    <hemisphereLight args={[RIG_HEMI_TOP, RIG_HEMI_BOTTOM, RIG_HEMI_INTENSITY]} />
+  </>
+);
+
 export const Player = (props: PlayerProps): JSX.Element => {
   const { scene } = useGLTF(props.ship.glbPath);
+  const dressed = useMemo(() => cloneAndDressShip(scene), [scene]);
   const shipScale = useMemo<readonly [number, number, number]>(
     () => [props.ship.scale, props.ship.scale, props.ship.scale],
     [props.ship.scale],
   );
-  usePlayerFrame(props);
+  const visualRef = useRef<Group | null>(null);
+  usePlayerFrame(props, visualRef);
   return (
     <group ref={props.meshRef} scale={shipScale} rotation={[0, 0, 0, 'YXZ']}>
+      {/* Rig sits outside the 180° flip so key/fill/rim stay in ship-world axes. */}
+      <ShipRig />
+      <group ref={visualRef}>
+        <group rotation={[0, Math.PI, 0]}>
+          <Center>
+            <primitive object={dressed.scene} />
+          </Center>
+        </group>
+      </group>
       <group rotation={[0, Math.PI, 0]}>
-        <Center>
-          <primitive object={scene} />
-        </Center>
         <Trail
           width={TRAIL_WIDTH}
           length={TRAIL_LENGTH}
