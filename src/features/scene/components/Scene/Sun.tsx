@@ -27,15 +27,15 @@ type SunProps = {
   readonly sunColliderRef: RefObject<SunCollider>;
 };
 
-// Sun sits well outside the planet ring (radius 80) so its huge corona/halo
-// billboards never overlap the gameplay area on screen. From inside the ring
-// the sun reads as a distant celestial beacon, planets and ship stay in
-// their own z-band, and additive halo fragments can't brighten the ship's
-// pixels through depth-write-off layering.
-const SUN_POSITION: readonly [number, number, number] = [180, 140, -320];
+// Sun sits well outside the planet ring (radius 80) on the same horizontal
+// plane (y = 0) the ship and planets occupy, so flying straight at the sun
+// would pierce its center rather than pass under it. From inside the ring
+// the sun reads as a distant beacon; the corona/halo billboards never
+// overlap the gameplay area on screen.
+const SUN_POSITION: readonly [number, number, number] = [180, 0, -320];
 // Scaled up from the original 5×-planets to compensate for distance — at
-// ~390 world units away, this reads as a large but clearly-distant sun.
-const SUN_BODY_SCALE = 20;
+// ~367 world units away, this reads as a large but clearly-distant sun.
+const SUN_BODY_SCALE = 15;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
 const HALO_SCALE_OF_DIAMETER = 3.5;
 
