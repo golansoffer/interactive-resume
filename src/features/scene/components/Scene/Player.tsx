@@ -12,7 +12,7 @@ import { MAX_SPEED, type Kinematics } from '../../types/kinematics';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
-import type { SunCollider } from './useSceneRefs';
+import type { SphereColliders } from './useSceneRefs';
 
 type PlayerProps = {
   readonly ship: ShipEntry;
@@ -20,7 +20,7 @@ type PlayerProps = {
   readonly intents: IntentStream;
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly meshRef: RefObject<Object3D | null>;
-  readonly sunColliderRef: RefObject<SunCollider>;
+  readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
 // Visual feel — banking and pitch derived from velocity in the camera basis.
@@ -172,10 +172,9 @@ const usePlayerFrame = (props: PlayerProps, visualRef: RefObject<Group | null>):
       delta,
       basis,
     );
-    const clampedPosition = clampOutOfSphere(
-      integrated.position,
-      props.sunColliderRef.current.read(),
-    );
+    const clampedPosition = props.sphereCollidersRef.current
+      .list()
+      .reduce((pos, sphere) => clampOutOfSphere(pos, sphere), integrated.position);
     const next: Kinematics =
       clampedPosition === integrated.position
         ? integrated

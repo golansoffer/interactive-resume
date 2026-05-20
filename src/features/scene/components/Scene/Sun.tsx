@@ -21,10 +21,10 @@ import {
   createSunHaloMaterial,
 } from '../../services/renderer/sunMaterial';
 import { sunAnimationAt } from '../../services/renderer/sunAnimation';
-import type { SunCollider } from './useSceneRefs';
+import type { SphereColliders } from './useSceneRefs';
 
 type SunProps = {
-  readonly sunColliderRef: RefObject<SunCollider>;
+  readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
 // Sun sits well outside the planet ring (radius 80) on the same horizontal
@@ -115,7 +115,7 @@ export const Sun = (props: SunProps): JSX.Element => {
   const worldRadius = bodyRadiusLocal * SUN_BODY_SCALE;
   const worldDiameter = worldRadius * 2;
 
-  props.sunColliderRef.current.write({
+  props.sphereCollidersRef.current.register('sun', {
     center: { x: SUN_POSITION[0], y: SUN_POSITION[1], z: SUN_POSITION[2] },
     radius: worldRadius,
   });

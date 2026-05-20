@@ -48,7 +48,7 @@ const projectLabels = (
   });
 
 export const Scene = (props: SceneProps): JSX.Element => {
-  const { meshRef, planetRadiiRef, planetActivationsRef, sunColliderRef } = useSceneRefs();
+  const { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef } = useSceneRefs();
 
   const planets = useMemo(() => projectPlanets(props.entries), [props.entries]);
   const labels = useMemo(() => projectLabels(props.entries), [props.entries]);
@@ -57,7 +57,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
     <>
       <color attach="background" args={['#04050a']} />
       <Starfield />
-      <Sun sunColliderRef={sunColliderRef} />
+      <Sun sphereCollidersRef={sphereCollidersRef} />
       <ambientLight intensity={0.4} />
       <directionalLight position={[10, 18, 6]} intensity={1.6} castShadow={false} />
       <directionalLight position={[-8, 6, -10]} intensity={0.2} castShadow={false} />
@@ -68,7 +68,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
         intents={props.intents}
         kinematicsRef={props.kinematicsRef}
         meshRef={meshRef}
-        sunColliderRef={sunColliderRef}
+        sphereCollidersRef={sphereCollidersRef}
       />
       <Companies
         planets={planets}

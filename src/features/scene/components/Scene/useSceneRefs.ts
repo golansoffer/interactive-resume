@@ -69,40 +69,19 @@ export const createSphereColliders = (): SphereColliders => {
   };
 };
 
-// Single-sphere collider registry for the sun. `read` always returns a
-// `Sphere` — the unmeasured case is folded into a degenerate radius-0
-// sphere so callers never see undefined. `clampOutOfSphere` treats
-// radius-0 as a no-op, so an unmeasured sun produces no clamp side-effect.
-export type SunCollider = {
-  readonly read: () => Sphere;
-  readonly write: (sphere: Sphere) => void;
-};
-
-const EMPTY_SPHERE: Sphere = { center: { x: 0, y: 0, z: 0 }, radius: 0 };
-
-const createSunCollider = (): SunCollider => {
-  let current: Sphere = EMPTY_SPHERE;
-  return {
-    read: () => current,
-    write: (sphere) => {
-      current = sphere;
-    },
-  };
-};
-
 type SceneRefs = {
   readonly meshRef: RefObject<Object3D | null>;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
-  readonly sunColliderRef: RefObject<SunCollider>;
+  readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
 export const useSceneRefs = (): SceneRefs => {
   const meshRef = useRef<Object3D | null>(null);
   const planetRadiiRef = useRef<PlanetRadii>(createPlanetRadii());
   const planetActivationsRef = useRef<PlanetActivations>(createPlanetActivations());
-  const sunColliderRef = useRef<SunCollider>(createSunCollider());
-  return { meshRef, planetRadiiRef, planetActivationsRef, sunColliderRef };
+  const sphereCollidersRef = useRef<SphereColliders>(createSphereColliders());
+  return { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef };
 };
 
 export type { SceneRefs };
