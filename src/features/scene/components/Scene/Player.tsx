@@ -4,11 +4,13 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
 import type { Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
+import { clampOutOfSphere } from '../../services/renderer/clampOutOfSphere';
 import { integrateMotion, MAX_SPEED } from '../../services/renderer/integrateMotion';
 import type { CameraBasis, Kinematics } from '../../services/renderer/integrateMotion';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import type { SunCollider } from './useSceneRefs';
 
 type PlayerProps = {
   readonly ship: ShipEntry;
@@ -16,6 +18,7 @@ type PlayerProps = {
   readonly intents: IntentStream;
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly meshRef: RefObject<Object3D | null>;
+  readonly sunColliderRef: RefObject<SunCollider>;
 };
 
 // Visual feel — banking and pitch derived from velocity in the camera basis.
@@ -147,12 +150,20 @@ const usePlayerFrame = (props: PlayerProps): void => {
     if (mesh === null) return;
     camera.getWorldDirection(cameraWorldDir);
     const basis = deriveBasis(cameraWorldDir, forwardScratch, rightScratch, upScratch);
-    const next = integrateMotion(
+    const integrated = integrateMotion(
       props.kinematicsRef.current,
       props.intents.current,
       delta,
       basis,
     );
+    const clampedPosition = clampOutOfSphere(
+      integrated.position,
+      props.sunColliderRef.current.read(),
+    );
+    const next: Kinematics =
+      clampedPosition === integrated.position
+        ? integrated
+        : { ...integrated, position: clampedPosition };
     props.kinematicsRef.current = next;
 
     const speed = Math.hypot(next.velocity.x, next.velocity.z);
