@@ -1,12 +1,13 @@
 import type { JSX, RefObject } from 'react';
 import type { PlanetProjection } from '../../types/projections';
-import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
+import type { PlanetActivations, PlanetRadii, SphereColliders } from './useSceneRefs';
 import { Planet } from './Planet';
 
 type CompaniesProps = {
   readonly planets: ReadonlyArray<PlanetProjection>;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
+  readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
 export const Companies = (props: CompaniesProps): JSX.Element => (
@@ -17,6 +18,7 @@ export const Companies = (props: CompaniesProps): JSX.Element => (
         planet={planet}
         planetRadiiRef={props.planetRadiiRef}
         planetActivationsRef={props.planetActivationsRef}
+        sphereCollidersRef={props.sphereCollidersRef}
       />
     ))}
   </group>

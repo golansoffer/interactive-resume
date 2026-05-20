@@ -10,7 +10,8 @@ import {
   extractBody,
   rotationRateFor,
 } from '../../services/renderer/planetVisualPlan';
-import type { PlanetVisualPlan } from '../../services/renderer/planetTypes';
+import type { BodyExtraction, PlanetVisualPlan } from '../../services/renderer/planetTypes';
+import { planetCollider } from '../../services/renderer/planetCollider';
 import { animatePlan } from '../../services/renderer/planetAnimation';
 import {
   COLORSHEET_PATH,
@@ -20,12 +21,13 @@ import {
 } from '../../services/renderer/planetAssets';
 import { planetPoseFor } from '../../services/renderer/planetPose';
 import type { PlanetPose } from '../../services/renderer/planetPose';
-import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
+import type { PlanetActivations, PlanetRadii, SphereColliders } from './useSceneRefs';
 
 type PlanetProps = {
   readonly planet: PlanetProjection;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
+  readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
 const PLANET_BASE_SCALE = 1.5;
@@ -61,14 +63,15 @@ const phaseFromId = (id: string): number => {
 type BodyDerivations = {
   readonly activeRadius: number;
   readonly pose: PlanetPose;
+  readonly extraction: BodyExtraction;
 };
 
 const deriveBodyValues = (scene: Object3D): BodyDerivations => {
   const extraction = extractBody(scene);
   const pose = planetPoseFor(extraction);
-  if (extraction.kind === 'no_body') return { activeRadius: 0, pose };
+  if (extraction.kind === 'no_body') return { activeRadius: 0, pose, extraction };
   const activeRadius = extraction.radius * PLANET_BASE_SCALE * ACTIVATION_RADIUS_MULTIPLIER;
-  return { activeRadius, pose };
+  return { activeRadius, pose, extraction };
 };
 
 // The alignment quaternion (inner group) puts the model's visual pole on
@@ -114,6 +117,10 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   }, [scene, colorsheet, look, phase]);
   const derived = useMemo(() => deriveBodyValues(scene), [scene]);
   props.planetRadiiRef.current.write(props.planet.id, derived.activeRadius);
+  props.sphereCollidersRef.current.register(
+    props.planet.id,
+    planetCollider(derived.extraction, props.planet.planet.placement, PLANET_BASE_SCALE),
+  );
   const meshRef = useRef<Object3D | null>(null);
   const rotationRate = useMemo(() => rotationRateFor(phase), [phase]);
 

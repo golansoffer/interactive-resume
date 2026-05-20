@@ -74,6 +74,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
         planets={planets}
         planetRadiiRef={planetRadiiRef}
         planetActivationsRef={planetActivationsRef}
+        sphereCollidersRef={sphereCollidersRef}
       />
       <Asteroids />
       <PlanetLabels labels={labels} />
