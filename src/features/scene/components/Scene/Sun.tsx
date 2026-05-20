@@ -27,15 +27,17 @@ type SunProps = {
   readonly sunColliderRef: RefObject<SunCollider>;
 };
 
-// 5× PLANET_BASE_SCALE (1.5)
-const SUN_BODY_SCALE = 7.5;
+// Sun sits well outside the planet ring (radius 80) so its huge corona/halo
+// billboards never overlap the gameplay area on screen. From inside the ring
+// the sun reads as a distant celestial beacon, planets and ship stay in
+// their own z-band, and additive halo fragments can't brighten the ship's
+// pixels through depth-write-off layering.
+const SUN_POSITION: readonly [number, number, number] = [180, 140, -320];
+// Scaled up from the original 5×-planets to compensate for distance — at
+// ~390 world units away, this reads as a large but clearly-distant sun.
+const SUN_BODY_SCALE = 20;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
 const HALO_SCALE_OF_DIAMETER = 3.5;
-
-const SUN_LIGHT_COLOR = '#ffcf8f';
-const SUN_LIGHT_INTENSITY = 120;
-const SUN_LIGHT_DISTANCE = 45;
-const SUN_LIGHT_DECAY = 2;
 
 const SUN_EMISSIVE_HEX = 0xffe9b0;
 const SUN_EMISSIVE_INTENSITY = 1.2;
@@ -111,7 +113,7 @@ export const Sun = (props: SunProps): JSX.Element => {
   const worldDiameter = worldRadius * 2;
 
   props.sunColliderRef.current.write({
-    center: { x: 0, y: 0, z: 0 },
+    center: { x: SUN_POSITION[0], y: SUN_POSITION[1], z: SUN_POSITION[2] },
     radius: worldRadius,
   });
 
@@ -128,14 +130,7 @@ export const Sun = (props: SunProps): JSX.Element => {
   useSunFrame(bodyRef, corona, halo);
 
   return (
-    <group position={[0, 0, 0]}>
-      <pointLight
-        color={SUN_LIGHT_COLOR}
-        intensity={SUN_LIGHT_INTENSITY}
-        distance={SUN_LIGHT_DISTANCE}
-        decay={SUN_LIGHT_DECAY}
-        castShadow={false}
-      />
+    <group position={SUN_POSITION}>
       <group ref={bodyRef} scale={[SUN_BODY_SCALE, SUN_BODY_SCALE, SUN_BODY_SCALE]}>
         <primitive object={prepared} />
       </group>
