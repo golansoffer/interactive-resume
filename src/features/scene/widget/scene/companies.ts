@@ -14,10 +14,11 @@ const ringPosition = (index: number): readonly [number, number, number] => {
 const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   {
     id: asCompanyId('mave'),
-    planet: { assetId: 'earth_b', placement: ringPosition(0) },
+    planet: { assetId: 'jupiter_b', placement: ringPosition(0) },
     info: {
       companyName: 'Mave',
-      logoSrc: '/logos/mave.svg',
+      logo: { kind: 'with_icon', src: '/icons/mave.svg', backdrop: 'light' },
+      website: { kind: 'has_website', url: 'https://www.mave.com/' },
       role: 'Head of Platform',
       period: { kind: 'ongoing', start: { year: 2025, month: 1 } },
       description:
@@ -29,7 +30,8 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
     planet: { assetId: 'saturn_b', placement: ringPosition(1) },
     info: {
       companyName: '8fig',
-      logoSrc: '/logos/8fig.svg',
+      logo: { kind: 'with_icon', src: '/icons/8fig.svg', backdrop: 'light' },
+      website: { kind: 'has_website', url: 'https://www.8fig.co/' },
       role: 'Software Architect',
       period: {
         kind: 'closed',
@@ -45,7 +47,8 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
     planet: { assetId: 'mars_b', placement: ringPosition(2) },
     info: {
       companyName: 'Riverside',
-      logoSrc: '/logos/riverside.svg',
+      logo: { kind: 'with_icon', src: '/icons/riverside.svg', backdrop: 'light' },
+      website: { kind: 'has_website', url: 'https://riverside.com/' },
       role: 'Group Lead',
       period: {
         kind: 'closed',
@@ -61,7 +64,8 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
     planet: { assetId: 'venus_b', placement: ringPosition(3) },
     info: {
       companyName: 'StreamElements',
-      logoSrc: '/logos/streamelements.svg',
+      logo: { kind: 'with_icon', src: '/icons/streamelements.svg', backdrop: 'dark' },
+      website: { kind: 'has_website', url: 'https://streamelements.com/' },
       role: 'Senior Frontend Engineer',
       period: {
         kind: 'closed',
@@ -74,10 +78,11 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('tgs'),
-    planet: { assetId: 'neptune_b', placement: ringPosition(4) },
+    planet: { assetId: 'uranus_b', placement: ringPosition(4) },
     info: {
       companyName: 'TGS',
-      logoSrc: '/logos/tgs.svg',
+      logo: { kind: 'no_icon' },
+      website: { kind: 'no_website' },
       role: 'Frontend Engineer',
       period: {
         kind: 'closed',

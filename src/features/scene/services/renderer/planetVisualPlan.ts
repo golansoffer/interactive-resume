@@ -1,74 +1,33 @@
 import { Color, Mesh, MeshStandardMaterial } from 'three';
-import type { IUniform, Object3D, Texture } from 'three';
+import type { Object3D, Texture } from 'three';
 import { createPlanetAtmosphereMaterial } from './planetAtmosphereMaterial';
-
-export type IdleBreath = {
-  readonly amplitude: number;
-  readonly frequencyHz: number;
-};
-
-export type RimSpec = {
-  readonly tint: readonly [number, number, number];
-  readonly power: number;
-  readonly opacity: number;
-  readonly scale: number;
-  readonly breath: IdleBreath;
-};
-
-export type PulseSpec = {
-  readonly amplitude: number;
-  readonly frequencyHz: number;
-  readonly emissiveTint: readonly [number, number, number];
-};
-
-// PlanetLook is the per-asset configured effect bundle. Every "looking"
-// planet carries both a body pulse (the baseline aliveness — always on) and
-// a rim (gated on activation by an external 0..1 factor at animation time).
-// Unconfigured asset ids resolve to 'plain' (no effects).
-export type PlanetLook =
-  | { readonly kind: 'plain' }
-  | { readonly kind: 'effects'; readonly pulse: PulseSpec; readonly rim: RimSpec };
-
-export type BodyExtraction =
-  | { readonly kind: 'no_body' }
-  | { readonly kind: 'body'; readonly mesh: Mesh; readonly radius: number };
-
-type AtmospherePlan = {
-  readonly opacityUniform: IUniform<number>;
-  readonly timeUniform: IUniform<number>;
-  readonly baseOpacity: number;
-  readonly breath: IdleBreath;
-};
-
-export type PlanetVisualPlan =
-  | { readonly kind: 'plain'; readonly scene: Object3D }
-  | {
-      readonly kind: 'effects';
-      readonly scene: Object3D;
-      readonly atmosphere: AtmospherePlan;
-      readonly pulse: PulseSpec;
-      readonly standardMaterials: ReadonlyArray<MeshStandardMaterial>;
-    };
-
-export type ClonedScene = {
-  readonly scene: Object3D;
-  readonly extraction: BodyExtraction;
-  readonly standardMaterials: ReadonlyArray<MeshStandardMaterial>;
-};
+import type {
+  AtmospherePlan,
+  BodyExtraction,
+  ClonedScene,
+  PlanetLook,
+  PlanetVisualPlan,
+  RimSpec,
+  RingNormalAxis,
+} from './planetTypes';
 
 type Candidate = {
   readonly mesh: Mesh;
   readonly radius: number;
   readonly sphericity: number;
+  readonly dx: number;
+  readonly dy: number;
+  readonly dz: number;
 };
 
 const ROTATION_RAD_PER_SEC_BASE = 0.07;
 const ROTATION_VARIANCE = 0.25;
-const TWO_PI = Math.PI * 2;
 
 // Mesh whose bounding-box minDim/maxDim is below this is treated as a flat
 // feature (e.g. Saturn's rings disc) and skipped when picking the body.
-const SPHERICITY_THRESHOLD = 0.5;
+// Calibrated against the planet asset set: pure spheres land at 0.97–0.99,
+// merged-mesh ringed bodies (Saturn ~0.59, Uranus ~0.45) land well below 0.8.
+const SPHERICITY_THRESHOLD = 0.8;
 
 export const rotationRateFor = (phase: number): number =>
   ROTATION_RAD_PER_SEC_BASE * (1 + ROTATION_VARIANCE * Math.sin(phase));
@@ -86,7 +45,36 @@ const computeCandidate = (mesh: Mesh): Candidate | null => {
   const maxDim = Math.max(dx, dy, dz);
   const minDim = Math.min(dx, dy, dz);
   const sphericity = maxDim === 0 ? 0 : minDim / maxDim;
-  return { mesh, radius: sphere.radius, sphericity };
+  return { mesh, radius: sphere.radius, sphericity, dx, dy, dz };
+};
+
+// Picks the axis of the smallest bounding-box dimension. A ring disc has a
+// flat normal axis (its thinnest dimension), which is the rotation axis we
+// need to align with the planet's spin axis. Exhaustive: any three numbers
+// produce one of 'x' | 'y' | 'z'.
+const ringNormalAxisFromDims = (dx: number, dy: number, dz: number): RingNormalAxis => {
+  if (dx <= dy && dx <= dz) return 'x';
+  if (dy <= dx && dy <= dz) return 'y';
+  return 'z';
+};
+
+type RingDisc =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'found'; readonly dx: number; readonly dy: number; readonly dz: number };
+
+// Selects the largest non-spherical candidate (by its broadest dimension —
+// the disc's outer extent). Absence is folded into the 'none' variant so the
+// caller narrows by `kind`, never by `T | undefined` on the array lookup.
+const pickRingDisc = (candidates: ReadonlyArray<Candidate>): RingDisc => {
+  let best: RingDisc = { kind: 'none' };
+  for (const c of candidates) {
+    if (c.sphericity > SPHERICITY_THRESHOLD) continue;
+    const extent = Math.max(c.dx, c.dy, c.dz);
+    if (best.kind === 'none' || extent > Math.max(best.dx, best.dy, best.dz)) {
+      best = { kind: 'found', dx: c.dx, dy: c.dy, dz: c.dz };
+    }
+  }
+  return best;
 };
 
 // Picks the most spherical descendant Mesh — for Saturn (body + flat rings),
@@ -107,6 +95,20 @@ export const extractBody = (root: Object3D): BodyExtraction => {
     null,
   );
   if (best === null) return { kind: 'no_body' };
+  // Multi-mesh case: a separate spherical body coexists with a flat ring disc
+  // as siblings in the scene graph.
+  const disc = pickRingDisc(candidates);
+  if (spherical.length > 0 && disc.kind === 'found') {
+    const ringNormalAxis = ringNormalAxisFromDims(disc.dx, disc.dy, disc.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, ringNormalAxis };
+  }
+  // Single-mesh case: body + ring are baked into one mesh (this asset set).
+  // The merged mesh is non-spherical because the ring extends beyond the body
+  // in its plane; the smallest bbox dim points along the ring normal.
+  if (best.sphericity <= SPHERICITY_THRESHOLD) {
+    const ringNormalAxis = ringNormalAxisFromDims(best.dx, best.dy, best.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, ringNormalAxis };
+  }
   return { kind: 'body', mesh: best.mesh, radius: best.radius };
 };
 
@@ -170,7 +172,15 @@ const attachAtmosphere = (body: Mesh, rim: RimSpec, phase: number): AtmospherePl
   if (opacityUniform === undefined || timeUniform === undefined) {
     throw new Error('createPlanetAtmosphereMaterial missing uOpacity or uTime uniform');
   }
-  return { opacityUniform, timeUniform, baseOpacity: rim.opacity, breath: rim.breath };
+  return {
+    opacityUniform,
+    timeUniform,
+    baseOpacity: rim.opacity,
+    breath: rim.breath,
+    rimMesh: mesh,
+    baseScale: rim.scale,
+    scalePulse: rim.scalePulse,
+  };
 };
 
 export const buildVisualPlan = (
@@ -193,28 +203,3 @@ export const buildVisualPlan = (
   };
 };
 
-// Applies per-frame mutations to the visual plan:
-// - Body pulse (warm emissive breathing) runs ALWAYS for any planet with
-//   effects — this is the baseline "alive" cue, independent of activation.
-// - Rim opacity, idle rim breath, and shader time are written every frame
-//   but multiplied by activationFactor (0..1). The rim fades in/out smoothly
-//   when the caller lerps activationFactor on proximity enter/exit.
-export const animatePlan = (
-  plan: PlanetVisualPlan,
-  time: number,
-  phase: number,
-  activationFactor: number,
-): void => {
-  if (plan.kind === 'plain') return;
-
-  const { amplitude, frequencyHz } = plan.pulse;
-  const pulseT = (Math.sin(time * frequencyHz * TWO_PI + phase) + 1) * 0.5;
-  const intensity = amplitude * pulseT;
-  for (const m of plan.standardMaterials) m.emissiveIntensity = intensity;
-
-  const { breath, baseOpacity, opacityUniform, timeUniform } = plan.atmosphere;
-  const breathT = (Math.sin(time * breath.frequencyHz * TWO_PI + phase * 0.6) + 1) * 0.5;
-  const breathFactor = 1 - breath.amplitude * 0.5 + breath.amplitude * breathT;
-  opacityUniform.value = baseOpacity * breathFactor * activationFactor;
-  timeUniform.value = time;
-};

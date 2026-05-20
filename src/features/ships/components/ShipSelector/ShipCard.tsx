@@ -29,18 +29,18 @@ const cardClassName = cn(
   'border-l-2 border-transparent bg-transparent',
   'px-3 py-2 text-left text-[--color-fg]',
   'transition-[background-color,border-color,transform] duration-200',
-  'hover:bg-[--color-accent]/8 hover:border-[--color-accent]/60',
-  'data-[hovered=true]:bg-[--color-accent]/10 data-[hovered=true]:border-[--color-accent]/80',
-  'data-[featured=true]:bg-[--color-accent]/12 data-[featured=true]:border-[--color-accent]',
+  'hover:bg-[--color-fg]/5 hover:border-[--color-fg]/25',
+  'data-[hovered=true]:bg-[--color-fg]/8 data-[hovered=true]:border-[--color-fg]/35',
+  'data-[featured=true]:bg-[--color-fg]/12 data-[featured=true]:border-[--color-fg]/50',
   'data-[featured=true]:scale-[1.01]',
-  'focus-visible:outline-none focus-visible:bg-[--color-accent]/12',
-  'focus-visible:border-[--color-accent]',
+  'focus-visible:outline-none focus-visible:bg-[--color-fg]/12',
+  'focus-visible:border-[--color-fg]/50',
 );
 
 const indexClassName = cn(
   'shrink-0 font-mono text-xs tracking-widest text-[--color-fg]/40',
-  'group-hover:text-[--color-accent]/70',
-  'group-data-[featured=true]:text-[--color-accent]',
+  'group-hover:text-[--color-fg]/70',
+  'group-data-[featured=true]:text-[--color-fg]',
 );
 
 const dividerClassName = 'h-10 w-px shrink-0 bg-[--color-fg]/10';
@@ -48,7 +48,7 @@ const dividerClassName = 'h-10 w-px shrink-0 bg-[--color-fg]/10';
 const thumbClassName = cn(
   'relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-black/40',
   'ring-1 ring-white/5',
-  'group-data-[featured=true]:ring-[--color-accent]/40',
+  'group-data-[featured=true]:ring-[--color-fg]/25',
 );
 
 const textColClassName = 'flex min-w-0 flex-col leading-tight';

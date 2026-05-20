@@ -9,6 +9,6 @@ export type PlanetProjection = {
 export type LabelProjection = {
   readonly id: CompanyId;
   readonly placement: readonly [number, number, number];
-  readonly companyName: string;
-  readonly logoSrc: string;
+  readonly iconSrc: string;
+  readonly backdrop: 'light' | 'dark';
 };

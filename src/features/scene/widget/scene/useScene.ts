@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useActor } from '@xstate/react';
 import { getSceneState, sceneMachine } from '../../../../core/scene/sceneMachine';
 import { getCompanyEntries } from './companies';
 import { subscribeToKeyboard } from '../../services/input/subscribeToKeyboard';
-import type { CompanyEntry } from '../../types/company';
+import type { CompanyEntry, CompanyId } from '../../types/company';
 import type { Intent, IntentStream } from '../../types/intent';
 import type { RevealProjection } from '../../types/reveal-projection';
 import type { SceneEvent } from '../../types/scene-event';
-import type { SceneState } from '../../types/scene-state';
+import type { PausedResume, SceneState } from '../../types/scene-state';
 
 type UseSceneResult = {
   readonly state: SceneState;
@@ -19,11 +19,50 @@ type UseSceneResult = {
 
 const HIDDEN: RevealProjection = { kind: 'hidden' };
 
-const projectionForEvent = (event: SceneEvent): RevealProjection => {
-  switch (event.kind) {
-    case 'entered_proximity':
-      return { kind: 'visible', info: event.info, placement: event.placement };
-    case 'exited_proximity':
+type ActiveReveal =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'active'; readonly objectId: CompanyId };
+
+const pausedActiveReveal = (resumeTo: PausedResume): ActiveReveal => {
+  switch (resumeTo.kind) {
+    case 'revealing':
+      return { kind: 'active', objectId: resumeTo.objectId };
+    case 'playing':
+      return { kind: 'none' };
+  }
+};
+
+const activeRevealOf = (state: SceneState): ActiveReveal => {
+  switch (state.kind) {
+    case 'revealing':
+      return { kind: 'active', objectId: state.objectId };
+    case 'paused':
+      return pausedActiveReveal(state.resumeTo);
+    case 'playing':
+      return { kind: 'none' };
+    case 'loading':
+      return { kind: 'none' };
+  }
+};
+
+const projectReveal = (
+  state: SceneState,
+  entries: ReadonlyArray<CompanyEntry>,
+): RevealProjection => {
+  const active = activeRevealOf(state);
+  switch (active.kind) {
+    case 'none':
+      return HIDDEN;
+    case 'active':
+      for (const entry of entries) {
+        if (entry.id === active.objectId) {
+          return {
+            kind: 'visible',
+            info: entry.info,
+            assetId: entry.planet.assetId,
+          };
+        }
+      }
       return HIDDEN;
   }
 };
@@ -33,7 +72,11 @@ export const useScene = (): UseSceneResult => {
   const intentSetRef = useRef<Set<Intent['kind']>>(new Set());
   const intents = useMemo<IntentStream>(() => ({ current: intentSetRef.current }), []);
   const entries = useMemo<ReadonlyArray<CompanyEntry>>(() => getCompanyEntries(), []);
-  const [revealProjection, setRevealProjection] = useState<RevealProjection>(HIDDEN);
+  const state = getSceneState(snapshot);
+  const revealProjection = useMemo<RevealProjection>(
+    () => projectReveal(state, entries),
+    [state, entries],
+  );
 
   useEffect(() => {
     const unsubscribe = subscribeToKeyboard((signal) => {
@@ -49,11 +92,10 @@ export const useScene = (): UseSceneResult => {
 
   const onEvent = useCallback(
     (event: SceneEvent): void => {
-      setRevealProjection(projectionForEvent(event));
       send({ type: event.kind, objectId: event.objectId });
     },
     [send],
   );
 
-  return { state: getSceneState(snapshot), entries, intents, onEvent, revealProjection };
+  return { state, entries, intents, onEvent, revealProjection };
 };

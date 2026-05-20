@@ -20,7 +20,7 @@ const containerClassName = cn(
 // prevent the flex item from shrinking below its content.
 const viewportClassName = cn(
   'relative flex-1 min-h-0 w-full overflow-hidden rounded-lg',
-  'bg-[radial-gradient(120%_80%_at_50%_40%,#0a1730_0%,#04070f_70%)]',
+  'bg-[radial-gradient(120%_80%_at_50%_40%,#161616_0%,#080808_70%)]',
   'ring-1 ring-white/5',
 );
 
@@ -38,15 +38,14 @@ const nameClassName = cn(
   'font-semibold tracking-tight text-[--color-fg] leading-none',
 );
 
-const separatorClassName = cn('h-px w-24 bg-[--color-accent]/40');
+const separatorClassName = cn('h-px w-24 bg-[--color-fg]/15');
 
 const launchButtonClassName = cn(
   'inline-flex items-center gap-2 rounded-md',
-  'border border-[--color-accent]/60 bg-[--color-accent]/10',
+  'border border-[--color-accent]/50 bg-transparent',
   'px-5 py-2 md:px-6 md:py-3 text-sm font-medium tracking-wider uppercase',
   'text-[--color-accent] transition-all duration-200',
-  'hover:bg-[--color-accent]/20 hover:border-[--color-accent]',
-  'hover:shadow-[0_0_24px_-4px_var(--color-accent)]',
+  'hover:bg-[--color-accent]/10 hover:border-[--color-accent]',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent]',
 );
 

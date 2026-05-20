@@ -17,13 +17,15 @@ const CANVAS_STYLE: CSSProperties = {
   pointerEvents: 'none',
 };
 
-// Two soft radial pools (warm-ish top-left, cool bottom-right) over the
-// base bg — gives the page depth without going full starfield.
+// Two soft neutral pools (a brighter pool top-left, a deeper pool
+// bottom-right) over a near-black neutral base — gives the page depth
+// without introducing chroma. All values are pure grayscale (R == G == B)
+// to sit in the same neutral register as the CompanyInfoPanel.
 const BACKDROP_STYLE: CSSProperties = {
   background:
-    'radial-gradient(80% 60% at 30% 20%, #0b1422 0%, transparent 60%), ' +
-    'radial-gradient(60% 50% at 80% 80%, #0a1830 0%, transparent 70%), ' +
-    'linear-gradient(180deg, #04050a 0%, #060912 100%)',
+    'radial-gradient(80% 60% at 30% 20%, #161616 0%, transparent 60%), ' +
+    'radial-gradient(60% 50% at 80% 80%, #1c1c1c 0%, transparent 70%), ' +
+    'linear-gradient(180deg, #080808 0%, #0e0e0e 100%)',
 };
 
 const containerClassName = cn(
@@ -37,7 +39,7 @@ const headerClassName = cn(
 );
 
 const eyebrowClassName = cn(
-  'font-mono text-[10px] tracking-[0.4em] uppercase text-[--color-accent]/70',
+  'font-mono text-[10px] tracking-[0.4em] uppercase text-[--color-fg]/55',
 );
 
 const titleClassName = cn(
@@ -54,8 +56,10 @@ const bodyClassName = cn(
 );
 
 // HUD corner brackets — four L-shapes pinned to the edges. Pure
-// decoration; the accent color picks up the cyan ship-wake.
-const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-[--color-accent]/40');
+// decoration; neutral foreground hairline matches the panel's
+// restrained ring/divider register (cyan is reserved for CTAs and
+// visual captions, not chrome).
+const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-[--color-fg]/15');
 const cornerTopLeft = cn(cornerClassName, 'left-4 top-4 border-l border-t');
 const cornerTopRight = cn(cornerClassName, 'right-4 top-4 border-r border-t');
 const cornerBottomLeft = cn(cornerClassName, 'bottom-4 left-4 border-b border-l');

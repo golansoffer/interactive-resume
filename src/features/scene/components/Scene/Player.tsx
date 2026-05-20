@@ -48,8 +48,9 @@ const TRAIL_ATTENUATION = (t: number): number => t * t;
 // against the heavier, slower-bobbing planets. Two distinct frequencies
 // so bob and sway never lock into a single rhythm.
 const IDLE_BOB_AMPLITUDE = 0.12;
-const IDLE_BOB_FREQ_HZ = 0.85;
-const IDLE_SWAY_AMPLITUDE = Math.PI / 110;
+const IDLE_BOB_FREQ_HZ = 0.7;
+// IDLE_SWAY_AMPLITUDE ≈ 3.3° applied to rotation.z = roll (wing dip), not lateral position.
+const IDLE_SWAY_AMPLITUDE = Math.PI / 55;
 const IDLE_SWAY_FREQ_HZ = 0.55;
 const IDLE_RATIO_FLOOR = 0.4;
 

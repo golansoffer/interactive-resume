@@ -81,7 +81,6 @@ export const ProximityWatcher = (props: ProximityWatcherProps): JSX.Element => {
         kind: 'entered_proximity',
         objectId: match.id,
         info: match.info,
-        placement: match.placement,
       });
     }
     for (const id of previous) {

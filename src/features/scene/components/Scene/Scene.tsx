@@ -3,16 +3,15 @@ import { useMemo } from 'react';
 import type { CompanyEntry } from '../../types/company';
 import type { IntentStream } from '../../types/intent';
 import type { LabelProjection, PlanetProjection } from '../../types/projections';
-import type { RevealProjection } from '../../types/reveal-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import { Asteroids } from './Asteroids';
 import { Companies } from './Companies';
 import { FollowCamera } from './FollowCamera';
 import { PlanetLabels } from './PlanetLabels';
 import { Player } from './Player';
 import { ProximityWatcher } from './ProximityWatcher';
-import { RevealOverlay } from './RevealOverlay';
 import { useSceneRefs } from './useSceneRefs';
 
 type SceneProps = {
@@ -21,7 +20,6 @@ type SceneProps = {
   readonly entries: ReadonlyArray<CompanyEntry>;
   readonly intents: IntentStream;
   readonly onEvent: (event: SceneEvent) => void;
-  readonly revealProjection: RevealProjection;
 };
 
 const projectPlanets = (
@@ -32,12 +30,22 @@ const projectPlanets = (
 const projectLabels = (
   entries: ReadonlyArray<CompanyEntry>,
 ): ReadonlyArray<LabelProjection> =>
-  entries.map((entry) => ({
-    id: entry.id,
-    placement: entry.planet.placement,
-    companyName: entry.info.companyName,
-    logoSrc: entry.info.logoSrc,
-  }));
+  entries.flatMap((entry): ReadonlyArray<LabelProjection> => {
+    const logo = entry.info.logo;
+    switch (logo.kind) {
+      case 'with_icon':
+        return [
+          {
+            id: entry.id,
+            placement: entry.planet.placement,
+            iconSrc: logo.src,
+            backdrop: logo.backdrop,
+          },
+        ];
+      case 'no_icon':
+        return [];
+    }
+  });
 
 export const Scene = (props: SceneProps): JSX.Element => {
   const { kinematicsRef, meshRef, planetRadiiRef, planetActivationsRef } = useSceneRefs();
@@ -64,6 +72,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
         planetRadiiRef={planetRadiiRef}
         planetActivationsRef={planetActivationsRef}
       />
+      <Asteroids />
       <PlanetLabels labels={labels} />
       <ProximityWatcher
         sceneState={props.state}
@@ -73,12 +82,6 @@ export const Scene = (props: SceneProps): JSX.Element => {
         planetActivationsRef={planetActivationsRef}
         onEvent={props.onEvent}
       />
-      {props.revealProjection.kind === 'visible' ? (
-        <RevealOverlay
-          info={props.revealProjection.info}
-          placement={props.revealProjection.placement}
-        />
-      ) : null}
     </>
   );
 };

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, SphereGeometry } from 'three';
 import { extractBody } from '../../services/renderer/planetVisualPlan';
-import { resolvePlanetLook } from './Planet';
+import { resolvePlanetLook } from '../../services/renderer/planetAssets';
 
 describe('resolvePlanetLook', () => {
-  it('returns effects for earth_b with both pulse and rim and a cool blue rim tint', () => {
-    const look = resolvePlanetLook('earth_b');
+  it('returns effects for jupiter_b with both pulse and rim and a warm cream rim tint', () => {
+    const look = resolvePlanetLook('jupiter_b');
     expect(look.kind).toBe('effects');
     if (look.kind !== 'effects') throw new Error('expected effects variant');
-    expect(look.rim.tint).toEqual([0.18, 0.72, 1.0]);
+    expect(look.rim.tint).toEqual([1.0, 0.65, 0.28]);
     expect(look.rim.scale).toBeGreaterThan(1);
     expect(look.rim.opacity).toBeGreaterThan(0);
     expect(look.rim.breath.amplitude).toBeGreaterThan(0);
@@ -22,7 +22,7 @@ describe('resolvePlanetLook', () => {
     const look = resolvePlanetLook('saturn_b');
     expect(look.kind).toBe('effects');
     if (look.kind !== 'effects') throw new Error('expected effects variant');
-    expect(look.rim.tint).toEqual([1.0, 0.62, 0.18]);
+    expect(look.rim.tint).toEqual([1.0, 0.5, 0.08]);
     expect(look.rim.breath.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.amplitude).toBeGreaterThan(0);
@@ -34,8 +34,8 @@ describe('resolvePlanetLook', () => {
     expect(look.kind).toBe('effects');
     if (look.kind !== 'effects') throw new Error('expected effects variant');
     expect(look.pulse.frequencyHz).toBeCloseTo(0.17);
-    expect(look.pulse.amplitude).toBeCloseTo(0.35);
-    expect(look.pulse.emissiveTint).toEqual([1.0, 0.42, 0.18]);
+    expect(look.pulse.amplitude).toBeCloseTo(0.68);
+    expect(look.pulse.emissiveTint).toEqual([1.0, 0.3, 0.12]);
     const [r, g, b] = look.pulse.emissiveTint;
     expect(r).toBeGreaterThan(g);
     expect(r).toBeGreaterThan(b);
@@ -43,7 +43,8 @@ describe('resolvePlanetLook', () => {
 
   it('returns plain for an unconfigured asset id', () => {
     expect(resolvePlanetLook('mercury_a')).toEqual({ kind: 'plain' });
-    expect(resolvePlanetLook('jupiter_b')).toEqual({ kind: 'plain' });
+    expect(resolvePlanetLook('earth_b')).toEqual({ kind: 'plain' });
+    expect(resolvePlanetLook('neptune_b')).toEqual({ kind: 'plain' });
     expect(resolvePlanetLook('sun_a')).toEqual({ kind: 'plain' });
   });
 });
@@ -66,16 +67,43 @@ describe('extractBody', () => {
     expect(result.mesh).toBe(largeMesh);
   });
 
-  it('prefers a spherical body over a flat disc with a larger bounding sphere', () => {
+  it('returns ringed_body when a flat disc is filtered alongside a spherical body', () => {
     const root = new Group();
     const bodyMesh = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial());
     const ringMesh = new Mesh(new BoxGeometry(10, 0.05, 10), new MeshBasicMaterial());
     root.add(bodyMesh);
     root.add(ringMesh);
     const result = extractBody(root);
-    expect(result.kind).toBe('body');
-    if (result.kind !== 'body') throw new Error('expected body variant');
+    expect(result.kind).toBe('ringed_body');
+    if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
     expect(result.mesh).toBe(bodyMesh);
+    // Ring disc dims are (10, 0.05, 10) → smallest axis is y → normal points
+    // along local Y. Auto-detection should pick 'y'.
+    expect(result.ringNormalAxis).toBe('y');
+  });
+
+  it('detects ring normal axis on the X axis when the disc is flat in YZ', () => {
+    const root = new Group();
+    const bodyMesh = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial());
+    const ringMesh = new Mesh(new BoxGeometry(0.05, 10, 10), new MeshBasicMaterial());
+    root.add(bodyMesh);
+    root.add(ringMesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('ringed_body');
+    if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
+    expect(result.ringNormalAxis).toBe('x');
+  });
+
+  it('detects ring normal axis on the Z axis when the disc is flat in XY', () => {
+    const root = new Group();
+    const bodyMesh = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial());
+    const ringMesh = new Mesh(new BoxGeometry(10, 10, 0.05), new MeshBasicMaterial());
+    root.add(bodyMesh);
+    root.add(ringMesh);
+    const result = extractBody(root);
+    expect(result.kind).toBe('ringed_body');
+    if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
+    expect(result.ringNormalAxis).toBe('z');
   });
 
   it('picks the single mesh when there is only one', () => {
