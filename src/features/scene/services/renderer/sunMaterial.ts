@@ -65,8 +65,8 @@ export const createSunHaloMaterial = (): ShaderMaterial =>
       // Lower blue than corona rim — halo is warmer/oranger so the outer
       // glow reads as a separate band, not a continuation of the corona.
       uColorRim: { value: new Vector3(1.0, 0.6, 0.23) },
-      uFalloff: { value: 1.6 },
-      uPeakOpacity: { value: 0.25 },
+      uFalloff: { value: 1.4 },
+      uPeakOpacity: { value: 0.45 },
       uOpacityScale: { value: 1.0 },
     },
     vertexShader: VERTEX_SHADER,

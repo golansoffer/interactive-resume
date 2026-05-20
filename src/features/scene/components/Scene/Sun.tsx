@@ -37,7 +37,7 @@ const SUN_POSITION: readonly [number, number, number] = [180, 0, -320];
 // ~367 world units away, this reads as a large but clearly-distant sun.
 const SUN_BODY_SCALE = 17;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
-const HALO_SCALE_OF_DIAMETER = 3.5;
+const HALO_SCALE_OF_DIAMETER = 4.5;
 
 // Emissive intensity tuned to feel sun-bright while still letting the
 // colorsheet texture read on the body — full-bright washes the surface,

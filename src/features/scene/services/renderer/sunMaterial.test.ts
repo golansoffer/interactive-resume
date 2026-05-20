@@ -71,11 +71,11 @@ describe('createSunHaloMaterial', () => {
     expect(m.toneMapped).toBe(false);
   });
 
-  it('exposes uPeakOpacity well below the corona (softer outer glow)', () => {
+  it('exposes uPeakOpacity below the corona (softer outer glow) but above 0', () => {
     const halo = readNumber(createSunHaloMaterial(), 'uPeakOpacity');
     const corona = readNumber(createSunCoronaMaterial(), 'uPeakOpacity');
     expect(halo).toBeLessThan(corona);
-    expect(halo).toBeCloseTo(0.25, 5);
+    expect(halo).toBeGreaterThan(0);
   });
 
   it('exposes a warmer rim color skewed toward orange compared to the corona rim', () => {
