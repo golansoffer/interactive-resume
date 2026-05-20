@@ -16,6 +16,7 @@ import {
   configureColorsheet,
 } from '../../services/renderer/planetAssets';
 import { extractBody } from '../../services/renderer/planetVisualPlan';
+import { planetCollider } from '../../services/renderer/planetCollider';
 import {
   createSunCoronaMaterial,
   createSunHaloMaterial,
@@ -111,14 +112,13 @@ export const Sun = (props: SunProps): JSX.Element => {
   }, [scene, colorsheet]);
 
   const extraction = useMemo(() => extractBody(prepared), [prepared]);
-  const bodyRadiusLocal = extraction.kind === 'no_body' ? 0 : extraction.radius;
-  const worldRadius = bodyRadiusLocal * SUN_BODY_SCALE;
-  const worldDiameter = worldRadius * 2;
+  const sphere = useMemo(
+    () => planetCollider(extraction, SUN_POSITION, SUN_BODY_SCALE),
+    [extraction],
+  );
+  const worldDiameter = sphere.radius * 2;
 
-  props.sphereCollidersRef.current.register('sun', {
-    center: { x: SUN_POSITION[0], y: SUN_POSITION[1], z: SUN_POSITION[2] },
-    radius: worldRadius,
-  });
+  props.sphereCollidersRef.current.register('sun', sphere);
 
   const corona = useMemo(
     () => makeBillboard(createSunCoronaMaterial(), worldDiameter * CORONA_SCALE_OF_DIAMETER),
