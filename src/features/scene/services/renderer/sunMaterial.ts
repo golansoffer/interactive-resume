@@ -43,9 +43,9 @@ void main() {
 export const createSunCoronaMaterial = (): ShaderMaterial =>
   new ShaderMaterial({
     uniforms: {
-      uColorCore: { value: new Vector3(1.0, 0.91, 0.69) }, // #ffe9b0
-      uColorRim:  { value: new Vector3(1.0, 0.81, 0.45) }, // #ffcf72
-      uFalloff:   { value: 2.4 },
+      uColorCore: { value: new Vector3(1.0, 0.91, 0.69) },
+      uColorRim: { value: new Vector3(1.0, 0.81, 0.45) },
+      uFalloff: { value: 2.4 },
       uPeakOpacity: { value: 1.0 },
       uOpacityScale: { value: 1.0 },
     },
@@ -61,9 +61,11 @@ export const createSunCoronaMaterial = (): ShaderMaterial =>
 export const createSunHaloMaterial = (): ShaderMaterial =>
   new ShaderMaterial({
     uniforms: {
-      uColorCore: { value: new Vector3(1.0, 0.81, 0.45) }, // #ffcf72
-      uColorRim:  { value: new Vector3(1.0, 0.6, 0.23) },  // #ff9a3a (lower B than corona rim)
-      uFalloff:   { value: 1.6 },
+      uColorCore: { value: new Vector3(1.0, 0.81, 0.45) },
+      // Lower blue than corona rim — halo is warmer/oranger so the outer
+      // glow reads as a separate band, not a continuation of the corona.
+      uColorRim: { value: new Vector3(1.0, 0.6, 0.23) },
+      uFalloff: { value: 1.6 },
       uPeakOpacity: { value: 0.25 },
       uOpacityScale: { value: 1.0 },
     },
