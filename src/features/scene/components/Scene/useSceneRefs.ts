@@ -1,8 +1,8 @@
 import type { RefObject } from 'react';
 import { useRef } from 'react';
 import type { Object3D } from 'three';
-import type { Kinematics } from '../../services/renderer/integrateMotion';
 import type { CompanyId } from '../../types/company';
+import type { Sphere } from '../../services/renderer/clampOutOfSphere';
 
 // TotalMap-style proof-bearing registry for per-planet activation radii.
 // `read` always returns `number` — the internal "not-yet-measured" case is
@@ -49,25 +49,40 @@ const createPlanetActivations = (): PlanetActivations => {
   };
 };
 
+// Single-sphere collider registry for the sun. `read` always returns a
+// `Sphere` — the unmeasured case is folded into a degenerate radius-0
+// sphere so callers never see undefined. `clampOutOfSphere` treats
+// radius-0 as a no-op, so an unmeasured sun produces no clamp side-effect.
+export type SunCollider = {
+  readonly read: () => Sphere;
+  readonly write: (sphere: Sphere) => void;
+};
+
+const EMPTY_SPHERE: Sphere = { center: { x: 0, y: 0, z: 0 }, radius: 0 };
+
+const createSunCollider = (): SunCollider => {
+  let current: Sphere = EMPTY_SPHERE;
+  return {
+    read: () => current,
+    write: (sphere) => {
+      current = sphere;
+    },
+  };
+};
+
 type SceneRefs = {
-  readonly kinematicsRef: RefObject<Kinematics>;
   readonly meshRef: RefObject<Object3D | null>;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
-};
-
-const INITIAL_KINEMATICS: Kinematics = {
-  position: { x: 0, y: 0, z: 0 },
-  velocity: { x: 0, y: 0, z: 0 },
-  heading: 0,
+  readonly sunColliderRef: RefObject<SunCollider>;
 };
 
 export const useSceneRefs = (): SceneRefs => {
-  const kinematicsRef = useRef<Kinematics>(INITIAL_KINEMATICS);
   const meshRef = useRef<Object3D | null>(null);
   const planetRadiiRef = useRef<PlanetRadii>(createPlanetRadii());
   const planetActivationsRef = useRef<PlanetActivations>(createPlanetActivations());
-  return { kinematicsRef, meshRef, planetRadiiRef, planetActivationsRef };
+  const sunColliderRef = useRef<SunCollider>(createSunCollider());
+  return { meshRef, planetRadiiRef, planetActivationsRef, sunColliderRef };
 };
 
 export type { SceneRefs };
