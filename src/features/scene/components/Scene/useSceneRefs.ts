@@ -49,6 +49,26 @@ const createPlanetActivations = (): PlanetActivations => {
   };
 };
 
+// String-keyed registry of sphere colliders. Sun and each planet register
+// their body sphere under a stable id; Player.tsx folds clampOutOfSphere
+// across list() each frame. Unregistered colliders never appear in list(),
+// so the fold's initial position is the identity when nothing is measured
+// yet — no `undefined` ever leaks (Iron Law 3).
+export type SphereColliders = {
+  readonly register: (id: string, sphere: Sphere) => void;
+  readonly list: () => ReadonlyArray<Sphere>;
+};
+
+export const createSphereColliders = (): SphereColliders => {
+  const inner = new Map<string, Sphere>();
+  return {
+    register: (id, sphere) => {
+      inner.set(id, sphere);
+    },
+    list: () => [...inner.values()],
+  };
+};
+
 // Single-sphere collider registry for the sun. `read` always returns a
 // `Sphere` — the unmeasured case is folded into a degenerate radius-0
 // sphere so callers never see undefined. `clampOutOfSphere` treats
