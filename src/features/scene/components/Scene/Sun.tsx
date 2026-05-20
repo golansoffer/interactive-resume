@@ -35,12 +35,15 @@ type SunProps = {
 const SUN_POSITION: readonly [number, number, number] = [180, 0, -320];
 // Scaled up from the original 5×-planets to compensate for distance — at
 // ~367 world units away, this reads as a large but clearly-distant sun.
-const SUN_BODY_SCALE = 15;
+const SUN_BODY_SCALE = 17;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
 const HALO_SCALE_OF_DIAMETER = 3.5;
 
+// Emissive intensity kept moderate (not full-bright) so the colorsheet
+// texture on the sphere stays readable — the body shows surface detail
+// instead of washing out to a uniform glow disk.
 const SUN_EMISSIVE_HEX = 0xffe9b0;
-const SUN_EMISSIVE_INTENSITY = 1.2;
+const SUN_EMISSIVE_INTENSITY = 0.55;
 
 // Clones the GLB scene and replaces each MeshStandardMaterial with a cloned
 // copy carrying the warm emissive override. Cloning is required because
