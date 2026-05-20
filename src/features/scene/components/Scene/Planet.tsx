@@ -10,7 +10,7 @@ import {
   extractBody,
   rotationRateFor,
 } from '../../services/renderer/planetVisualPlan';
-import type { PlanetVisualPlan, RingNormalAxis } from '../../services/renderer/planetTypes';
+import type { PlanetVisualPlan } from '../../services/renderer/planetTypes';
 import { animatePlan } from '../../services/renderer/planetAnimation';
 import {
   COLORSHEET_PATH,
@@ -18,6 +18,8 @@ import {
   configureColorsheet,
   resolvePlanetLook,
 } from '../../services/renderer/planetAssets';
+import { planetPoseFor } from '../../services/renderer/planetPose';
+import type { PlanetPose, PlanetSpinAxis } from '../../services/renderer/planetPose';
 import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
 
 type PlanetProps = {
@@ -27,12 +29,6 @@ type PlanetProps = {
 };
 
 const PLANET_BASE_SCALE = 1.5;
-// Axial tilt applied as the final pose offset after the ring plane is rotated
-// to horizontal. Direction of tilt is around local X.
-const AXIAL_TILT_RAD = 0;
-// Quarter-turn used to swing a vertical ring disc onto the horizontal plane
-// before the axial tilt is layered on top.
-const QUARTER_TURN = Math.PI / 2;
 // Barely-perceptible sway, phase-offset per CompanyId so the five planets
 // don't sway in unison.
 const PLANET_SWAY_AMPLITUDE = Math.PI / 220;
@@ -61,33 +57,18 @@ const phaseFromId = (id: string): number => {
 
 type BodyDerivations = {
   readonly activeRadius: number;
-  readonly tiltEuler: readonly [number, number, number];
-};
-
-// Maps the auto-detected ring normal axis to the (rx, ry, rz) pose that puts
-// the ring plane horizontal and adds the ~20° Saturn-style axial tilt.
-// - 'y': ring already in local XZ plane → only tilt around X.
-// - 'z': ring in local XY (normal toward viewer) → rotate +π/2 around X so
-//   the normal points up, then tilt the result by 20° around X.
-// - 'x': ring in local YZ (normal sideways) → rotate +π/2 around Z so the
-//   normal points up, then tilt by 20° around X.
-const tiltEulerFor = (
-  axis: RingNormalAxis,
-): readonly [number, number, number] => {
-  if (axis === 'y') return [AXIAL_TILT_RAD, 0, 0];
-  if (axis === 'z') return [QUARTER_TURN - AXIAL_TILT_RAD, 0, 0];
-  return [AXIAL_TILT_RAD, 0, QUARTER_TURN];
+  readonly pose: PlanetPose;
 };
 
 const deriveBodyValues = (scene: Object3D): BodyDerivations => {
   const extraction = extractBody(scene);
-  if (extraction.kind === 'no_body') return { activeRadius: 0, tiltEuler: [0, 0, 0] };
-  const activeRadius =
-    extraction.radius * PLANET_BASE_SCALE * ACTIVATION_RADIUS_MULTIPLIER;
-  const tiltEuler: readonly [number, number, number] =
-    extraction.kind === 'ringed_body' ? tiltEulerFor(extraction.ringNormalAxis) : [0, 0, 0];
-  return { activeRadius, tiltEuler };
+  const pose = planetPoseFor(extraction);
+  if (extraction.kind === 'no_body') return { activeRadius: 0, pose };
+  const activeRadius = extraction.radius * PLANET_BASE_SCALE * ACTIVATION_RADIUS_MULTIPLIER;
+  return { activeRadius, pose };
 };
+
+type FrameAxes = { readonly spin: PlanetSpinAxis; readonly sway: PlanetSpinAxis };
 
 const usePlanetFrame = (
   props: PlanetProps,
@@ -95,14 +76,15 @@ const usePlanetFrame = (
   meshRef: RefObject<Object3D | null>,
   phase: number,
   rotationRate: number,
+  axes: FrameAxes,
 ): void => {
   const activationFactorRef = useRef(0);
   useFrame((state, delta) => {
     const mesh = meshRef.current;
     if (mesh === null) return;
-    mesh.rotation.y += rotationRate * delta;
+    mesh.rotation[axes.spin] += rotationRate * delta;
     const time = state.clock.elapsedTime;
-    mesh.rotation.z =
+    mesh.rotation[axes.sway] =
       Math.sin(time * PLANET_SWAY_FREQ_HZ * TWO_PI + phase * 1.3) * PLANET_SWAY_AMPLITUDE;
     const target = props.planetActivationsRef.current.isActive(props.planet.id) ? 1 : 0;
     const current = activationFactorRef.current;
@@ -131,11 +113,14 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   const meshRef = useRef<Object3D | null>(null);
   const rotationRate = useMemo(() => rotationRateFor(phase), [phase]);
 
-  usePlanetFrame(props, plan, meshRef, phase, rotationRate);
+  usePlanetFrame(props, plan, meshRef, phase, rotationRate, {
+    spin: derived.pose.spinAxis,
+    sway: derived.pose.swayAxis,
+  });
 
   return (
     <group position={props.planet.planet.placement}>
-      <group rotation={derived.tiltEuler}>
+      <group rotation={derived.pose.tiltEuler}>
         <group ref={meshRef}>
           <Center>
             <primitive object={plan.scene} />
