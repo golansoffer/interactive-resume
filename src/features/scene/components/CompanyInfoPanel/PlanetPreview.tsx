@@ -1,7 +1,7 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Center, Resize, useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF, useTexture } from '@react-three/drei';
 import type { Group, MeshStandardMaterial, Object3D } from 'three';
 import type { PlanetAssetId } from '../../types/planet';
 import {
@@ -15,6 +15,8 @@ import type { PulseSpec } from '../../services/renderer/planetTypes';
 import { animatePulse } from '../../services/renderer/planetAnimation';
 import { planetPoseFor } from '../../services/renderer/planetPose';
 import type { PlanetPose } from '../../services/renderer/planetPose';
+import { computePlanetPreviewFit } from '../../services/renderer/planetPreviewFit';
+import type { PlanetPreviewFit } from '../../services/renderer/planetPreviewFit';
 
 // Contemplative rotation — eye rests on the text, not the model.
 const ROTATION_RATE_RAD_PER_SEC = 0.6;
@@ -27,13 +29,19 @@ type PlanetPreviewProps = {
 };
 
 type DressedScene =
-  | { readonly kind: 'plain'; readonly scene: Object3D; readonly pose: PlanetPose }
+  | {
+      readonly kind: 'plain';
+      readonly scene: Object3D;
+      readonly pose: PlanetPose;
+      readonly fit: PlanetPreviewFit;
+    }
   | {
       readonly kind: 'effects';
       readonly scene: Object3D;
       readonly materials: ReadonlyArray<MeshStandardMaterial>;
       readonly pulse: PulseSpec;
       readonly pose: PlanetPose;
+      readonly fit: PlanetPreviewFit;
     };
 
 // Pulse phase offset per-asset so different planets aren't in lockstep when
@@ -54,8 +62,9 @@ const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
     const look = resolvePlanetLook(assetId);
     const dressed = cloneAndDress(scene, colorsheet, look);
     const pose = planetPoseFor(dressed.extraction);
+    const fit = computePlanetPreviewFit(dressed.scene, pose.tiltEuler);
     if (look.kind === 'plain') {
-      return { kind: 'plain', scene: dressed.scene, pose };
+      return { kind: 'plain', scene: dressed.scene, pose, fit };
     }
     return {
       kind: 'effects',
@@ -63,6 +72,7 @@ const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
       materials: dressed.standardMaterials,
       pulse: look.pulse,
       pose,
+      fit,
     };
   }, [scene, colorsheet, assetId]);
 };
@@ -92,13 +102,15 @@ const PlanetScene = (props: PlanetPreviewProps): JSX.Element => {
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 5]} intensity={2.0} color={KEY_COLOR} />
       <directionalLight position={[-4, 2, -3]} intensity={0.9} color={FILL_COLOR} />
-      <group rotation={dressed.pose.tiltEuler}>
-        <group ref={groupRef} scale={1.4}>
-          <Center>
-            <Resize>
-              <primitive object={dressed.scene} />
-            </Resize>
-          </Center>
+      <group scale={1.4}>
+        <group scale={dressed.fit.uniformScale}>
+          <group position={dressed.fit.translation}>
+            <group rotation={dressed.pose.tiltEuler}>
+              <group ref={groupRef}>
+                <primitive object={dressed.scene} />
+              </group>
+            </group>
+          </group>
         </group>
       </group>
     </>

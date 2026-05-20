@@ -104,7 +104,7 @@ const WebsiteFooter = ({ url }: { readonly url: string }): JSX.Element => (
 );
 
 const CARD_CLASSNAME =
-  'pointer-events-none fixed right-6 top-6 z-50 w-[23rem] max-w-[24rem] bg-card/85 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md transition-[opacity,transform,filter] ease-[cubic-bezier(0.22,1,0.36,1)] data-[state=open]:duration-700 data-[state=closed]:duration-500 data-[state=closed]:translate-x-6 data-[state=closed]:opacity-0 data-[state=closed]:blur-sm data-[state=open]:translate-x-0 data-[state=open]:opacity-100 data-[state=open]:blur-0 motion-reduce:transition-none motion-reduce:transform-none';
+  'pointer-events-none fixed right-6 top-6 z-50 w-[23rem] max-w-[24rem] bg-card/85 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md transition-[opacity,transform,filter] ease-[cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:ease-[cubic-bezier(0.4,0,1,1)] data-[state=open]:duration-700 data-[state=closed]:duration-500 data-[state=closed]:translate-x-6 data-[state=closed]:opacity-0 data-[state=closed]:blur-sm data-[state=open]:translate-x-0 data-[state=open]:opacity-100 data-[state=open]:blur-0 motion-reduce:transition-none motion-reduce:transform-none';
 
 export const CompanyInfoPanel = (props: CompanyInfoPanelProps): JSX.Element | null => {
   const lastPayloadRef = useRef<LastPayload | null>(null);

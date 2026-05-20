@@ -33,19 +33,15 @@ const projectLabels = (
 ): ReadonlyArray<LabelProjection> =>
   entries.flatMap((entry): ReadonlyArray<LabelProjection> => {
     const logo = entry.info.logo;
-    switch (logo.kind) {
-      case 'with_icon':
-        return [
-          {
-            id: entry.id,
-            placement: entry.planet.placement,
-            iconSrc: logo.src,
-            backdrop: logo.backdrop,
-          },
-        ];
-      case 'no_icon':
-        return [];
-    }
+    if (logo.kind === 'no_icon') return [];
+    return [
+      {
+        id: entry.id,
+        placement: entry.planet.placement,
+        iconSrc: logo.src,
+        backdrop: logo.backdrop,
+      },
+    ];
   });
 
 export const Scene = (props: SceneProps): JSX.Element => {

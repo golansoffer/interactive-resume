@@ -40,8 +40,8 @@ const pairLabelsWithElements = <T extends Element>(
   });
 };
 
-const readTwoPlates = (container: HTMLElement): readonly [Element, Element] => {
-  const plates = Array.from(container.querySelectorAll('[data-backdrop]'));
+const readTwoPlates = (container: HTMLElement): readonly [HTMLElement, HTMLElement] => {
+  const plates = Array.from(container.querySelectorAll<HTMLElement>('[data-backdrop]'));
   if (plates.length !== 2) {
     throw new Error(`expected exactly 2 plates, got ${plates.length}`);
   }
@@ -63,7 +63,7 @@ const readTextContent = (node: Node): string => {
 };
 
 const parsePosition = (raw: string): ParsedPosition => {
-  const parts = raw.split(',').map((s) => Number(s));
+  const parts = raw.split(',').map(Number);
   if (parts.length !== 3) {
     return { kind: 'malformed', reason: `expected 3 parts, got ${parts.length}` };
   }
@@ -175,18 +175,18 @@ describe('PlanetLabels — icon-only renderer', () => {
     ];
     const { container } = renderWith(labels);
     const [lightPlate, darkPlate] = readTwoPlates(container);
-    expect(lightPlate.getAttribute('data-backdrop')).toBe('light');
-    expect(darkPlate.getAttribute('data-backdrop')).toBe('dark');
+    expect(lightPlate.dataset['backdrop']).toBe('light');
+    expect(darkPlate.dataset['backdrop']).toBe('dark');
   });
 
   it('places each label below its planet — rendered Y is less than placement Y', () => {
     const labels = fiveLabels();
     const { container } = renderWith(labels);
-    const hosts = Array.from(container.querySelectorAll('[data-testid="html-host"]'));
+    const hosts = Array.from(container.querySelectorAll<HTMLElement>('[data-testid="html-host"]'));
     const pairs = pairLabelsWithElements(labels, hosts);
     pairs.forEach(([label, host]) => {
-      const raw = host.getAttribute('data-position');
-      if (raw === null) {
+      const raw = host.dataset['position'];
+      if (raw === undefined) {
         throw new Error('host missing data-position');
       }
       const parsed = parsePosition(raw);
