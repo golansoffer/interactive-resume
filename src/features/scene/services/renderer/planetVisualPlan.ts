@@ -1,5 +1,6 @@
 import { Color, Mesh, MeshStandardMaterial } from 'three';
 import type { Object3D, Texture } from 'three';
+import { computeBandNormal } from './bandNormal';
 import { createPlanetAtmosphereMaterial } from './planetAtmosphereMaterial';
 import type {
   AtmospherePlan,
@@ -7,7 +8,7 @@ import type {
   ClonedScene,
   PlanetLook,
   PlanetVisualPlan,
-  PoleAxis,
+  PoleDirection,
   RimSpec,
 } from './planetTypes';
 
@@ -48,15 +49,36 @@ const computeCandidate = (mesh: Mesh): Candidate | null => {
   return { mesh, radius: sphere.radius, sphericity, dx, dy, dz };
 };
 
-// Picks the axis of the smallest bounding-box dimension. For a ring disc this
-// is the disc normal; for a non-ringed body it is the model pole (the axis the
-// asset was authored around — texture seams and the implied spin axis). In
-// both cases we want this axis aligned with world up. Exhaustive: any three
-// numbers produce one of 'x' | 'y' | 'z'.
-const poleAxisFromDims = (dx: number, dy: number, dz: number): PoleAxis => {
-  if (dx <= dy && dx <= dz) return 'x';
-  if (dy <= dx && dy <= dz) return 'y';
-  return 'z';
+// Fallback pole direction from bounding-box dims: a cardinal unit vector
+// along the smallest dim. Used when band-normal detection has no UV data to
+// read — its values can be unreliable on perfectly spherical meshes
+// (Jupiter_b sphericity ~0.99999 has dims agreeing to 7 decimals so the
+// comparison reduces to float-rounding noise), but it's the only signal
+// left when the mesh carries no bands.
+const poleDirectionFromDims = (
+  dx: number,
+  dy: number,
+  dz: number,
+): PoleDirection => {
+  if (dx <= dy && dx <= dz) return [1, 0, 0];
+  if (dy <= dx && dy <= dz) return [0, 1, 0];
+  return [0, 0, 1];
+};
+
+// Visual pole direction for a mesh, in mesh-local space. The colour bands
+// authored into the model's UVs are the planet's "north–south" — bands wrap
+// around the pole. PCA on each band's face centroids yields a band normal;
+// aggregated across bands that's the pole direction. Falls back to the
+// bbox-dim cardinal direction only when the mesh has no UV data.
+const poleDirectionForMesh = (
+  mesh: Mesh,
+  dx: number,
+  dy: number,
+  dz: number,
+): PoleDirection => {
+  const banded = computeBandNormal(mesh);
+  if (banded.kind === 'detected') return banded.direction;
+  return poleDirectionFromDims(dx, dy, dz);
 };
 
 type RingDisc =
@@ -97,24 +119,24 @@ export const extractBody = (root: Object3D): BodyExtraction => {
   );
   if (best === null) return { kind: 'no_body' };
   // Multi-mesh case: a separate spherical body coexists with a flat ring disc
-  // as siblings in the scene graph.
+  // as siblings in the scene graph. The disc's smallest bbox dim is the ring
+  // normal — for that path we use the cardinal direction (no body to PCA).
   const disc = pickRingDisc(candidates);
   if (spherical.length > 0 && disc.kind === 'found') {
-    const poleAxis = poleAxisFromDims(disc.dx, disc.dy, disc.dz);
-    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleAxis };
+    const poleDirection = poleDirectionFromDims(disc.dx, disc.dy, disc.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleDirection };
   }
-  // Single-mesh case: body + ring are baked into one mesh (this asset set).
-  // The merged mesh is non-spherical because the ring extends beyond the body
-  // in its plane; the smallest bbox dim points along the ring normal.
+  // Single-mesh case: body + ring baked into one mesh. The bands wrap around
+  // the same axis the ring's normal points along, so the band normal *is*
+  // the pole direction.
   if (best.sphericity <= SPHERICITY_THRESHOLD) {
-    const poleAxis = poleAxisFromDims(best.dx, best.dy, best.dz);
-    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleAxis };
+    const poleDirection = poleDirectionForMesh(best.mesh, best.dx, best.dy, best.dz);
+    return { kind: 'ringed_body', mesh: best.mesh, radius: best.radius, poleDirection };
   }
-  // Non-ringed body: pole axis is the body mesh's own thinnest bbox dim.
-  // Planet GLB assets are authored as near-spheres with a slight pole-axis
-  // flattening; this picks that axis so the pose reorients it to world up.
-  const poleAxis = poleAxisFromDims(best.dx, best.dy, best.dz);
-  return { kind: 'body', mesh: best.mesh, radius: best.radius, poleAxis };
+  // Non-ringed body: pole direction is the model-space band normal — the
+  // exact axis the colour bands wrap around, not a cardinal-axis snap.
+  const poleDirection = poleDirectionForMesh(best.mesh, best.dx, best.dy, best.dz);
+  return { kind: 'body', mesh: best.mesh, radius: best.radius, poleDirection };
 };
 
 export const cloneAndDress = (

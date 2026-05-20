@@ -62,7 +62,7 @@ const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
     const look = resolvePlanetLook(assetId);
     const dressed = cloneAndDress(scene, colorsheet, look);
     const pose = planetPoseFor(dressed.extraction);
-    const fit = computePlanetPreviewFit(dressed.scene, pose.tiltEuler);
+    const fit = computePlanetPreviewFit(dressed.scene, pose.alignQuaternion);
     if (look.kind === 'plain') {
       return { kind: 'plain', scene: dressed.scene, pose, fit };
     }
@@ -77,6 +77,10 @@ const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
   }, [scene, colorsheet, assetId]);
 };
 
+// Spin is on the outer group (its parent chain carries no rotation), so its
+// local +y axis equals world +y. The alignment quaternion below it has
+// already carried the model's pole onto +y, so spinning around y here is
+// spinning around the planet's actual pole.
 const usePreviewFrame = (
   groupRef: RefObject<Group | null>,
   dressed: DressedScene,
@@ -85,7 +89,7 @@ const usePreviewFrame = (
   useFrame((state, delta) => {
     const g = groupRef.current;
     if (g === null) return;
-    g.rotation[dressed.pose.spinAxis] += ROTATION_RATE_RAD_PER_SEC * delta;
+    g.rotation.y += ROTATION_RATE_RAD_PER_SEC * delta;
     if (dressed.kind === 'effects') {
       animatePulse(dressed.materials, dressed.pulse, state.clock.elapsedTime, phase);
     }
@@ -105,8 +109,8 @@ const PlanetScene = (props: PlanetPreviewProps): JSX.Element => {
       <group scale={1.4}>
         <group scale={dressed.fit.uniformScale}>
           <group position={dressed.fit.translation}>
-            <group rotation={dressed.pose.tiltEuler}>
-              <group ref={groupRef}>
+            <group ref={groupRef}>
+              <group quaternion={dressed.pose.alignQuaternion}>
                 <primitive object={dressed.scene} />
               </group>
             </group>

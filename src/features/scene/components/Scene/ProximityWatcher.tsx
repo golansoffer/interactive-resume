@@ -2,7 +2,7 @@ import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { proximityCheck } from '../../services/renderer/proximityCheck';
-import type { Kinematics } from '../../services/renderer/integrateMotion';
+import type { Kinematics } from '../../types/kinematics';
 import type { CompanyEntry, CompanyId } from '../../types/company';
 import type { CompanyInfo } from '../../types/company-info';
 import type { SceneEvent } from '../../types/scene-event';

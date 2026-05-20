@@ -35,19 +35,28 @@ export type PlanetLook =
 
 export type PoleAxis = 'x' | 'y' | 'z';
 
+// The planet's visual pole expressed as a unit vector in the mesh's local
+// space. For ringed bodies it's the ring's plane normal; for non-ringed
+// bodies it's the axis the colour bands wrap around. The pose builds a
+// quaternion that rotates this exact vector onto world-up, so the rendered
+// pole lands precisely vertical instead of leaning by the residual that a
+// cardinal-axis snap would leave (Jupiter_b's band normal is `(0.34, 0.77,
+// 0.54)` — only 77% of `+y`, off by 24° after a snap).
+export type PoleDirection = readonly [number, number, number];
+
 export type BodyExtraction =
   | { readonly kind: 'no_body' }
   | {
       readonly kind: 'body';
       readonly mesh: Mesh;
       readonly radius: number;
-      readonly poleAxis: PoleAxis;
+      readonly poleDirection: PoleDirection;
     }
   | {
       readonly kind: 'ringed_body';
       readonly mesh: Mesh;
       readonly radius: number;
-      readonly poleAxis: PoleAxis;
+      readonly poleDirection: PoleDirection;
     };
 
 export type AtmospherePlan = {

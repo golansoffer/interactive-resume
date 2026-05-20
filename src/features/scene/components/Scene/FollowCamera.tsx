@@ -4,9 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { Vector3 } from 'three';
-import { MAX_SPEED } from '../../services/renderer/integrateMotion';
-import type { Kinematics } from '../../services/renderer/integrateMotion';
-import type { Vec3 } from '../../services/renderer/vec3';
+import { MAX_SPEED, type Kinematics, type Vec3 } from '../../types/kinematics';
 
 type FollowCameraProps = {
   readonly kinematicsRef: RefObject<Kinematics>;

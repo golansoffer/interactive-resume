@@ -19,7 +19,7 @@ import {
   resolvePlanetLook,
 } from '../../services/renderer/planetAssets';
 import { planetPoseFor } from '../../services/renderer/planetPose';
-import type { PlanetPose, PlanetSpinAxis } from '../../services/renderer/planetPose';
+import type { PlanetPose } from '../../services/renderer/planetPose';
 import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
 
 type PlanetProps = {
@@ -68,23 +68,24 @@ const deriveBodyValues = (scene: Object3D): BodyDerivations => {
   return { activeRadius, pose };
 };
 
-type FrameAxes = { readonly spin: PlanetSpinAxis; readonly sway: PlanetSpinAxis };
-
+// The alignment quaternion (inner group) puts the model's visual pole on
+// world +y, so spin is always around world y and sway around world x — both
+// from the outer group's perspective, which is unrotated (its parent is a
+// position-only group).
 const usePlanetFrame = (
   props: PlanetProps,
   plan: PlanetVisualPlan,
   meshRef: RefObject<Object3D | null>,
   phase: number,
   rotationRate: number,
-  axes: FrameAxes,
 ): void => {
   const activationFactorRef = useRef(0);
   useFrame((state, delta) => {
     const mesh = meshRef.current;
     if (mesh === null) return;
-    mesh.rotation[axes.spin] += rotationRate * delta;
+    mesh.rotation.y += rotationRate * delta;
     const time = state.clock.elapsedTime;
-    mesh.rotation[axes.sway] =
+    mesh.rotation.x =
       Math.sin(time * PLANET_SWAY_FREQ_HZ * TWO_PI + phase * 1.3) * PLANET_SWAY_AMPLITUDE;
     const target = props.planetActivationsRef.current.isActive(props.planet.id) ? 1 : 0;
     const current = activationFactorRef.current;
@@ -113,15 +114,12 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   const meshRef = useRef<Object3D | null>(null);
   const rotationRate = useMemo(() => rotationRateFor(phase), [phase]);
 
-  usePlanetFrame(props, plan, meshRef, phase, rotationRate, {
-    spin: derived.pose.spinAxis,
-    sway: derived.pose.swayAxis,
-  });
+  usePlanetFrame(props, plan, meshRef, phase, rotationRate);
 
   return (
     <group position={props.planet.planet.placement}>
-      <group rotation={derived.pose.tiltEuler}>
-        <group ref={meshRef}>
+      <group ref={meshRef}>
+        <group quaternion={derived.pose.alignQuaternion}>
           <Center>
             <primitive object={plan.scene} />
           </Center>

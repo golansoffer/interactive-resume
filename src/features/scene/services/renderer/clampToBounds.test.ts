@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clampToBounds, type Bounds } from './clampToBounds';
-import type { Vec3 } from './vec3';
+import type { Vec3 } from '../../types/kinematics';
 
 const BOX: Bounds = {
   min: { x: -10, y: -10, z: -10 },

@@ -40,7 +40,16 @@
     },
     {
       "files": ["**/features/*/components/**/*.tsx"],
-      "rules": { "import/max-dependencies": "off" }
+      "rules": {
+        "import/max-dependencies": "off"
+      }
+    },
+    {
+      "files": ["**/features/*/widget/*/use*.ts"],
+      "rules": {
+        "import/max-dependencies": "off",
+        "max-lines-per-function": "off"
+      }
     },
     {
       "files": ["src/main.tsx"],

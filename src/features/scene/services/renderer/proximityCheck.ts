@@ -1,4 +1,4 @@
-import type { Vec3 } from './vec3';
+import type { Vec3 } from '../../types/kinematics';
 
 // Each target carries its own activation radius — planets vary in visible
 // size (Saturn with rings is larger than Mars), so a single global radius

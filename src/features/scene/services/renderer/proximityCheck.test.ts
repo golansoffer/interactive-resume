@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { asCompanyId } from '../../types/company';
 import type { CompanyId } from '../../types/company';
 import { proximityCheck } from './proximityCheck';
-import type { Vec3 } from './vec3';
+import type { Vec3 } from '../../types/kinematics';
 
 type TestTarget = {
   readonly id: CompanyId;

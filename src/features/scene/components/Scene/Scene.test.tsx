@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { asCompanyId } from '../../types/company';
@@ -7,6 +7,7 @@ import type { IntentStream } from '../../types/intent';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
 import { Scene } from './Scene';
 
 vi.mock('@react-three/fiber', () => {
@@ -151,6 +152,8 @@ const testShip: ShipEntry = {
   scale: 0.6,
 };
 
+const createKinematicsRef = (): RefObject<Kinematics> => ({ current: INITIAL_KINEMATICS });
+
 const mount = (
   state: SceneState,
   entries: ReadonlyArray<CompanyEntry>,
@@ -164,6 +167,7 @@ const mount = (
       entries={entries}
       intents={intents}
       onEvent={onEvent}
+      kinematicsRef={createKinematicsRef()}
     />,
   );
 };

@@ -6,7 +6,7 @@ import type { LabelProjection, PlanetProjection } from '../../types/projections'
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
-import type { Kinematics } from '../../services/renderer/integrateMotion';
+import type { Kinematics } from '../../types/kinematics';
 import { Asteroids } from './Asteroids';
 import { Companies } from './Companies';
 import { FollowCamera } from './FollowCamera';

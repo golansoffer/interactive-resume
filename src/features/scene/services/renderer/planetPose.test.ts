@@ -1,83 +1,104 @@
 import { describe, expect, it } from 'vitest';
-import { Euler, Mesh, Vector3 } from 'three';
-import type { BodyExtraction, PoleAxis } from './planetTypes';
+import { Mesh, Quaternion, Vector3 } from 'three';
+import type { BodyExtraction, PoleDirection } from './planetTypes';
 import { planetPoseFor } from './planetPose';
 
-const bodyExtraction = (poleAxis: PoleAxis): BodyExtraction => ({
+const bodyExtraction = (poleDirection: PoleDirection): BodyExtraction => ({
   kind: 'body',
   mesh: new Mesh(),
   radius: 1,
-  poleAxis,
+  poleDirection,
 });
 
-const ringedExtraction = (poleAxis: PoleAxis): BodyExtraction => ({
+const ringedExtraction = (poleDirection: PoleDirection): BodyExtraction => ({
   kind: 'ringed_body',
   mesh: new Mesh(),
   radius: 1,
-  poleAxis,
+  poleDirection,
 });
 
-const modelAxisVector = (axis: PoleAxis): Vector3 => {
-  if (axis === 'x') return new Vector3(1, 0, 0);
-  if (axis === 'y') return new Vector3(0, 1, 0);
-  return new Vector3(0, 0, 1);
-};
-
-// Applies the pose's tiltEuler (in XYZ order, matching Three.js group
-// rotation default) to a model-space vector and returns where it lands in
-// world space.
-const applyTilt = (
-  tiltEuler: readonly [number, number, number],
+// Applies the pose's alignment quaternion to a model-space direction and
+// returns where it lands in world space.
+const applyAlign = (
+  alignQuaternion: readonly [number, number, number, number],
   modelVec: Vector3,
 ): Vector3 => {
-  const [rx, ry, rz] = tiltEuler;
-  const euler = new Euler(rx, ry, rz, 'XYZ');
-  return modelVec.clone().applyEuler(euler);
+  const [x, y, z, w] = alignQuaternion;
+  return modelVec.clone().applyQuaternion(new Quaternion(x, y, z, w));
 };
 
 describe('planetPoseFor', () => {
-  it('returns identity pose for no_body', () => {
+  it('returns the identity quaternion for no_body', () => {
     const pose = planetPoseFor({ kind: 'no_body' });
-    expect(pose.tiltEuler).toEqual([0, 0, 0]);
-    expect(pose.spinAxis).toBe('y');
-    expect(pose.swayAxis).toBe('z');
+    expect(pose.alignQuaternion).toEqual([0, 0, 0, 1]);
   });
 
-  it('returns identity pose for body with poleAxis y', () => {
-    const pose = planetPoseFor(bodyExtraction('y'));
-    expect(pose.tiltEuler).toEqual([0, 0, 0]);
-    expect(pose.spinAxis).toBe('y');
-    expect(pose.swayAxis).toBe('z');
+  it('returns the identity quaternion when the pole already points along +y', () => {
+    const pose = planetPoseFor(bodyExtraction([0, 1, 0]));
+    expect(pose.alignQuaternion[0]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[1]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[2]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[3]).toBeCloseTo(1, 6);
   });
 
-  it('rotates pole to vertical for body with poleAxis x', () => {
-    const pose = planetPoseFor(bodyExtraction('x'));
-    expect(pose.spinAxis).toBe('x');
-    expect(pose.swayAxis).not.toBe(pose.spinAxis);
-    const landed = applyTilt(pose.tiltEuler, modelAxisVector('x'));
-    expect(landed.x).toBeCloseTo(0);
-    expect(landed.y).toBeCloseTo(1);
-    expect(landed.z).toBeCloseTo(0);
+  it('rotates a +x model pole onto +y world', () => {
+    const pose = planetPoseFor(bodyExtraction([1, 0, 0]));
+    const landed = applyAlign(pose.alignQuaternion, new Vector3(1, 0, 0));
+    expect(landed.x).toBeCloseTo(0, 6);
+    expect(landed.y).toBeCloseTo(1, 6);
+    expect(landed.z).toBeCloseTo(0, 6);
   });
 
-  it('rotates pole to vertical for body with poleAxis z', () => {
-    const pose = planetPoseFor(bodyExtraction('z'));
-    expect(pose.spinAxis).toBe('z');
-    expect(pose.swayAxis).not.toBe(pose.spinAxis);
-    const landed = applyTilt(pose.tiltEuler, modelAxisVector('z'));
-    // The X-rotation tilt for poleAxis 'z' carries +Z to -Y; visually the
-    // pole is still vertical (just inverted), which is what matters for
-    // planet rendering — a sphere's axis is direction-symmetric on screen.
-    expect(landed.x).toBeCloseTo(0);
-    expect(Math.abs(landed.y)).toBeCloseTo(1);
-    expect(landed.z).toBeCloseTo(0);
+  it('rotates a +z model pole onto +y world', () => {
+    const pose = planetPoseFor(bodyExtraction([0, 0, 1]));
+    const landed = applyAlign(pose.alignQuaternion, new Vector3(0, 0, 1));
+    expect(landed.x).toBeCloseTo(0, 6);
+    expect(landed.y).toBeCloseTo(1, 6);
+    expect(landed.z).toBeCloseTo(0, 6);
   });
 
-  it('produces identical poses for body and ringed_body with the same poleAxis', () => {
-    const axes: ReadonlyArray<PoleAxis> = ['x', 'y', 'z'];
-    for (const axis of axes) {
-      const bodyPose = planetPoseFor(bodyExtraction(axis));
-      const ringedPose = planetPoseFor(ringedExtraction(axis));
+  it('rotates a diagonal model pole onto +y exactly (cardinal snap would leave residual lean)', () => {
+    // Jupiter_b's measured band normal — 0.34 right, 0.77 up, 0.54 forward,
+    // normalised. Cardinal-axis snap would land this 24° off vertical; full
+    // quaternion alignment carries it onto (0, 1, 0) exactly.
+    const direction: PoleDirection = [0.339, 0.770, 0.541];
+    const [dx, dy, dz] = direction;
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const unit = new Vector3(dx / len, dy / len, dz / len);
+    const pose = planetPoseFor(bodyExtraction(direction));
+    const landed = applyAlign(pose.alignQuaternion, unit);
+    expect(landed.x).toBeCloseTo(0, 5);
+    expect(landed.y).toBeCloseTo(1, 5);
+    expect(landed.z).toBeCloseTo(0, 5);
+  });
+
+  it('handles an anti-parallel pole (model pole at -y) by rotating 180°', () => {
+    const pose = planetPoseFor(bodyExtraction([0, -1, 0]));
+    const landed = applyAlign(pose.alignQuaternion, new Vector3(0, -1, 0));
+    expect(landed.x).toBeCloseTo(0, 6);
+    expect(landed.y).toBeCloseTo(1, 6);
+    expect(landed.z).toBeCloseTo(0, 6);
+  });
+
+  it('normalises non-unit pole directions before computing alignment', () => {
+    // (0, 5, 0) should align the same as (0, 1, 0).
+    const pose = planetPoseFor(bodyExtraction([0, 5, 0]));
+    expect(pose.alignQuaternion[0]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[1]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[2]).toBeCloseTo(0, 6);
+    expect(pose.alignQuaternion[3]).toBeCloseTo(1, 6);
+  });
+
+  it('produces identical poses for body and ringed_body with the same poleDirection', () => {
+    const directions: ReadonlyArray<PoleDirection> = [
+      [0, 1, 0],
+      [1, 0, 0],
+      [0, 0, 1],
+      [0.339, 0.770, 0.541],
+    ];
+    for (const d of directions) {
+      const bodyPose = planetPoseFor(bodyExtraction(d));
+      const ringedPose = planetPoseFor(ringedExtraction(d));
       expect(bodyPose).toEqual(ringedPose);
     }
   });

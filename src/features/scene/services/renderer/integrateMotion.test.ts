@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Intent } from '../../types/intent';
-import {
-  ACCELERATION,
-  DECELERATION,
-  MAX_SPEED,
-  integrateMotion,
-  type CameraBasis,
-  type Kinematics,
-} from './integrateMotion';
+import { ACCELERATION, DECELERATION, integrateMotion, type CameraBasis } from './integrateMotion';
+import { MAX_SPEED, type Kinematics } from '../../types/kinematics';
 
 const ZERO: Kinematics = {
   position: { x: 0, y: 0, z: 0 },

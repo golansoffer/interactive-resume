@@ -1,15 +1,9 @@
 import type { Intent } from '../../types/intent';
-import type { Vec3 } from './vec3';
+import type { Kinematics, Vec3 } from '../../types/kinematics';
+import { MAX_SPEED } from '../../types/kinematics';
 
-export const MAX_SPEED = 14;
 export const ACCELERATION = 120;
 export const DECELERATION = 140;
-
-export type Kinematics = {
-  readonly position: Vec3;
-  readonly velocity: Vec3;
-  readonly heading: number;
-};
 
 export type CameraBasis = {
   readonly forward: Vec3;

@@ -79,7 +79,7 @@ describe('extractBody', () => {
     expect(result.mesh).toBe(bodyMesh);
     // Ring disc dims are (10, 0.05, 10) → smallest axis is y → normal points
     // along local Y. Auto-detection should pick 'y'.
-    expect(result.poleAxis).toBe('y');
+    expect(result.poleDirection).toEqual([0, 1, 0]);
   });
 
   it('detects ring normal axis on the X axis when the disc is flat in YZ', () => {
@@ -91,7 +91,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('ringed_body');
     if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
-    expect(result.poleAxis).toBe('x');
+    expect(result.poleDirection).toEqual([1, 0, 0]);
   });
 
   it('detects ring normal axis on the Z axis when the disc is flat in XY', () => {
@@ -103,7 +103,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('ringed_body');
     if (result.kind !== 'ringed_body') throw new Error('expected ringed_body variant');
-    expect(result.poleAxis).toBe('z');
+    expect(result.poleDirection).toEqual([0, 0, 1]);
   });
 
   it('picks the single mesh when there is only one', () => {
@@ -114,7 +114,9 @@ describe('extractBody', () => {
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
     expect(result.mesh).toBe(mesh);
-    expect(['x', 'y', 'z']).toContain(result.poleAxis);
+    const [px, py, pz] = result.poleDirection;
+    const len = Math.sqrt(px * px + py * py + pz * pz);
+    expect(len).toBeCloseTo(1, 6);
   });
 
   it('computes bounding sphere when null on the geometry', () => {
@@ -126,7 +128,9 @@ describe('extractBody', () => {
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
     expect(geometry.boundingSphere).not.toBeNull();
-    expect(['x', 'y', 'z']).toContain(result.poleAxis);
+    const [px, py, pz] = result.poleDirection;
+    const len = Math.sqrt(px * px + py * py + pz * pz);
+    expect(len).toBeCloseTo(1, 6);
   });
 
   it('detects pole axis on X for a single non-ringed body flattened along X', () => {
@@ -139,7 +143,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
-    expect(result.poleAxis).toBe('x');
+    expect(result.poleDirection).toEqual([1, 0, 0]);
   });
 
   it('detects pole axis on Y for a single non-ringed body flattened along Y', () => {
@@ -149,7 +153,7 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
-    expect(result.poleAxis).toBe('y');
+    expect(result.poleDirection).toEqual([0, 1, 0]);
   });
 
   it('detects pole axis on Z for a single non-ringed body flattened along Z', () => {
@@ -159,6 +163,6 @@ describe('extractBody', () => {
     const result = extractBody(root);
     expect(result.kind).toBe('body');
     if (result.kind !== 'body') throw new Error('expected body variant');
-    expect(result.poleAxis).toBe('z');
+    expect(result.poleDirection).toEqual([0, 0, 1]);
   });
 });

@@ -1,4 +1,4 @@
-import type { Vec3 } from './vec3';
+import type { Vec3 } from '../../types/kinematics';
 
 export type Sphere = {
   readonly center: Vec3;
