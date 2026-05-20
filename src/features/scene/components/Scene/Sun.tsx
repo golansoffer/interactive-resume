@@ -39,11 +39,11 @@ const SUN_BODY_SCALE = 17;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
 const HALO_SCALE_OF_DIAMETER = 3.5;
 
-// Emissive intensity kept moderate (not full-bright) so the colorsheet
-// texture on the sphere stays readable — the body shows surface detail
-// instead of washing out to a uniform glow disk.
+// Emissive intensity tuned to feel sun-bright while still letting the
+// colorsheet texture read on the body — full-bright washes the surface,
+// too low feels dim.
 const SUN_EMISSIVE_HEX = 0xffe9b0;
-const SUN_EMISSIVE_INTENSITY = 0.55;
+const SUN_EMISSIVE_INTENSITY = 0.9;
 
 // Clones the GLB scene and replaces each MeshStandardMaterial with a cloned
 // copy carrying the warm emissive override. Cloning is required because
