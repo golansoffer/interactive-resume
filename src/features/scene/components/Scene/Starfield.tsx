@@ -11,7 +11,6 @@ import {
 import { buildStarfieldMaterial } from '../../services/renderer/starfieldMaterial';
 
 const STAR_COLOR = '#cfd9ff';
-const TWINKLE_SPEED = 1.6;
 
 export const Starfield = (): JSX.Element => {
   const groupRef = useRef<Group | null>(null);
@@ -27,10 +26,7 @@ export const Starfield = (): JSX.Element => {
     [],
   );
 
-  const material = useMemo(
-    () => buildStarfieldMaterial({ color: STAR_COLOR, twinkleSpeed: TWINKLE_SPEED }),
-    [],
-  );
+  const material = useMemo(() => buildStarfieldMaterial({ color: STAR_COLOR }), []);
 
   useFrame((state, delta) => {
     const group = groupRef.current;

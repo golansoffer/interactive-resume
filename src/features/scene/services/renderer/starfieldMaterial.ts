@@ -2,43 +2,61 @@ import { AdditiveBlending, Color, ShaderMaterial } from 'three';
 
 export type StarfieldMaterialParams = {
   readonly color: string;
-  readonly twinkleSpeed: number;
 };
+
+const DEFAULT_HALO_SIZE_BOOST = 14.0;
+const DEFAULT_HALO_STRENGTH = 0.55;
+const DEFAULT_SPIKE_STRENGTH = 0.45;
 
 const VERTEX_SHADER = `
 attribute float aSize;
 attribute float aBrightness;
 attribute float aTwinkleAmp;
+attribute float aTwinkleSpeed;
+attribute float aTwinkleSharp;
 attribute float aTwinklePhase;
+attribute vec3 aColor;
+attribute float aLuminous;
 
 uniform float uTime;
-uniform float uTwinkleSpeed;
 uniform float uPixelRatio;
+uniform float uHaloSizeBoost;
 
 varying float vAlpha;
+varying vec3 vColor;
+varying float vLuminous;
 
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
 
-  float pulse = sin(uTime * uTwinkleSpeed + aTwinklePhase);
-  float twinkle = 1.0 - aTwinkleAmp + aTwinkleAmp * (0.5 + 0.5 * pulse);
+  float wave = sin(uTime * aTwinkleSpeed + aTwinklePhase);
+  float normalized = 0.5 + 0.5 * wave;
+  float sharpened = pow(normalized, 6.0);
+  float shaped = mix(normalized, sharpened, aTwinkleSharp);
+  float twinkle = 1.0 - aTwinkleAmp + aTwinkleAmp * shaped;
 
   vAlpha = aBrightness * twinkle;
-  gl_PointSize = aSize * uPixelRatio;
+  vColor = aColor;
+  vLuminous = aLuminous;
+
+  float baseSize = aSize * uPixelRatio;
+  gl_PointSize = baseSize + aLuminous * uHaloSizeBoost;
 }
 `;
 
 const FRAGMENT_SHADER = `
 uniform vec3 uColor;
+
 varying float vAlpha;
+varying vec3 vColor;
 
 void main() {
   vec2 d = gl_PointCoord - 0.5;
   float r2 = dot(d, d);
   if (r2 > 0.25) discard;
   float core = smoothstep(0.25, 0.0, r2);
-  gl_FragColor = vec4(uColor, vAlpha * core);
+  gl_FragColor = vec4(uColor * vColor, vAlpha * core);
 }
 `;
 
@@ -53,9 +71,11 @@ export const buildStarfieldMaterial = (params: StarfieldMaterialParams): ShaderM
   new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uTwinkleSpeed: { value: params.twinkleSpeed },
       uColor: { value: new Color(params.color) },
       uPixelRatio: { value: readDevicePixelRatio() },
+      uHaloSizeBoost: { value: DEFAULT_HALO_SIZE_BOOST },
+      uHaloStrength: { value: DEFAULT_HALO_STRENGTH },
+      uSpikeStrength: { value: DEFAULT_SPIKE_STRENGTH },
     },
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
