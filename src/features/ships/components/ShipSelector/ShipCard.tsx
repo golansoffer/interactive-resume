@@ -11,7 +11,6 @@ type ShipCardProps = {
   readonly isHovered: boolean;
   readonly isFeatured: boolean;
   readonly onHoverEnter: (id: ShipId) => void;
-  readonly onHoverLeave: () => void;
   readonly onPick: (id: ShipId) => void;
 };
 
@@ -66,7 +65,6 @@ export const ShipCard = (props: ShipCardProps): JSX.Element => (
     data-hovered={props.isHovered ? 'true' : 'false'}
     data-featured={props.isFeatured ? 'true' : 'false'}
     onMouseEnter={() => props.onHoverEnter(props.ship.id)}
-    onMouseLeave={() => props.onHoverLeave()}
     onClick={() => props.onPick(props.ship.id)}
     className={cardClassName}
   >

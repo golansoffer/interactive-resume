@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ALL_SHIPS } from '../../types/shipRegistry';
 import { ShipSelector } from './ShipSelector';
@@ -70,6 +70,29 @@ describe('ShipSelector', () => {
     );
     const hovered = thumbnailButtons().filter((b) => b.dataset['hovered'] === 'true');
     expect(hovered).toHaveLength(0);
+  });
+
+  it('calls onHoverLeave when the mouse leaves the strip (not on inter-card transits)', () => {
+    const onHoverLeave = vi.fn();
+    render(
+      <ShipSelector
+        ships={ALL_SHIPS}
+        hover={{ kind: 'hovering', id: 'cargoA' }}
+        onHoverEnter={noop}
+        onHoverLeave={onHoverLeave}
+        onPick={noop}
+      />,
+    );
+    const cards = thumbnailButtons();
+    const firstCard = cards[0];
+    const secondCard = cards[1];
+    if (!firstCard || !secondCard) throw new Error('expected at least two thumbnails');
+    fireEvent.mouseLeave(firstCard, { relatedTarget: secondCard });
+    expect(onHoverLeave).not.toHaveBeenCalled();
+    const strip = firstCard.parentElement;
+    if (!strip) throw new Error('expected card to have a parent strip');
+    fireEvent.mouseLeave(strip);
+    expect(onHoverLeave).toHaveBeenCalledTimes(1);
   });
 
   it('renders the hero launch button', () => {

@@ -78,7 +78,11 @@ const acmeEntry: CompanyEntry = {
     website: { kind: 'has_website', url: 'https://acme.test/' },
     role: 'Engineer',
     period: { kind: 'ongoing', start: { year: 2024, month: 1 } },
-    description: 'Acme description.',
+    oneLiner: 'Acme one-liner.',
+    hook: 'Acme hook.',
+    decision: { kind: 'none' },
+    work: ['Acme work.'],
+    departure: { kind: 'current_role' },
   },
 };
 
@@ -100,13 +104,18 @@ const globexEntry: CompanyEntry = {
       start: { year: 2020, month: 6 },
       end: { year: 2023, month: 12 },
     },
-    description: 'Globex description.',
+    oneLiner: 'Globex one-liner.',
+    hook: 'Globex hook.',
+    decision: { kind: 'none' },
+    work: ['Globex work.'],
+    departure: { kind: 'undisclosed' },
   },
 };
 
 const initech = asCompanyId('initech');
 const umbrella = asCompanyId('umbrella');
 const soylent = asCompanyId('soylent');
+const hooli = asCompanyId('hooli');
 
 const initechEntry: CompanyEntry = {
   id: initech,
@@ -117,7 +126,11 @@ const initechEntry: CompanyEntry = {
     website: { kind: 'no_website' },
     role: 'Engineer',
     period: { kind: 'ongoing', start: { year: 2021, month: 3 } },
-    description: 'Initech description.',
+    oneLiner: 'Initech one-liner.',
+    hook: 'Initech hook.',
+    decision: { kind: 'none' },
+    work: ['Initech work.'],
+    departure: { kind: 'current_role' },
   },
 };
 
@@ -130,7 +143,11 @@ const umbrellaEntry: CompanyEntry = {
     website: { kind: 'has_website', url: 'https://umbrella.test/' },
     role: 'Researcher',
     period: { kind: 'ongoing', start: { year: 2022, month: 1 } },
-    description: 'Umbrella description.',
+    oneLiner: 'Umbrella one-liner.',
+    hook: 'Umbrella hook.',
+    decision: { kind: 'none' },
+    work: ['Umbrella work.'],
+    departure: { kind: 'current_role' },
   },
 };
 
@@ -143,7 +160,28 @@ const soylentEntry: CompanyEntry = {
     website: { kind: 'has_website', url: 'https://soylent.test/' },
     role: 'Chemist',
     period: { kind: 'ongoing', start: { year: 2023, month: 1 } },
-    description: 'Soylent description.',
+    oneLiner: 'Soylent one-liner.',
+    hook: 'Soylent hook.',
+    decision: { kind: 'none' },
+    work: ['Soylent work.'],
+    departure: { kind: 'current_role' },
+  },
+};
+
+const hooliEntry: CompanyEntry = {
+  id: hooli,
+  planet: { assetId: 'neptune_b', placement: [0, 0, 11] },
+  info: {
+    companyName: 'Hooli',
+    logo: { kind: 'text_label', text: 'HOO', backdrop: 'light' },
+    website: { kind: 'no_website' },
+    role: 'Engineer',
+    period: { kind: 'ongoing', start: { year: 2024, month: 6 } },
+    oneLiner: 'Hooli one-liner.',
+    hook: 'Hooli hook.',
+    decision: { kind: 'none' },
+    work: ['Hooli work.'],
+    departure: { kind: 'current_role' },
   },
 };
 
@@ -253,11 +291,12 @@ describe('Scene — port purity at mount', () => {
 });
 
 describe('Scene — logo variant mixes', () => {
-  const mixed: ReadonlyArray<CompanyEntry> = [acmeEntry, initechEntry, umbrellaEntry];
+  const mixed: ReadonlyArray<CompanyEntry> = [acmeEntry, initechEntry, umbrellaEntry, hooliEntry];
   const allNoIcon: ReadonlyArray<CompanyEntry> = [initechEntry];
   const allDarkIcon: ReadonlyArray<CompanyEntry> = [umbrellaEntry, soylentEntry];
+  const withTextLabel: ReadonlyArray<CompanyEntry> = [acmeEntry, hooliEntry];
 
-  it('mounts without throwing when entries mix with_icon and no_icon companies', () => {
+  it('mounts without throwing when entries mix with_icon, no_icon, and text_label companies', () => {
     expect(() => mount({ kind: 'playing' }, mixed, emptyIntents(), vi.fn())).not.toThrow();
   });
 
@@ -269,13 +308,19 @@ describe('Scene — logo variant mixes', () => {
     expect(() => mount({ kind: 'playing' }, allDarkIcon, emptyIntents(), vi.fn())).not.toThrow();
   });
 
-  it('does not invoke onEvent at mount under any of the three mixes above', () => {
+  it('mounts without throwing when entries include a text_label', () => {
+    expect(() => mount({ kind: 'playing' }, withTextLabel, emptyIntents(), vi.fn())).not.toThrow();
+  });
+
+  it('does not invoke onEvent at mount under any of the variant mixes above', () => {
     const onEvent = vi.fn();
     mount({ kind: 'playing' }, mixed, emptyIntents(), onEvent);
     cleanup();
     mount({ kind: 'playing' }, allNoIcon, emptyIntents(), onEvent);
     cleanup();
     mount({ kind: 'playing' }, allDarkIcon, emptyIntents(), onEvent);
+    cleanup();
+    mount({ kind: 'playing' }, withTextLabel, emptyIntents(), onEvent);
     expect(onEvent).not.toHaveBeenCalled();
   });
 });

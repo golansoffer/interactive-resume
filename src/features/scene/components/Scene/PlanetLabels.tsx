@@ -1,4 +1,4 @@
-import type { CSSProperties, JSX } from 'react';
+import type { CSSProperties, JSX, ReactNode } from 'react';
 import { Html } from '@react-three/drei';
 import type { LabelProjection } from '../../types/projections';
 
@@ -42,8 +42,30 @@ const ICON_STYLE: CSSProperties = {
   display: 'block',
 };
 
+const TEXT_STYLE: CSSProperties = {
+  width: '120px',
+  height: '32px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: '"Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif',
+  fontWeight: 700,
+  fontSize: '22px',
+  letterSpacing: '0.04em',
+  lineHeight: 1,
+};
+
 const plateStyleFor = (backdrop: 'light' | 'dark'): CSSProperties =>
   backdrop === 'light' ? LIGHT_PLATE_STYLE : DARK_PLATE_STYLE;
+
+const renderLabelBody = (label: LabelProjection): ReactNode => {
+  switch (label.kind) {
+    case 'icon':
+      return <img src={label.iconSrc} alt="" style={ICON_STYLE} />;
+    case 'text':
+      return <span style={TEXT_STYLE}>{label.text}</span>;
+  }
+};
 
 export const PlanetLabels = (props: PlanetLabelsProps): JSX.Element => (
   <group>
@@ -53,7 +75,7 @@ export const PlanetLabels = (props: PlanetLabelsProps): JSX.Element => (
       return (
         <Html key={label.id} position={position} center distanceFactor={LABEL_DISTANCE_FACTOR}>
           <div data-backdrop={label.backdrop} style={plateStyleFor(label.backdrop)}>
-            <img src={label.iconSrc} alt="" style={ICON_STYLE} />
+            {renderLabelBody(label)}
           </div>
         </Html>
       );

@@ -99,7 +99,14 @@ const labelWithIcon = (
   iconSrc: string,
   placement: readonly [number, number, number],
   backdrop: 'light' | 'dark',
-): LabelProjection => ({ id, placement, iconSrc, backdrop });
+): LabelProjection => ({ kind: 'icon', id, placement, iconSrc, backdrop });
+
+const labelWithText = (
+  id: ReturnType<typeof asCompanyId>,
+  text: string,
+  placement: readonly [number, number, number],
+  backdrop: 'light' | 'dark',
+): LabelProjection => ({ kind: 'text', id, placement, text, backdrop });
 
 const fiveLabels = (): ReadonlyArray<LabelProjection> => [
   labelWithIcon(mave, '/logos/mave.svg', [10, 0, 0], 'light'),
@@ -116,7 +123,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('PlanetLabels — icon-only renderer', () => {
+describe('PlanetLabels — icon and text renderer', () => {
   it('renders nothing when labels is empty', () => {
     const { container } = renderWith([]);
     expect(container.querySelectorAll('img').length).toBe(0);
@@ -135,6 +142,9 @@ describe('PlanetLabels — icon-only renderer', () => {
     const imgs = Array.from(container.querySelectorAll('img'));
     const pairs = pairLabelsWithElements(labels, imgs);
     pairs.forEach(([label, img]) => {
+      if (label.kind !== 'icon') {
+        throw new Error('fiveLabels fixture must contain only icon-kind labels');
+      }
       expect(img.getAttribute('src')?.endsWith(label.iconSrc)).toBe(true);
     });
   });
@@ -148,7 +158,7 @@ describe('PlanetLabels — icon-only renderer', () => {
     }
   });
 
-  it('renders no element whose text content equals any companyName (icon-only invariant)', () => {
+  it('renders no text content when every label is icon-kind (all-icon fixture invariant)', () => {
     const { container } = renderWith(fiveLabels());
     const text = readTextContent(container);
     expect(text.trim()).toBe('');
@@ -204,6 +214,9 @@ describe('PlanetLabels — icon-only renderer', () => {
     const imgs = Array.from(container.querySelectorAll('img'));
     const pairs = pairLabelsWithElements(labels, imgs);
     pairs.forEach(([label, img]) => {
+      if (label.kind !== 'icon') {
+        throw new Error('fiveLabels fixture must contain only icon-kind labels');
+      }
       expect(img.getAttribute('src')?.endsWith(label.iconSrc)).toBe(true);
     });
   });
@@ -223,5 +236,44 @@ describe('PlanetLabels — icon-only renderer', () => {
       const c = renderWith(fiveLabels());
       c.unmount();
     }).not.toThrow();
+  });
+
+  it('renders the text content of a text-kind label', () => {
+    const labels: ReadonlyArray<LabelProjection> = [
+      labelWithText(tgs, 'TGS', [0, 0, 0], 'light'),
+    ];
+    const { container } = renderWith(labels);
+    expect(readTextContent(container)).toContain('TGS');
+  });
+
+  it('renders the text element with bold weight (fontWeight: 700)', () => {
+    const labels: ReadonlyArray<LabelProjection> = [
+      labelWithText(tgs, 'TGS', [0, 0, 0], 'light'),
+    ];
+    const { container } = renderWith(labels);
+    const spans = Array.from(container.querySelectorAll<HTMLElement>('span'));
+    expect(spans.length).toBe(1);
+    const [span] = spans;
+    if (span === undefined) throw new Error('expected one span');
+    expect(span.style.fontWeight).toBe('700');
+  });
+
+  it('emits no <img> for a text-kind-only label set', () => {
+    const labels: ReadonlyArray<LabelProjection> = [
+      labelWithText(tgs, 'TGS', [0, 0, 0], 'light'),
+    ];
+    const { container } = renderWith(labels);
+    expect(container.querySelectorAll('img').length).toBe(0);
+  });
+
+  it('plate data-backdrop distinguishes light vs dark for text-kind labels', () => {
+    const labels: ReadonlyArray<LabelProjection> = [
+      labelWithText(tgs, 'TGS', [0, 0, 0], 'light'),
+      labelWithText(mave, 'MV', [0, 0, 0], 'dark'),
+    ];
+    const { container } = renderWith(labels);
+    const [lightPlate, darkPlate] = readTwoPlates(container);
+    expect(lightPlate.dataset['backdrop']).toBe('light');
+    expect(darkPlate.dataset['backdrop']).toBe('dark');
   });
 });

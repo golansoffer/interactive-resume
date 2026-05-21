@@ -32,21 +32,37 @@ type SceneProps = {
   readonly routeProjection: RouteProjection;
 };
 
+const projectLabel = (entry: CompanyEntry): ReadonlyArray<LabelProjection> => {
+  const logo = entry.info.logo;
+  switch (logo.kind) {
+    case 'with_icon':
+      return [
+        {
+          kind: 'icon',
+          id: entry.id,
+          placement: entry.planet.placement,
+          iconSrc: logo.src,
+          backdrop: logo.backdrop,
+        },
+      ];
+    case 'text_label':
+      return [
+        {
+          kind: 'text',
+          id: entry.id,
+          placement: entry.planet.placement,
+          text: logo.text,
+          backdrop: logo.backdrop,
+        },
+      ];
+    case 'no_icon':
+      return [];
+  }
+};
+
 const projectLabels = (
   entries: ReadonlyArray<CompanyEntry>,
-): ReadonlyArray<LabelProjection> =>
-  entries.flatMap((entry): ReadonlyArray<LabelProjection> => {
-    const logo = entry.info.logo;
-    if (logo.kind === 'no_icon') return [];
-    return [
-      {
-        id: entry.id,
-        placement: entry.planet.placement,
-        iconSrc: logo.src,
-        backdrop: logo.backdrop,
-      },
-    ];
-  });
+): ReadonlyArray<LabelProjection> => entries.flatMap((entry) => projectLabel(entry));
 
 export const Scene = (props: SceneProps): JSX.Element => {
   const { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef, boostSignalRef } =

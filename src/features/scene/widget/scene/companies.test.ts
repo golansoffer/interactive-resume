@@ -19,17 +19,46 @@ describe('getCompanyEntries', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('every entry carries a non-empty companyName, role, and description', () => {
+  it('every entry carries non-empty companyName, role, oneLiner, hook, and at least one work bullet', () => {
     for (const entry of getCompanyEntries()) {
       expect(entry.info.companyName.length).toBeGreaterThan(0);
       expect(entry.info.role.length).toBeGreaterThan(0);
-      expect(entry.info.description.length).toBeGreaterThan(0);
+      expect(entry.info.oneLiner.length).toBeGreaterThan(0);
+      expect(entry.info.hook.length).toBeGreaterThan(0);
+      expect(entry.info.work.length).toBeGreaterThan(0);
     }
   });
 
-  it("every entry's info.logo.kind is one of 'with_icon' | 'no_icon'", () => {
+  it("every entry's decision is either 'recorded' with text or 'none'", () => {
     for (const entry of getCompanyEntries()) {
-      expect(['with_icon', 'no_icon']).toContain(entry.info.logo.kind);
+      const decision = entry.info.decision;
+      if (decision.kind === 'recorded') {
+        expect(decision.text.length).toBeGreaterThan(0);
+      } else {
+        expect(decision.kind).toBe('none');
+      }
+    }
+  });
+
+  it("every entry's departure is one of 'current_role' | 'moved_on' | 'undisclosed'", () => {
+    for (const entry of getCompanyEntries()) {
+      expect(['current_role', 'moved_on', 'undisclosed']).toContain(entry.info.departure.kind);
+    }
+  });
+
+  it("ongoing roles use departure 'current_role'; closed roles do not", () => {
+    for (const entry of getCompanyEntries()) {
+      if (entry.info.period.kind === 'ongoing') {
+        expect(entry.info.departure.kind).toBe('current_role');
+      } else {
+        expect(entry.info.departure.kind).not.toBe('current_role');
+      }
+    }
+  });
+
+  it("every entry's info.logo.kind is one of 'with_icon' | 'text_label' | 'no_icon'", () => {
+    for (const entry of getCompanyEntries()) {
+      expect(['with_icon', 'text_label', 'no_icon']).toContain(entry.info.logo.kind);
     }
   });
 
@@ -84,13 +113,12 @@ describe('getCompanyEntries', () => {
     });
   });
 
-  it("tgs entry's info.logo.kind equals 'no_icon'", () => {
-    expect(findById('tgs').info.logo.kind).toBe('no_icon');
-  });
-
-  it("at least one entry has logo.kind = 'no_icon' (guards against future drop)", () => {
-    const anyNoIcon = getCompanyEntries().some((e) => e.info.logo.kind === 'no_icon');
-    expect(anyNoIcon).toBe(true);
+  it("tgs entry carries a text_label logo with text 'TGS' and light backdrop", () => {
+    expect(findById('tgs').info.logo).toEqual({
+      kind: 'text_label',
+      text: 'TGS',
+      backdrop: 'light',
+    });
   });
 
   it('every entry carries a YearMonth start with year ≥ 2000', () => {

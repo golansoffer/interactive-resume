@@ -26,7 +26,6 @@ const baseProps = {
   isHovered: false,
   isFeatured: false,
   onHoverEnter: (): void => {},
-  onHoverLeave: (): void => {},
   onPick: (): void => {},
 };
 
@@ -67,14 +66,6 @@ describe('ShipCard', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
     expect(onHoverEnter).toHaveBeenCalledTimes(1);
     expect(onHoverEnter).toHaveBeenCalledWith('speederA');
-  });
-
-  it('calls onHoverLeave() on mouseLeave', () => {
-    const onHoverLeave = vi.fn();
-    render(<ShipCard {...baseProps} onHoverLeave={onHoverLeave} />);
-    fireEvent.mouseLeave(screen.getByRole('button'));
-    expect(onHoverLeave).toHaveBeenCalledTimes(1);
-    expect(onHoverLeave).toHaveBeenCalledWith();
   });
 
   it('calls onPick(id) on click', () => {

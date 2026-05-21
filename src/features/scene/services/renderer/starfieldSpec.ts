@@ -1,17 +1,17 @@
 export const STAR_SEED = 0xc0ffee;
 export const STAR_SEED_NEAR = (0xc0ffee ^ 0xa1b2c3) >>> 0;
 
-export const STAR_COUNT_FAR = 2500;
-export const STAR_COUNT_NEAR = 1000;
+export const STAR_COUNT_FAR = 4000;
+export const STAR_COUNT_NEAR = 2000;
 export const STAR_RADIUS_FAR = 400;
-export const STAR_RADIUS_NEAR = 200;
+export const STAR_RADIUS_NEAR = 180;
 
 export const PARALLAX_FACTOR_NEAR = 0.6;
 
 export const STAR_SIZE_MIN = 0.6;
-export const STAR_SIZE_MAX = 0.8;
+export const STAR_SIZE_MAX = 1.6;
 
-export const STAR_BRIGHTNESS_MIN = 0.35;
+export const STAR_BRIGHTNESS_MIN = 0.6;
 export const STAR_BRIGHTNESS_MAX = 1;
 
 export const LUMINOUS_PERCENTILE = 0.95;
@@ -85,30 +85,30 @@ const DEEP_RED_ORANGE = hex(0xff9272);
 const HOT_BLUE = hex(0xa0b8ff);
 
 const PALETTE_BASE: Palette = [
-  { rgb: COOL_BLUE_WHITE, weight: 0.15 },
-  { rgb: NEUTRAL_WHITE, weight: 0.4 },
+  { rgb: COOL_BLUE_WHITE, weight: 0.22 },
+  { rgb: NEUTRAL_WHITE, weight: 0.42 },
   { rgb: WARM_WHITE, weight: 0.25 },
-  { rgb: ORANGE, weight: 0.12 },
-  { rgb: DEEP_RED_ORANGE, weight: 0.05 },
-  { rgb: HOT_BLUE, weight: 0.03 },
+  { rgb: ORANGE, weight: 0.05 },
+  { rgb: DEEP_RED_ORANGE, weight: 0 },
+  { rgb: HOT_BLUE, weight: 0.06 },
 ];
 
 const PALETTE_DIM: Palette = [
-  { rgb: COOL_BLUE_WHITE, weight: 0.15 },
+  { rgb: COOL_BLUE_WHITE, weight: 0.2 },
   { rgb: NEUTRAL_WHITE, weight: 0.5 },
-  { rgb: WARM_WHITE, weight: 0.3 },
-  { rgb: ORANGE, weight: 0.05 },
+  { rgb: WARM_WHITE, weight: 0.27 },
+  { rgb: ORANGE, weight: 0.03 },
   { rgb: DEEP_RED_ORANGE, weight: 0 },
   { rgb: HOT_BLUE, weight: 0 },
 ];
 
 const PALETTE_LUMINOUS: Palette = [
-  { rgb: COOL_BLUE_WHITE, weight: 0.15 },
-  { rgb: NEUTRAL_WHITE, weight: 0.2 },
+  { rgb: COOL_BLUE_WHITE, weight: 0.28 },
+  { rgb: NEUTRAL_WHITE, weight: 0.3 },
   { rgb: WARM_WHITE, weight: 0.12 },
-  { rgb: ORANGE, weight: 0.12 },
-  { rgb: DEEP_RED_ORANGE, weight: 0.15 },
-  { rgb: HOT_BLUE, weight: 0.26 },
+  { rgb: ORANGE, weight: 0.0 },
+  { rgb: DEEP_RED_ORANGE, weight: 0 },
+  { rgb: HOT_BLUE, weight: 0.3 },
 ];
 
 const sampleColor = (palette: Palette, u: number): readonly [number, number, number] => {
@@ -164,7 +164,7 @@ const computeStar = (radius: number, rng: Rng): StarValues => {
     radius * sinPhi * Math.sin(theta),
   ];
   const sizeT = rng();
-  const size = lerp(STAR_SIZE_MIN, STAR_SIZE_MAX, sizeT * sizeT * sizeT);
+  const size = lerp(STAR_SIZE_MIN, STAR_SIZE_MAX, sizeT * sizeT);
   const sizeNorm = (size - STAR_SIZE_MIN) / (STAR_SIZE_MAX - STAR_SIZE_MIN);
   const brightness = lerp(STAR_BRIGHTNESS_MIN, STAR_BRIGHTNESS_MAX, sizeNorm);
   const color = sampleColor(sizeT < 0.3 ? PALETTE_DIM : PALETTE_BASE, rng());

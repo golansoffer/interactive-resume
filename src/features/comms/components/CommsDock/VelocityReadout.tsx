@@ -16,13 +16,9 @@ const padded3 = (n: number): string => {
   return String(i);
 };
 
-// Hardcoded bright cyan (not the theme accent). The dark-mode `--accent`
-// token resolves to a near-black gray and renders the bar invisible at
-// 1.5px tall against the dim track; this color is chosen for visibility
-// at that thin scale.
 const BAR_FILL_CLASSNAME = cn(
   'absolute inset-y-0 left-0 w-full origin-left rounded-full',
-  'bg-cyan-300',
+  'bg-(--color-accent)',
   'transition-transform duration-150 ease-out',
   'group-data-[motion=reduced]:transition-none',
 );

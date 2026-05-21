@@ -46,7 +46,6 @@ body,
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -157,5 +156,37 @@ body,
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Company info panel — per-section staggered entry.
+   Sections are tagged via data-section on their root element. The outer card
+   carries data-state="open|closed"; when open, each section runs the keyframe
+   below with a delay specific to its position in the reading order. */
+@keyframes panel-section-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-state='open'] [data-section] {
+  animation: panel-section-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-state='open'] [data-section='hero']      { animation-delay: 0ms; }
+[data-state='open'] [data-section='hook']      { animation-delay: 80ms; }
+[data-state='open'] [data-section='decision']  { animation-delay: 160ms; }
+[data-state='open'] [data-section='work']      { animation-delay: 240ms; }
+[data-state='open'] [data-section='departure'] { animation-delay: 320ms; }
+[data-state='open'] [data-section='footer']    { animation-delay: 400ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-state='open'] [data-section] {
+    animation: none;
   }
 }

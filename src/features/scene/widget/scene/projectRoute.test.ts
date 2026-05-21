@@ -19,7 +19,11 @@ const entryFor = (id: CompanyEntry['id'], z: number): CompanyEntry => ({
     website: { kind: 'no_website' },
     role: 'X',
     period: { kind: 'ongoing', start: { year: 2020, month: 1 } },
-    description: 'X',
+    oneLiner: 'X',
+    hook: 'X',
+    decision: { kind: 'none' },
+    work: ['X'],
+    departure: { kind: 'current_role' },
   },
 });
 

@@ -12,7 +12,11 @@ const info = (companyName: string): CompanyInfo => ({
   website: { kind: 'no_website' },
   role: 'role',
   period: { kind: 'ongoing', start: { year: 2024, month: 1 } },
-  description: 'desc',
+  oneLiner: 'one-liner',
+  hook: 'hook',
+  decision: { kind: 'none' },
+  work: ['work'],
+  departure: { kind: 'current_role' },
 });
 
 const placeA = [0, 0, 70] as const;

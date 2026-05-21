@@ -46,7 +46,7 @@ const heroSlotClassName = cn('flex min-h-0 min-w-0 flex-1 flex-col');
 
 export const ShipSelector = (props: ShipSelectorProps): JSX.Element => (
   <div className={rootClassName}>
-    <div className={stripClassName}>
+    <div className={stripClassName} onMouseLeave={props.onHoverLeave}>
       {props.ships.map((ship, i) => (
         <ShipCard
           key={ship.id}
@@ -55,7 +55,6 @@ export const ShipSelector = (props: ShipSelectorProps): JSX.Element => (
           isHovered={isHoveredId(props.hover, ship.id)}
           isFeatured={isFeaturedId(props.hover, ship.id)}
           onHoverEnter={props.onHoverEnter}
-          onHoverLeave={props.onHoverLeave}
           onPick={props.onPick}
         />
       ))}

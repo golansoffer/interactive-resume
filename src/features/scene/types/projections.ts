@@ -6,9 +6,18 @@ export type PlanetProjection = {
   readonly planet: PlanetConfig;
 };
 
-export type LabelProjection = {
-  readonly id: CompanyId;
-  readonly placement: readonly [number, number, number];
-  readonly iconSrc: string;
-  readonly backdrop: 'light' | 'dark';
-};
+export type LabelProjection =
+  | {
+      readonly kind: 'icon';
+      readonly id: CompanyId;
+      readonly placement: readonly [number, number, number];
+      readonly iconSrc: string;
+      readonly backdrop: 'light' | 'dark';
+    }
+  | {
+      readonly kind: 'text';
+      readonly id: CompanyId;
+      readonly placement: readonly [number, number, number];
+      readonly text: string;
+      readonly backdrop: 'light' | 'dark';
+    };
