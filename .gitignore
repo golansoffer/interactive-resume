@@ -8,7 +8,6 @@ build
 .env*.local
 
 .tanstack
-src/routeTree.gen.ts
 
 .claude/
 CLAUDE.md
