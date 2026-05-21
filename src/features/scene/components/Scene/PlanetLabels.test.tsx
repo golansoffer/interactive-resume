@@ -9,11 +9,17 @@ vi.mock('@react-three/drei', () => ({
   Html: ({
     children,
     position,
+    zIndexRange,
   }: {
     readonly children?: ReactNode;
     readonly position?: readonly [number, number, number];
+    readonly zIndexRange?: readonly [number, number];
   }): ReactNode => (
-    <div data-testid="html-host" data-position={position ? position.join(',') : ''}>
+    <div
+      data-testid="html-host"
+      data-position={position ? position.join(',') : ''}
+      data-z-index-range={zIndexRange ? zIndexRange.join(',') : ''}
+    >
       {children}
     </div>
   ),
@@ -219,6 +225,34 @@ describe('PlanetLabels — icon and text renderer', () => {
       }
       expect(img.getAttribute('src')?.endsWith(label.iconSrc)).toBe(true);
     });
+  });
+
+  it('clamps Html zIndexRange below the lowest fixed-position UI overlay (z-40)', () => {
+    // Regression guard: drei's default zIndexRange is [16777271, 0], which
+    // would render labels above CompanyInfoPanel (z-50) and CommsDock (z-40).
+    const labels = fiveLabels();
+    const { container } = renderWith(labels);
+    const hosts = Array.from(container.querySelectorAll<HTMLElement>('[data-testid="html-host"]'));
+    expect(hosts.length).toBe(labels.length);
+    for (const host of hosts) {
+      const raw = host.dataset['zIndexRange'];
+      if (raw === undefined || raw === '') {
+        throw new Error('host missing data-z-index-range');
+      }
+      const parts = raw.split(',').map(Number);
+      if (parts.length !== 2) {
+        throw new Error(`expected 2 zIndexRange parts, got ${parts.length}`);
+      }
+      const [front, back] = parts;
+      if (front === undefined || back === undefined) {
+        throw new Error('zIndexRange destructure failure');
+      }
+      if (!Number.isFinite(front) || !Number.isFinite(back)) {
+        throw new Error('zIndexRange contains non-finite component');
+      }
+      expect(front).toBeLessThan(40);
+      expect(back).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('mounts and unmounts without throwing for 0, 1, and 5 labels', () => {

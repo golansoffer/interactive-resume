@@ -10,6 +10,12 @@ type PlanetLabelsProps = {
 const LABEL_OFFSET_Y = -8.0;
 const LABEL_DISTANCE_FACTOR = 30;
 
+// Labels render via drei's <Html> DOM portal, whose default zIndexRange is
+// [16777271, 0] — high enough to obscure every fixed-position UI overlay
+// (CommsDock z-40, CompanyInfoPanel z-50). Clamp to a scene-layer band that
+// sits firmly below those z-indexes.
+const LABEL_Z_INDEX_RANGE: [number, number] = [30, 0];
+
 const PLATE_BASE_STYLE: CSSProperties = {
   pointerEvents: 'none',
   display: 'flex',
@@ -74,7 +80,13 @@ export const PlanetLabels = (props: PlanetLabelsProps): JSX.Element => (
       const [x, y, z] = label.placement;
       const position: readonly [number, number, number] = [x, y + LABEL_OFFSET_Y, z];
       return (
-        <Html key={label.id} position={position} center distanceFactor={LABEL_DISTANCE_FACTOR}>
+        <Html
+          key={label.id}
+          position={position}
+          center
+          distanceFactor={LABEL_DISTANCE_FACTOR}
+          zIndexRange={LABEL_Z_INDEX_RANGE}
+        >
           <div data-backdrop={label.backdrop} style={plateStyleFor(label.backdrop)}>
             {renderLabelBody(label)}
           </div>
