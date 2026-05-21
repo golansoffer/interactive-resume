@@ -12,7 +12,7 @@ describe('createBoostController', () => {
     expect(step.factor).toBeCloseTo(0, 6);
   });
 
-  it('returns an active step with multiplier 3 when boostHeld=true and not in any activation', () => {
+  it('returns an active step with multiplier 3 when boost is pressed and no new planet entry', () => {
     const signal = createBoostSignal();
     const controller = createBoostController(signal);
     const step = controller.tick(true, false, 0.016);
@@ -21,12 +21,55 @@ describe('createBoostController', () => {
     expect(step.factor).toBeGreaterThan(0);
   });
 
-  it('returns an inactive step when boostHeld=true but the player is inside an activation radius', () => {
+  it('stays active across many held frames when no new planet entry occurs', () => {
     const signal = createBoostSignal();
     const controller = createBoostController(signal);
-    const step = controller.tick(true, true, 0.016);
-    expect(step.kind).toBe('inactive');
-    expect(step.multiplier).toBe(1);
+    let last = controller.tick(true, false, 0.016);
+    for (let i = 0; i < 60; i += 1) {
+      last = controller.tick(true, false, 0.016);
+    }
+    expect(last.kind).toBe('active');
+  });
+
+  it('cancels on the frame a new planet enters proximity while holding boost', () => {
+    const signal = createBoostSignal();
+    const controller = createBoostController(signal);
+    controller.tick(true, false, 0.016);
+    const cancelStep = controller.tick(true, true, 0.016);
+    expect(cancelStep.kind).toBe('inactive');
+    expect(cancelStep.multiplier).toBe(1);
+  });
+
+  it('stays cancelled across subsequent held frames after the entry edge passes', () => {
+    const signal = createBoostSignal();
+    const controller = createBoostController(signal);
+    controller.tick(true, false, 0.016);
+    controller.tick(true, true, 0.016);
+    let last = controller.tick(true, false, 0.016);
+    for (let i = 0; i < 30; i += 1) {
+      last = controller.tick(true, false, 0.016);
+    }
+    expect(last.kind).toBe('inactive');
+  });
+
+  it('re-arms on release-then-press after a cancel — press-edge resets the latch', () => {
+    const signal = createBoostSignal();
+    const controller = createBoostController(signal);
+    controller.tick(true, false, 0.016);
+    controller.tick(true, true, 0.016);
+    controller.tick(true, false, 0.016);
+    controller.tick(false, false, 0.016);
+    const reArmed = controller.tick(true, false, 0.016);
+    expect(reArmed.kind).toBe('active');
+    expect(reArmed.multiplier).toBe(3);
+  });
+
+  it('engages on first press even when a new planet entry occurred while not holding', () => {
+    const signal = createBoostSignal();
+    const controller = createBoostController(signal);
+    controller.tick(false, true, 0.016);
+    const step = controller.tick(true, false, 0.016);
+    expect(step.kind).toBe('active');
   });
 
   it('factor ramps toward 1 across repeated active ticks and stays bounded', () => {

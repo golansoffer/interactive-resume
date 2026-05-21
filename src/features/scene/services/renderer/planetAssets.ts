@@ -84,6 +84,18 @@ const PLANET_LOOK: Partial<Record<PlanetAssetId, PlanetLook>> = {
       scalePulse: { amplitude: 0.07, frequencyHz: 0.52 },
     },
   },
+  earth_b: {
+    kind: 'effects',
+    pulse: { amplitude: 0.65, frequencyHz: 0.13, emissiveTint: [0.2, 0.55, 0.9] },
+    rim: {
+      tint: [0.3, 0.65, 1.0],
+      power: 2.2,
+      opacity: 0.84,
+      scale: 1.13,
+      breath: { amplitude: 0.28, frequencyHz: 0.1 },
+      scalePulse: { amplitude: 0.08, frequencyHz: 0.35 },
+    },
+  },
   venus_b: {
     kind: 'effects',
     pulse: { amplitude: 0.7, frequencyHz: 0.11, emissiveTint: [1.0, 0.18, 0.32] },

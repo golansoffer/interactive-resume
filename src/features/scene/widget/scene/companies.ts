@@ -12,7 +12,7 @@ export const CAREER_ROUTE: readonly [
 ] = [
   {
     id: asCompanyId('mave'),
-    planet: { assetId: 'saturn_b', placement: [0, 0, 70] },
+    planet: { assetId: 'saturn_b', placement: [80, 0, 80] },
     info: {
       companyName: 'Mave',
       logo: { kind: 'with_icon', src: '/icons/mave.svg', backdrop: 'light' },
@@ -25,7 +25,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('8fig'),
-    planet: { assetId: 'jupiter_b', placement: [0, 0, 170] },
+    planet: { assetId: 'jupiter_b', placement: [60, 0, 180] },
     info: {
       companyName: '8fig',
       logo: { kind: 'with_icon', src: '/icons/8fig.svg', backdrop: 'light' },
@@ -42,7 +42,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('riverside'),
-    planet: { assetId: 'mars_b', placement: [0, 0, 250] },
+    planet: { assetId: 'mars_b', placement: [30, 0, 290] },
     info: {
       companyName: 'Riverside',
       logo: { kind: 'with_icon', src: '/icons/riverside.svg', backdrop: 'light' },
@@ -59,7 +59,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('streamelements'),
-    planet: { assetId: 'earth_b', placement: [0, 0, 325] },
+    planet: { assetId: 'earth_b', placement: [-10, 0, 400] },
     info: {
       companyName: 'StreamElements',
       logo: { kind: 'with_icon', src: '/icons/streamelements.svg', backdrop: 'dark' },
@@ -76,7 +76,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('tgs'),
-    planet: { assetId: 'venus_b', placement: [0, 0, 395] },
+    planet: { assetId: 'venus_b', placement: [-50, 0, 510] },
     info: {
       companyName: 'TGS',
       logo: { kind: 'no_icon' },

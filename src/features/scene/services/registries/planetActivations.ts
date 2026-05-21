@@ -6,6 +6,7 @@ export const createPlanetActivations = (): PlanetActivations => {
   return {
     isActive: (id) => active.has(id),
     anyActive: () => active.size > 0,
+    snapshot: () => active,
     publish: (next) => {
       active = next;
     },

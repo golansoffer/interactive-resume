@@ -28,11 +28,8 @@ type SunProps = {
   readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
-// Sun sits on-axis at the journey terminus past Venus, on the same
-// horizontal plane (y = 0) the ship and planets occupy. From inside the
-// ring the sun reads as a distant beacon at the end of the corridor; the
-// corona/halo billboards never overlap the gameplay area on screen.
-const SUN_POSITION: readonly [number, number, number] = [0, 0, 560];
+// On the curve's far axis past Venus; anchors the rightward arc.
+const SUN_POSITION: readonly [number, number, number] = [-280, 0, 1150];
 // Scaled up from the original 5×-planets to compensate for distance — at
 // ~367 world units away, this reads as a large but clearly-distant sun.
 const SUN_BODY_SCALE = 17;

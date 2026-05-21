@@ -15,17 +15,26 @@ export type BoostStep =
 
 // Stateful boost controller. Owns the smoothed factor and writes through
 // the shared signal on every tick. Tick takes three distinct positional
-// domain values: (1) the raw boost intent, (2) the activation-mask,
-// (3) the frame delta.
+// domain values: (1) the raw boost intent, (2) an edge-trigger for new
+// planet-proximity entry, (3) the frame delta. Boost engages on press
+// regardless of current proximity, and only cancels on the frame a new
+// planet enters proximity; the cancel latch resets on the next
+// press-edge (release-then-press).
 export type BoostController = {
-  readonly tick: (boostHeld: boolean, inAnyActivation: boolean, delta: number) => BoostStep;
+  readonly tick: (boostHeld: boolean, newPlanetEntry: boolean, delta: number) => BoostStep;
 };
 
 export const createBoostController = (signal: BoostSignal): BoostController => {
   let factor = 0;
+  let cancelled = false;
+  let prevHeld = false;
   return {
-    tick: (boostHeld, inAnyActivation, delta) => {
-      const active = boostHeld && !inAnyActivation;
+    tick: (boostHeld, newPlanetEntry, delta) => {
+      if (boostHeld && !prevHeld) cancelled = false;
+      if (newPlanetEntry && boostHeld) cancelled = true;
+      prevHeld = boostHeld;
+
+      const active = boostHeld && !cancelled;
       const target = active ? 1 : 0;
       const blend = 1 - Math.exp(-BOOST_FACTOR_LERP_RATE * delta);
       factor = factor + (target - factor) * blend;

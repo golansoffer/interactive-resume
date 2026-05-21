@@ -13,7 +13,8 @@ import { createOrientationController } from '../../services/renderer/orientation
 import { parseTrailMaterial } from '../../services/renderer/parseTrailMaterial';
 import { deriveBasis, integratesIn } from '../../services/renderer/shipFrame';
 import { cloneAndDressShip } from '../../services/renderer/shipVisualPlan';
-import type { Kinematics } from '../../types/kinematics';
+import type { CompanyId } from '../../types/company';
+import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
@@ -123,6 +124,19 @@ const stepKinematics = (
   return { ...integrated, position: clampedPosition };
 };
 
+// Per-frame edge: true on the first frame where any planet id appears in
+// the current activation snapshot that was absent from the previous frame.
+// Steady-state proximity returns false; only the entry transition fires.
+const detectNewPlanetEntry = (
+  current: ReadonlySet<CompanyId>,
+  previous: ReadonlySet<CompanyId>,
+): boolean => {
+  for (const id of current) {
+    if (!previous.has(id)) return true;
+  }
+  return false;
+};
+
 const usePlayerFrame = (
   props: PlayerProps,
   visualRef: RefObject<Group | null>,
@@ -135,6 +149,7 @@ const usePlayerFrame = (
     [props.boostSignalRef],
   );
   const orientationController = useMemo(() => createOrientationController(), []);
+  const prevActivationsRef = useRef<ReadonlySet<CompanyId>>(new Set<CompanyId>());
 
   useFrame((state, delta) => {
     if (!integratesIn(props.sceneState)) return;
@@ -142,8 +157,10 @@ const usePlayerFrame = (
     if (mesh === null) return;
 
     const boostHeld = props.intents.current.has('boost');
-    const inAnyActivation = props.planetActivationsRef.current.anyActive();
-    const boost = boostController.tick(boostHeld, inAnyActivation, delta);
+    const currentActivations = props.planetActivationsRef.current.snapshot();
+    const newPlanetEntry = detectNewPlanetEntry(currentActivations, prevActivationsRef.current);
+    prevActivationsRef.current = currentActivations;
+    const boost = boostController.tick(boostHeld, newPlanetEntry, delta);
 
     camera.getWorldDirection(scratch.cameraWorldDir);
     const basis = deriveBasis(scratch.cameraWorldDir, scratch.forward, scratch.right, scratch.up);
@@ -176,7 +193,7 @@ export const Player = (props: PlayerProps): JSX.Element => {
   const trailMats = useMemo<TrailMaterials>(() => ({ base: baseSlot, boost: boostSlot }), []);
   usePlayerFrame(props, visualRef, trailMats);
   return (
-    <group ref={props.meshRef} scale={shipScale} rotation={[0, 0, 0, 'YXZ']}>
+    <group ref={props.meshRef} scale={shipScale} rotation={[0, INITIAL_KINEMATICS.heading, 0, 'YXZ']}>
       {/* Rig sits outside the 180° flip so key/fill/rim stay in ship-world axes. */}
       <ShipRig />
       <group ref={visualRef}>

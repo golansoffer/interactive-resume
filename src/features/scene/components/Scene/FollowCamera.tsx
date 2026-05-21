@@ -181,6 +181,9 @@ const updateChaseCamera = (
   const speed = Math.hypot(velocity.x, velocity.z);
   const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
 
+  if (!memory.snapped) {
+    memory.followHeading = kinematics.heading;
+  }
   advanceFollowHeading(velocity, memory, delta);
   const localRight = writeDesiredChasePosition(position, velocity, memory);
   stepPositionSpring(camera, memory, delta);
@@ -244,7 +247,7 @@ export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
       position={cameraInitial}
       fov={BASE_FOV}
       near={0.1}
-      far={800}
+      far={1500}
     />
   );
 };

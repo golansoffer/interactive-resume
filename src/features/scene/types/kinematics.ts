@@ -11,9 +11,10 @@ export type Kinematics = {
 };
 
 export const INITIAL_KINEMATICS: Kinematics = {
-  position: { x: 0, y: 0, z: 0 },
+  position: { x: 60, y: 0, z: 35 },
   velocity: { x: 0, y: 0, z: 0 },
-  heading: 0,
+  // Faces Saturn (the first career stop) from the spawn position.
+  heading: Math.atan2(20, 45),
 };
 
 export const MAX_SPEED = 14;

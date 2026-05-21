@@ -29,6 +29,7 @@ export type PlanetRadii = {
 export type PlanetActivations = {
   readonly isActive: (id: CompanyId) => boolean;
   readonly anyActive: () => boolean;
+  readonly snapshot: () => ReadonlySet<CompanyId>;
   readonly publish: (active: ReadonlySet<CompanyId>) => void;
 };
 

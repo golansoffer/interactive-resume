@@ -41,9 +41,22 @@ describe('resolvePlanetLook', () => {
     expect(r).toBeGreaterThan(b);
   });
 
+  it('returns effects for earth_b with a blue rim tint and oceanic pulse emissive tint', () => {
+    const look = resolvePlanetLook('earth_b');
+    expect(look.kind).toBe('effects');
+    if (look.kind !== 'effects') throw new Error('expected effects variant');
+    expect(look.rim.tint).toEqual([0.3, 0.65, 1.0]);
+    expect(look.rim.breath.frequencyHz).toBeGreaterThan(0);
+    expect(look.pulse.amplitude).toBeGreaterThan(0);
+    expect(look.pulse.frequencyHz).toBeGreaterThan(0);
+    expect(look.pulse.emissiveTint).toEqual([0.2, 0.55, 0.9]);
+    const [r, g, b] = look.pulse.emissiveTint;
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g);
+  });
+
   it('returns plain for an unconfigured asset id', () => {
     expect(resolvePlanetLook('mercury_a')).toEqual({ kind: 'plain' });
-    expect(resolvePlanetLook('earth_b')).toEqual({ kind: 'plain' });
     expect(resolvePlanetLook('neptune_b')).toEqual({ kind: 'plain' });
     expect(resolvePlanetLook('sun_a')).toEqual({ kind: 'plain' });
   });

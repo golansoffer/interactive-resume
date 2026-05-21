@@ -35,4 +35,26 @@ describe('createPlanetActivations', () => {
     activations.publish(new Set<CompanyId>());
     expect(activations.anyActive()).toBe(false);
   });
+
+  it('snapshot() returns an empty set on a fresh registry', () => {
+    const activations = createPlanetActivations();
+    expect(activations.snapshot().size).toBe(0);
+  });
+
+  it('snapshot() reflects the most recently published set', () => {
+    const activations = createPlanetActivations();
+    activations.publish(new Set([mave]));
+    const first = activations.snapshot();
+    expect(first.has(mave)).toBe(true);
+    expect(first.has(eightfig)).toBe(false);
+  });
+
+  it('snapshot() returns the replacement set after a subsequent publish', () => {
+    const activations = createPlanetActivations();
+    activations.publish(new Set([mave]));
+    activations.publish(new Set([eightfig]));
+    const next = activations.snapshot();
+    expect(next.has(eightfig)).toBe(true);
+    expect(next.has(mave)).toBe(false);
+  });
 });
