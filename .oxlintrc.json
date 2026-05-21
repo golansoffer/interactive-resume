@@ -36,7 +36,7 @@
     },
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
-      "rules": { "max-lines-per-function": "off" }
+      "rules": { "max-lines-per-function": "off", "max-lines": "off", "unicorn/no-array-sort": "off" }
     },
     {
       "files": ["**/features/*/components/**/*.tsx"],

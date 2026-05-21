@@ -3,8 +3,8 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
 import {
-  STAR_COUNT,
-  STAR_RADIUS,
+  STAR_COUNT_FAR,
+  STAR_RADIUS_FAR,
   STAR_SEED,
   buildStarfieldSpec,
 } from '../../services/renderer/starfieldSpec';
@@ -17,7 +17,13 @@ export const Starfield = (): JSX.Element => {
   const groupRef = useRef<Group | null>(null);
 
   const spec = useMemo(
-    () => buildStarfieldSpec({ seed: STAR_SEED, count: STAR_COUNT, radius: STAR_RADIUS }),
+    () =>
+      buildStarfieldSpec({
+        layer: 'far',
+        seed: STAR_SEED,
+        count: STAR_COUNT_FAR,
+        radius: STAR_RADIUS_FAR,
+      }),
     [],
   );
 
@@ -42,7 +48,11 @@ export const Starfield = (): JSX.Element => {
           <bufferAttribute attach="attributes-position" args={[spec.positions, 3]} />
           <bufferAttribute attach="attributes-aSize" args={[spec.sizes, 1]} />
           <bufferAttribute attach="attributes-aBrightness" args={[spec.brightness, 1]} />
+          <bufferAttribute attach="attributes-aColor" args={[spec.colors, 3]} />
+          <bufferAttribute attach="attributes-aLuminous" args={[spec.luminous, 1]} />
           <bufferAttribute attach="attributes-aTwinkleAmp" args={[spec.twinkleAmps, 1]} />
+          <bufferAttribute attach="attributes-aTwinkleSpeed" args={[spec.twinkleSpeeds, 1]} />
+          <bufferAttribute attach="attributes-aTwinkleSharp" args={[spec.twinkleSharps, 1]} />
           <bufferAttribute attach="attributes-aTwinklePhase" args={[spec.twinklePhases, 1]} />
         </bufferGeometry>
         <primitive object={material} attach="material" />
