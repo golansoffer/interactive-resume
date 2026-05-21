@@ -247,7 +247,7 @@ export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
       position={cameraInitial}
       fov={BASE_FOV}
       near={0.1}
-      far={1500}
+      far={4500}
     />
   );
 };

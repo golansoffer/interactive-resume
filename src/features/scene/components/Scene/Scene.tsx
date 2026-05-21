@@ -9,7 +9,7 @@ import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
 import type { Kinematics } from '../../types/kinematics';
-import { Asteroids } from './Asteroids';
+import { CelestialTraffic } from './CelestialTraffic';
 import { Companies } from './Companies';
 import { FillerPlanets } from './FillerPlanets';
 import { FollowCamera } from './FollowCamera';
@@ -19,7 +19,6 @@ import { ProximityWatcher } from './ProximityWatcher';
 import { Starfield } from './Starfield';
 import { Sun } from './Sun';
 import { WaypointBeam } from './WaypointBeam';
-import { WaypointMarker } from './WaypointMarker';
 import { useSceneRefs } from './useSceneRefs';
 
 type SceneProps = {
@@ -81,10 +80,9 @@ export const Scene = (props: SceneProps): JSX.Element => {
         sphereCollidersRef={sphereCollidersRef}
       />
       <FillerPlanets fillerPlanets={props.fillerPlanets} sphereCollidersRef={sphereCollidersRef} />
-      <Asteroids />
+      <CelestialTraffic />
       <PlanetLabels labels={labels} />
       <WaypointBeam projection={props.routeProjection} />
-      <WaypointMarker projection={props.routeProjection} kinematicsRef={props.kinematicsRef} />
       <ProximityWatcher
         sceneState={props.state}
         kinematicsRef={props.kinematicsRef}

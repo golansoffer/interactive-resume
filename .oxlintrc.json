@@ -61,6 +61,12 @@
         "unicorn/prefer-math-trunc": "off",
         "unicorn/no-array-sort": "off"
       }
+    },
+    {
+      "files": ["**/services/renderer/celestialFlightSpec.ts"],
+      "rules": {
+        "unicorn/prefer-math-trunc": "off"
+      }
     }
   ],
   "settings": { "react": { "version": "19" } },
