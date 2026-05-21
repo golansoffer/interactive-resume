@@ -4,8 +4,8 @@ export type StarfieldMaterialParams = {
   readonly color: string;
 };
 
-const DEFAULT_HALO_SIZE_BOOST = 14.0;
-const DEFAULT_HALO_STRENGTH = 0.55;
+const DEFAULT_HALO_SIZE_BOOST = 6.0;
+const DEFAULT_HALO_STRENGTH = 0.4;
 const DEFAULT_SPIKE_STRENGTH = 0.45;
 
 const VERTEX_SHADER = `
