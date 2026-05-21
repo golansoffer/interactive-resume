@@ -124,3 +124,61 @@ describe('route gate', () => {
     expect(router.state.location.search).toEqual({ ship: 'speederA' });
   });
 });
+
+type ChangeListener = (event: { readonly matches: boolean }) => void;
+
+type FakeMediaQueryList = {
+  matches: boolean;
+  readonly addEventListener: (type: 'change', listener: ChangeListener) => void;
+  readonly removeEventListener: (type: 'change', listener: ChangeListener) => void;
+};
+
+const createFakeMediaQueryList = (initialMatches: boolean): FakeMediaQueryList => {
+  const listeners = new Set<ChangeListener>();
+  return {
+    matches: initialMatches,
+    addEventListener: (_type, listener) => {
+      listeners.add(listener);
+    },
+    removeEventListener: (_type, listener) => {
+      listeners.delete(listener);
+    },
+  };
+};
+
+const stubMatchMedia = (list: FakeMediaQueryList): void => {
+  vi.stubGlobal(
+    'window',
+    Object.assign(globalThis.window, {
+      matchMedia: vi.fn(() => list),
+    }),
+  );
+};
+
+describe('root-level device-support gate', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders the unsupported splash and hides the canvas when matchMedia reports no match', async () => {
+    stubMatchMedia(createFakeMediaQueryList(false));
+    const { ui } = mountAt('/?ship=speederA');
+    render(ui);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Open this on desktop.' }),
+    ).toBeDefined();
+    expect(screen.queryByTestId('canvas')).toBeNull();
+    expect(screen.queryByText('Choose your ship')).toBeNull();
+  });
+
+  it('renders the normal scene and hides the unsupported splash when matchMedia reports a match', async () => {
+    stubMatchMedia(createFakeMediaQueryList(true));
+    const { ui } = mountAt('/?ship=speederA');
+    render(ui);
+    expect(await screen.findByTestId('canvas')).toBeDefined();
+    expect(
+      screen.queryByRole('heading', { level: 1, name: 'Open this on desktop.' }),
+    ).toBeNull();
+  });
+});
