@@ -98,3 +98,22 @@ describe('buildStarfieldMaterial — shader source', () => {
     expect(src).toMatch(/uColor\s*\*\s*vColor|vColor\s*\*\s*uColor/u);
   });
 });
+
+describe('buildStarfieldMaterial — halo + spike fragment paths', () => {
+  it('contains a halo contribution gated by vLuminous and uHaloStrength', () => {
+    const src = buildStarfieldMaterial(PARAMS).fragmentShader;
+    expect(src).toContain('uHaloStrength');
+    expect(src).toMatch(/halo\s*=[^;]*vLuminous/u);
+  });
+
+  it('contains a diffraction-spike contribution gated by the 0.7 luminous threshold', () => {
+    const src = buildStarfieldMaterial(PARAMS).fragmentShader;
+    expect(src).toContain('uSpikeStrength');
+    expect(src).toMatch(/step\s*\(\s*0\.7/u);
+  });
+
+  it('combines core + halo + spike into the final fragment intensity', () => {
+    const src = buildStarfieldMaterial(PARAMS).fragmentShader;
+    expect(src).toMatch(/core\s*\+\s*halo\s*\+\s*spike|core\s*\+\s*spike\s*\+\s*halo|halo\s*\+\s*core\s*\+\s*spike|spike\s*\+\s*halo\s*\+\s*core|spike\s*\+\s*core\s*\+\s*halo|halo\s*\+\s*spike\s*\+\s*core/u);
+  });
+});
