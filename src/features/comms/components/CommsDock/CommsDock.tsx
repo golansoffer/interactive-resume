@@ -1,7 +1,6 @@
 import type { JSX } from 'react';
 import { cn } from '@/lib/utils';
 import type { Channel, ChannelId } from '../../types/channel';
-import type { CopyFeedback } from '../../types/feedback';
 import type { VelocityReadout as VelocityReadoutValue } from '../../types/velocity-readout';
 import type { DockVisibility } from '../../types/visibility';
 import type { MotionPreference } from '../../types/motion-preference';
@@ -11,26 +10,10 @@ import { ChannelButton } from './ChannelButton';
 type CommsDockProps = {
   readonly channels: ReadonlyArray<Channel>;
   readonly readout: VelocityReadoutValue;
-  readonly feedback: CopyFeedback;
   readonly visibility: DockVisibility;
   readonly motion: MotionPreference;
   readonly onActivate: (channelId: ChannelId) => void;
 };
-
-const announcementText = (
-  channels: ReadonlyArray<Channel>,
-  feedback: CopyFeedback,
-): string =>
-  channels.reduce<string>((acc, channel) => {
-    switch (feedback.kind) {
-      case 'idle':
-        return acc;
-      case 'success':
-        return channel.id === feedback.channelId ? `Copied ${channel.label}` : acc;
-      case 'failed':
-        return channel.id === feedback.channelId ? `Copy failed for ${channel.label}` : acc;
-    }
-  }, '');
 
 const DOCK_CLASSNAME = cn(
   'pointer-events-none fixed bottom-6 left-1/2 z-40 -translate-x-1/2',
@@ -41,8 +24,6 @@ const DOCK_CLASSNAME = cn(
 
 export const CommsDock = (props: CommsDockProps): JSX.Element | null => {
   if (props.visibility.kind === 'hidden') return null;
-
-  const announcement = announcementText(props.channels, props.feedback);
 
   return (
     <section
@@ -62,20 +43,10 @@ export const CommsDock = (props: CommsDockProps): JSX.Element | null => {
           <ChannelButton
             key={channel.id}
             channel={channel}
-            feedback={props.feedback}
             motion={props.motion}
             onActivate={props.onActivate}
           />
         ))}
-      </div>
-      <div
-        className="sr-only"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        data-announcement
-      >
-        {announcement}
       </div>
     </section>
   );

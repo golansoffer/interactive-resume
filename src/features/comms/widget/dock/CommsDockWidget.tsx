@@ -10,7 +10,7 @@ type CommsDockWidgetProps = {
 };
 
 export const CommsDockWidget = (props: CommsDockWidgetProps): JSX.Element => {
-  const { channels, readout, feedback, visibility, motion, onActivate } = useCommsDock({
+  const { channels, readout, visibility, motion, onActivate } = useCommsDock({
     kinematicsRef: props.kinematicsRef,
     sceneState: props.sceneState,
   });
@@ -18,7 +18,6 @@ export const CommsDockWidget = (props: CommsDockWidgetProps): JSX.Element => {
     <CommsDock
       channels={channels}
       readout={readout}
-      feedback={feedback}
       visibility={visibility}
       motion={motion}
       onActivate={onActivate}

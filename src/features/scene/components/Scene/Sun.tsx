@@ -29,7 +29,7 @@ type SunProps = {
 };
 
 // On the curve's far axis past Venus; anchors the rightward arc.
-const SUN_POSITION: readonly [number, number, number] = [-280, 0, 1150];
+const SUN_POSITION: readonly [number, number, number] = [-380, 0, 1150];
 // Scaled up from the original 5×-planets to compensate for distance — at
 // ~367 world units away, this reads as a large but clearly-distant sun.
 const SUN_BODY_SCALE = 17;
