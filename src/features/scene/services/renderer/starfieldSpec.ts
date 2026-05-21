@@ -102,6 +102,15 @@ const PALETTE_DIM: Palette = [
   { rgb: HOT_BLUE, weight: 0 },
 ];
 
+const PALETTE_LUMINOUS: Palette = [
+  { rgb: COOL_BLUE_WHITE, weight: 0.15 },
+  { rgb: NEUTRAL_WHITE, weight: 0.2 },
+  { rgb: WARM_WHITE, weight: 0.12 },
+  { rgb: ORANGE, weight: 0.12 },
+  { rgb: DEEP_RED_ORANGE, weight: 0.15 },
+  { rgb: HOT_BLUE, weight: 0.26 },
+];
+
 const sampleColor = (palette: Palette, u: number): readonly [number, number, number] => {
   let acc = 0;
   let last: PaletteEntry = palette[0];
@@ -159,7 +168,8 @@ const computeStar = (radius: number, rng: Rng): StarValues => {
   const sizeNorm = (size - STAR_SIZE_MIN) / (STAR_SIZE_MAX - STAR_SIZE_MIN);
   const brightness = lerp(STAR_BRIGHTNESS_MIN, STAR_BRIGHTNESS_MAX, sizeNorm);
   const color = sampleColor(sizeT < 0.3 ? PALETTE_DIM : PALETTE_BASE, rng());
-  const twinkle = rng() < TWINKLE_FRACTION ? computeTwinkler(rng) : NO_TWINKLE;
+  const pBase = TWINKLE_FRACTION * (1 + TWINKLE_BRIGHTNESS_BIAS * (sizeT - 0.5));
+  const twinkle = rng() < pBase ? computeTwinkler(rng) : NO_TWINKLE;
   return { position, size, brightness, color, ...twinkle };
 };
 
@@ -191,6 +201,34 @@ export const buildStarfieldSpec = (params: StarfieldSpecParams): StarfieldSpec =
     twinkleSpeeds[i] = v.twinkleSpeed;
     twinkleSharps[i] = v.twinkleSharp;
     twinklePhases[i] = v.twinklePhase;
+  }
+
+  const sortedBrightness = Array.from(brightness).slice().sort((a, b) => a - b);
+  const thresholdIdx = Math.floor(LUMINOUS_PERCENTILE * count);
+  const pThreshold = sortedBrightness[thresholdIdx] ?? 0;
+  const pMax = sortedBrightness[count - 1] ?? pThreshold;
+  const lumRange = Math.max(pMax - pThreshold, 1e-6);
+
+  for (let i = 0; i < count; i++) {
+    const b = brightness[i] ?? 0;
+    if (b < pThreshold) continue;
+    luminous[i] = Math.min(Math.max((b - pThreshold) / lumRange, 0), 1);
+  }
+
+  const recolorRng = mulberry32((seed ^ 0x10000000) >>> 0);
+  for (let i = 0; i < count; i++) {
+    if ((luminous[i] ?? 0) <= 0) continue;
+    const [cr, cg, cb] = sampleColor(PALETTE_LUMINOUS, recolorRng());
+    colors[i * 3 + 0] = cr;
+    colors[i * 3 + 1] = cg;
+    colors[i * 3 + 2] = cb;
+  }
+
+  for (let i = 0; i < count; i++) {
+    if ((luminous[i] ?? 0) <= 0) continue;
+    const amp = twinkleAmps[i] ?? 0;
+    if (amp <= TWINKLE_AMP_LUMINOUS_CAP) continue;
+    twinkleAmps[i] = TWINKLE_AMP_LUMINOUS_CAP;
   }
 
   return {

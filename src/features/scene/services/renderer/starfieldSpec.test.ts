@@ -238,23 +238,25 @@ describe('buildStarfieldSpec — twinkle variety', () => {
     expect(Math.abs(observed - TWINKLE_SHARP_FRACTION)).toBeLessThan(0.08);
   });
 
-  it('keeps smooth-twinkler amps within [TWINKLE_AMP_SMOOTH_MIN, TWINKLE_AMP_SMOOTH_MAX]', () => {
+  it('keeps smooth-twinkler amps within [TWINKLE_AMP_SMOOTH_MIN, TWINKLE_AMP_SMOOTH_MAX] (luminous stars exempt — their amps are capped separately)', () => {
     const spec = buildDefaultFar();
     for (let i = 0; i < spec.count; i++) {
       const amp = spec.twinkleAmps[i] ?? 0;
       if (amp === 0) continue;
       if ((spec.twinkleSharps[i] ?? 0) === 1) continue;
+      if ((spec.luminous[i] ?? 0) > 0) continue;
       expect(amp).toBeGreaterThanOrEqual(twinkleAmpSmoothMin32);
       expect(amp).toBeLessThanOrEqual(twinkleAmpSmoothMax32);
     }
   });
 
-  it('keeps sharp-twinkler amps within [TWINKLE_AMP_SHARP_MIN, TWINKLE_AMP_SHARP_MAX]', () => {
+  it('keeps sharp-twinkler amps within [TWINKLE_AMP_SHARP_MIN, TWINKLE_AMP_SHARP_MAX] (luminous stars exempt — their amps are capped separately)', () => {
     const spec = buildDefaultFar();
     for (let i = 0; i < spec.count; i++) {
       const amp = spec.twinkleAmps[i] ?? 0;
       if (amp === 0) continue;
       if ((spec.twinkleSharps[i] ?? 0) !== 1) continue;
+      if ((spec.luminous[i] ?? 0) > 0) continue;
       expect(amp).toBeGreaterThanOrEqual(twinkleAmpSharpMin32);
       expect(amp).toBeLessThanOrEqual(twinkleAmpSharpMax32);
     }
@@ -296,11 +298,122 @@ describe('buildStarfieldSpec — twinkle variety', () => {
   });
 });
 
-describe('buildStarfieldSpec — luminous default', () => {
-  it('produces a luminous array initialised to all zeros', () => {
+import {
+  LUMINOUS_PERCENTILE,
+  SPIKE_THRESHOLD,
+  TWINKLE_AMP_LUMINOUS_CAP,
+} from './starfieldSpec';
+
+const luminousCap32 = Math.fround(TWINKLE_AMP_LUMINOUS_CAP);
+
+describe('buildStarfieldSpec — luminous tier', () => {
+  it('keeps every luminous value within [0, 1]', () => {
     const spec = buildDefaultFar();
     for (let i = 0; i < spec.count; i++) {
-      expect(spec.luminous[i] ?? -1).toBe(0);
+      const l = spec.luminous[i] ?? -1;
+      expect(l).toBeGreaterThanOrEqual(0);
+      expect(l).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('marks roughly (1 - LUMINOUS_PERCENTILE) of stars as luminous (within ±1%)', () => {
+    const spec = buildDefaultFar();
+    let lit = 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.luminous[i] ?? 0) > 0) lit++;
+    }
+    const expectedFraction = 1 - LUMINOUS_PERCENTILE;
+    expect(Math.abs(lit / spec.count - expectedFraction)).toBeLessThan(0.01);
+  });
+
+  it('marks between 1% and 2.5% of stars as spike candidates (luminous > SPIKE_THRESHOLD)', () => {
+    const spec = buildDefaultFar();
+    let spikes = 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.luminous[i] ?? 0) > SPIKE_THRESHOLD) spikes++;
+    }
+    const fraction = spikes / spec.count;
+    expect(fraction).toBeGreaterThanOrEqual(0.01);
+    expect(fraction).toBeLessThanOrEqual(0.025);
+  });
+
+  it('reaches luminous = 1 for the brightest star', () => {
+    const spec = buildDefaultFar();
+    let maxLum = 0;
+    for (let i = 0; i < spec.count; i++) {
+      const l = spec.luminous[i] ?? 0;
+      if (l > maxLum) maxLum = l;
+    }
+    expect(maxLum).toBeCloseTo(1, 5);
+  });
+
+  it('ties luminous > 0 to the top brightness percentile (every luminous star is at or above the LUMINOUS_PERCENTILE brightness threshold)', () => {
+    const spec = buildDefaultFar();
+    const sorted = Array.from(spec.brightness).slice().sort((a, b) => a - b);
+    const p95 = sorted[Math.floor(LUMINOUS_PERCENTILE * spec.count)] ?? 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.luminous[i] ?? 0) > 0) {
+        expect(spec.brightness[i] ?? 0).toBeGreaterThanOrEqual(p95);
+      }
+    }
+  });
+
+  it('caps luminous-star twinkle amps at TWINKLE_AMP_LUMINOUS_CAP', () => {
+    const spec = buildDefaultFar();
+    let checked = 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.luminous[i] ?? 0) <= 0) continue;
+      expect(spec.twinkleAmps[i] ?? 0).toBeLessThanOrEqual(luminousCap32);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it('uses the luminous-biased palette for luminous stars (deep red-orange + hot blue appear more often than in the base distribution)', () => {
+    const spec = buildDefaultFar();
+    let deepRedOrHotBlue = 0;
+    let total = 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.luminous[i] ?? 0) <= 0) continue;
+      total++;
+      const c = colorAt(spec, i);
+      if (colorMatchesBucket(c, PALETTE_HEXES[4] ?? [0, 0, 0])) deepRedOrHotBlue++;
+      if (colorMatchesBucket(c, PALETTE_HEXES[5] ?? [0, 0, 0])) deepRedOrHotBlue++;
+    }
+    expect(total).toBeGreaterThan(0);
+    expect(deepRedOrHotBlue / total).toBeGreaterThan(0.25);
+  });
+});
+
+describe('buildStarfieldSpec — brightness-rank bias on twinkler selection', () => {
+  it('biases twinkler selection toward brighter stars (mean brightness of twinklers > mean brightness of all stars by a clear margin)', () => {
+    const spec = buildDefaultFar();
+    let twinklerSum = 0;
+    let twinklerCount = 0;
+    let totalSum = 0;
+    for (let i = 0; i < spec.count; i++) {
+      const b = spec.brightness[i] ?? 0;
+      totalSum += b;
+      if ((spec.twinkleAmps[i] ?? 0) > 0) {
+        twinklerSum += b;
+        twinklerCount++;
+      }
+    }
+    expect(twinklerCount).toBeGreaterThan(0);
+    const twinklerMean = twinklerSum / twinklerCount;
+    const totalMean = totalSum / spec.count;
+    expect(twinklerMean).toBeGreaterThan(totalMean);
+    expect(twinklerMean - totalMean).toBeGreaterThan(totalMean * 0.05);
+  });
+
+  it('keeps the population twinkler fraction in [0.12, 0.17] (binomial tolerance — bias preserves the population mean of TWINKLE_FRACTION)', () => {
+    const spec = buildDefaultFar();
+    let twinklers = 0;
+    for (let i = 0; i < spec.count; i++) {
+      if ((spec.twinkleAmps[i] ?? 0) > 0) twinklers++;
+    }
+    const fraction = twinklers / spec.count;
+    expect(fraction).toBeGreaterThanOrEqual(0.12);
+    expect(fraction).toBeLessThanOrEqual(0.17);
   });
 });
