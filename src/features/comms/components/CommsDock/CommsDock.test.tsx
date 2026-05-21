@@ -78,14 +78,19 @@ describe('CommsDock — rendering', () => {
     }
   });
 
-  it('renders the velocity readout metersPerSecond as displayed text (rounded, zero-padded)', () => {
+  it('renders the readout ratio as a 0–100 percentage (rounded, zero-padded)', () => {
     render(<CommsDock {...baseProps} readout={{ kind: 'readout', metersPerSecond: 7, ratio: 0.5 }} />);
-    expect(screen.getByText('007')).toBeDefined();
+    expect(screen.getByText('050')).toBeDefined();
   });
 
   it('zero-pads the readout value to 3 characters at low speeds', () => {
     render(<CommsDock {...baseProps} readout={{ kind: 'readout', metersPerSecond: 0, ratio: 0 }} />);
     expect(screen.getByText('000')).toBeDefined();
+  });
+
+  it('renders 100 when the readout ratio is saturated at 1', () => {
+    render(<CommsDock {...baseProps} readout={{ kind: 'readout', metersPerSecond: 42, ratio: 1 }} />);
+    expect(screen.getByText('100')).toBeDefined();
   });
 
   it('renders the readout ratio as the speed bar aria-valuenow', () => {

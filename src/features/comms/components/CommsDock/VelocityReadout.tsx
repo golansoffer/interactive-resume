@@ -16,9 +16,13 @@ const padded3 = (n: number): string => {
   return String(i);
 };
 
+// Hardcoded bright cyan (not the theme accent). The dark-mode `--accent`
+// token resolves to a near-black gray and renders the bar invisible at
+// 1.5px tall against the dim track; this color is chosen for visibility
+// at that thin scale.
 const BAR_FILL_CLASSNAME = cn(
   'absolute inset-y-0 left-0 w-full origin-left rounded-full',
-  'bg-[--color-accent]',
+  'bg-cyan-300',
   'transition-transform duration-150 ease-out',
   'group-data-[motion=reduced]:transition-none',
 );
@@ -34,7 +38,7 @@ export const VelocityReadout = (props: VelocityReadoutProps): JSX.Element => {
       <div className="flex items-baseline gap-2">
         <span
           data-label
-          className="font-mono text-[10px] font-medium uppercase tracking-[0.32em] text-[--color-accent]/75"
+          className="font-mono text-[10px] font-medium uppercase tracking-[0.32em] text-(--color-accent)/75"
         >
           VEL
         </span>
@@ -42,13 +46,13 @@ export const VelocityReadout = (props: VelocityReadoutProps): JSX.Element => {
           data-value
           className="font-mono text-base font-semibold leading-none tabular-nums text-foreground"
         >
-          {padded3(props.readout.metersPerSecond)}
+          {padded3(Math.round(props.readout.ratio * 100))}
         </span>
         <span
           data-unit
           className="font-mono text-[9px] font-medium uppercase tracking-[0.28em] text-muted-foreground"
         >
-          M/S
+          %
         </span>
       </div>
       <div

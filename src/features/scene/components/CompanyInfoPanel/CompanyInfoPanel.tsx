@@ -59,7 +59,7 @@ const WebsiteLink = ({ url }: { readonly url: string }): JSX.Element => (
     href={url}
     target="_blank"
     rel="noreferrer noopener"
-    className="pointer-events-auto group inline-flex items-center gap-1.5 rounded-sm text-xs font-medium tracking-wide text-[--color-accent] transition-colors hover:text-[--color-accent]/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent]"
+    className="pointer-events-auto group inline-flex items-center gap-1.5 rounded-sm text-xs font-medium tracking-wide text-(--color-accent) transition-colors hover:text-(--color-accent)/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)"
   >
     <span>{displayHost(url)}</span>
     <ExternalLink
@@ -73,7 +73,7 @@ const PanelHeader = (props: LastPayload): JSX.Element => (
   <CardHeader className="grid grid-cols-[5rem_1fr] items-start gap-4">
     <div className="flex flex-col items-stretch gap-2">
       <PlanetPreview assetId={props.assetId} />
-      <span className="text-center font-mono text-[10px] uppercase tracking-[0.32em] text-[--color-accent]/80">
+      <span className="text-center font-mono text-[10px] uppercase tracking-[0.32em] text-(--color-accent)/80">
         {planetDisplayName(props.assetId)}
       </span>
     </div>

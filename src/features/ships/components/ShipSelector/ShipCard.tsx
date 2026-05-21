@@ -27,38 +27,38 @@ const cardClassName = cn(
   'group relative flex shrink-0 items-center gap-3 cursor-pointer',
   'md:w-full',
   'border-l-2 border-transparent bg-transparent',
-  'px-3 py-2 text-left text-[--color-fg]',
+  'px-3 py-2 text-left text-(--color-fg)',
   'transition-[background-color,border-color,transform] duration-200',
-  'hover:bg-[--color-fg]/5 hover:border-[--color-fg]/25',
-  'data-[hovered=true]:bg-[--color-fg]/8 data-[hovered=true]:border-[--color-fg]/35',
-  'data-[featured=true]:bg-[--color-fg]/12 data-[featured=true]:border-[--color-fg]/50',
+  'hover:bg-(--color-fg)/5 hover:border-(--color-fg)/25',
+  'data-[hovered=true]:bg-(--color-fg)/8 data-[hovered=true]:border-(--color-fg)/35',
+  'data-[featured=true]:bg-(--color-fg)/12 data-[featured=true]:border-(--color-fg)/50',
   'data-[featured=true]:scale-[1.01]',
-  'focus-visible:outline-none focus-visible:bg-[--color-fg]/12',
-  'focus-visible:border-[--color-fg]/50',
+  'focus-visible:outline-none focus-visible:bg-(--color-fg)/12',
+  'focus-visible:border-(--color-fg)/50',
 );
 
 const indexClassName = cn(
-  'shrink-0 font-mono text-xs tracking-widest text-[--color-fg]/40',
-  'group-hover:text-[--color-fg]/70',
-  'group-data-[featured=true]:text-[--color-fg]',
+  'shrink-0 font-mono text-xs tracking-widest text-(--color-fg)/40',
+  'group-hover:text-(--color-fg)/70',
+  'group-data-[featured=true]:text-(--color-fg)',
 );
 
-const dividerClassName = 'h-10 w-px shrink-0 bg-[--color-fg]/10';
+const dividerClassName = 'h-10 w-px shrink-0 bg-(--color-fg)/10';
 
 const thumbClassName = cn(
   'relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-black/40',
   'ring-1 ring-white/5',
-  'group-data-[featured=true]:ring-[--color-fg]/25',
+  'group-data-[featured=true]:ring-(--color-fg)/25',
 );
 
 const textColClassName = 'flex min-w-0 flex-col leading-tight';
 
 const codeClassName = cn(
-  'font-mono text-[10px] tracking-[0.2em] uppercase text-[--color-fg]/50',
-  'group-data-[featured=true]:text-[--color-accent]',
+  'font-mono text-[10px] tracking-[0.2em] uppercase text-(--color-fg)/50',
+  'group-data-[featured=true]:text-(--color-accent)',
 );
 
-const nameClassName = 'truncate text-sm font-medium tracking-wide text-[--color-fg]';
+const nameClassName = 'truncate text-sm font-medium tracking-wide text-(--color-fg)';
 
 export const ShipCard = (props: ShipCardProps): JSX.Element => (
   <button

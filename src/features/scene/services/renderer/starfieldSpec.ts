@@ -2,14 +2,14 @@ export const STAR_SEED = 0xc0ffee;
 export const STAR_SEED_NEAR = (0xc0ffee ^ 0xa1b2c3) >>> 0;
 
 export const STAR_COUNT_FAR = 2500;
-export const STAR_COUNT_NEAR = 800;
+export const STAR_COUNT_NEAR = 1000;
 export const STAR_RADIUS_FAR = 400;
-export const STAR_RADIUS_NEAR = 180;
+export const STAR_RADIUS_NEAR = 200;
 
 export const PARALLAX_FACTOR_NEAR = 0.6;
 
 export const STAR_SIZE_MIN = 0.6;
-export const STAR_SIZE_MAX = 1.6;
+export const STAR_SIZE_MAX = 0.8;
 
 export const STAR_BRIGHTNESS_MIN = 0.35;
 export const STAR_BRIGHTNESS_MAX = 1;

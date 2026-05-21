@@ -30,7 +30,7 @@ const BACKDROP_STYLE: CSSProperties = {
 
 const containerClassName = cn(
   'relative flex h-screen w-screen flex-col items-stretch',
-  'text-[--color-fg] overflow-hidden',
+  'text-(--color-fg) overflow-hidden',
 );
 
 const headerClassName = cn(
@@ -39,15 +39,15 @@ const headerClassName = cn(
 );
 
 const eyebrowClassName = cn(
-  'font-mono text-[10px] tracking-[0.4em] uppercase text-[--color-fg]/55',
+  'font-mono text-[10px] tracking-[0.4em] uppercase text-(--color-fg)/55',
 );
 
 const titleClassName = cn(
-  'text-2xl md:text-3xl font-semibold tracking-tight text-[--color-fg]',
+  'text-2xl md:text-3xl font-semibold tracking-tight text-(--color-fg)',
 );
 
 const subtitleClassName = cn(
-  'text-xs md:text-sm tracking-wide text-[--color-fg]/60',
+  'text-xs md:text-sm tracking-wide text-(--color-fg)/60',
 );
 
 const bodyClassName = cn(
@@ -59,7 +59,7 @@ const bodyClassName = cn(
 // decoration; neutral foreground hairline matches the panel's
 // restrained ring/divider register (cyan is reserved for CTAs and
 // visual captions, not chrome).
-const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-[--color-fg]/15');
+const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-(--color-fg)/15');
 const cornerTopLeft = cn(cornerClassName, 'left-4 top-4 border-l border-t');
 const cornerTopRight = cn(cornerClassName, 'right-4 top-4 border-r border-t');
 const cornerBottomLeft = cn(cornerClassName, 'bottom-4 left-4 border-b border-l');

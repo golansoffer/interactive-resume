@@ -21,7 +21,7 @@ const BUTTON_CLASSNAME = cn(
   'transition-[background-color,color,box-shadow,transform] duration-200',
   'hover:bg-foreground/[0.06] hover:text-foreground hover:ring-foreground/15',
   'focus-visible:outline-none focus-visible:bg-foreground/[0.08]',
-  'focus-visible:text-foreground focus-visible:ring-[--color-accent]/40',
+  'focus-visible:text-foreground focus-visible:ring-(--color-accent)/40',
   'active:translate-y-px',
   'data-[motion=reduced]:transition-none',
 );

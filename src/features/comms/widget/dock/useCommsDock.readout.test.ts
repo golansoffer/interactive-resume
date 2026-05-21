@@ -31,9 +31,10 @@ describe('useCommsDock — velocity readout wiring', () => {
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(7, 0));
+      h.kinematics.push(sample(21, 0));
     });
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(7);
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(21);
+    // Denominator is MAX_SPEED * 3 = 42 (full cruise-to-boost range); 21/42 = 0.5.
     expect(result.current.readout.ratio).toBeCloseTo(0.5);
   });
 
@@ -49,16 +50,16 @@ describe('useCommsDock — velocity readout wiring', () => {
     expect(result.current.readout.metersPerSecond).toBe(0);
   });
 
-  it('exposes ratio 1 when the subscribed sample has velocity magnitude at max speed', () => {
+  it('exposes ratio 1 when the subscribed sample has velocity magnitude at boost top speed', () => {
     const h = createHarness();
     const { result } = renderHook(() =>
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(14, 0));
+      h.kinematics.push(sample(42, 0));
     });
     expect(result.current.readout.ratio).toBe(1);
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(14);
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(42);
   });
 
   it('state.readout exposes only parsed Readout values (never raw Kinematics fields)', () => {

@@ -13,6 +13,11 @@ import type { MotionPreference } from '../../types/motion-preference';
 import type { VelocityReadout } from '../../types/velocity-readout';
 import type { DockVisibility } from '../../types/visibility';
 import { MAX_SPEED, type Kinematics } from '../../../scene/types/kinematics';
+
+// Denominator for the velocity bar. Matches the boost multiplier (3×) in
+// boostController so the bar fills proportionally across the full
+// cruise-to-boost range instead of saturating at baseline cruise.
+const READOUT_TOP_SPEED = MAX_SPEED * 3;
 import type { SceneState } from '../../../scene/types/scene-state';
 
 export type LinkOpenRequest = {
@@ -41,7 +46,7 @@ export type UseCommsDockResult = {
   readonly onActivate: (channelId: ChannelId) => void;
 };
 
-const ZERO_READOUT: VelocityReadout = projectVelocityReadout({ x: 0, y: 0, z: 0 }, MAX_SPEED);
+const ZERO_READOUT: VelocityReadout = projectVelocityReadout({ x: 0, y: 0, z: 0 }, READOUT_TOP_SPEED);
 const INITIAL_MOTION: MotionPreference = { kind: 'normal' };
 
 const defaultOpenExternal = (request: LinkOpenRequest): void => {
@@ -72,7 +77,7 @@ export const useCommsDock = (props: UseCommsDockProps): UseCommsDockResult => {
   useEffect(() => {
     const source = deps.createKinematicsSource(() => ({ velocity: kinematicsRef.current.velocity }));
     const unsubscribe = source.subscribe((sample) => {
-      setReadout(projectVelocityReadout(sample.velocity, MAX_SPEED));
+      setReadout(projectVelocityReadout(sample.velocity, READOUT_TOP_SPEED));
     });
     return unsubscribe;
   }, [deps, kinematicsRef]);

@@ -30,23 +30,23 @@ const infoBlockClassName = cn(
 );
 
 const codeClassName = cn(
-  'font-mono text-xs tracking-[0.4em] uppercase text-[--color-accent]/80',
+  'font-mono text-xs tracking-[0.4em] uppercase text-(--color-accent)/80',
 );
 
 const nameClassName = cn(
   'text-3xl sm:text-4xl md:text-5xl xl:text-6xl',
-  'font-semibold tracking-tight text-[--color-fg] leading-none',
+  'font-semibold tracking-tight text-(--color-fg) leading-none',
 );
 
-const separatorClassName = cn('h-px w-24 bg-[--color-fg]/15');
+const separatorClassName = cn('h-px w-24 bg-(--color-fg)/15');
 
 const launchButtonClassName = cn(
   'inline-flex items-center gap-2 rounded-md',
-  'border border-[--color-accent]/50 bg-transparent',
+  'border border-(--color-accent)/50 bg-transparent',
   'px-5 py-2 md:px-6 md:py-3 text-sm font-medium tracking-wider uppercase',
-  'text-[--color-accent] transition-all duration-200',
-  'hover:bg-[--color-accent]/10 hover:border-[--color-accent]',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent]',
+  'text-(--color-accent) transition-all duration-200',
+  'hover:bg-(--color-accent)/10 hover:border-(--color-accent)',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)',
 );
 
 export const HeroShip = (props: HeroShipProps): JSX.Element => (

@@ -15,7 +15,7 @@ import { deriveBasis, integratesIn } from '../../services/renderer/shipFrame';
 import { cloneAndDressShip } from '../../services/renderer/shipVisualPlan';
 import type { CompanyId } from '../../types/company';
 import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
-import type { IntentStream } from '../../types/intent';
+import type { Intent, IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
 import { ShipRig } from './ShipRig';
@@ -59,6 +59,24 @@ const TAIL_OFFSET_Z = 0.75;
 const TRAIL_DECAY = 1;
 const TRAIL_ATTENUATION = (t: number): number => t * t;
 
+// Trail represents engine exhaust — visible only while a directional thrust
+// intent is held. Without this gate drei's buffer keeps drawing ~1.3s of
+// stale samples after the player releases keys, producing the lingering
+// flicker behind a stopped ship.
+const THRUST_INTENTS: readonly Intent['kind'][] = [
+  'move_forward',
+  'move_backward',
+  'strafe_left',
+  'strafe_right',
+];
+
+const isThrusting = (intents: ReadonlySet<Intent['kind']>): boolean => {
+  for (const kind of THRUST_INTENTS) {
+    if (intents.has(kind)) return true;
+  }
+  return false;
+};
+
 // Cross-fade by role: 'base' fades out as boost ramps in; 'boost' fades in
 // as boost ramps in. Sum stays at 1 so the visual brightness is constant.
 const opacityFor = (role: TrailRole, factor: number): number =>
@@ -85,11 +103,15 @@ const writeTrailMaterial =
     slot.current = mat;
   };
 
-const writeTrailOpacities = (mats: TrailMaterials, factor: number): void => {
+const writeTrailOpacities = (
+  mats: TrailMaterials,
+  factor: number,
+  thrusting: boolean,
+): void => {
   for (const variant of TRAIL_VARIANTS) {
     const mat = mats[variant.role].current;
     if (mat === null) continue;
-    mat.opacity = opacityFor(variant.role, factor);
+    mat.opacity = thrusting ? opacityFor(variant.role, factor) : 0;
   }
 };
 
@@ -176,7 +198,7 @@ const usePlayerFrame = (
     props.kinematicsRef.current = next;
 
     orientationController.tick(mesh, visualRef.current, next, basis, state.clock.elapsedTime);
-    writeTrailOpacities(trailMats, boost.factor);
+    writeTrailOpacities(trailMats, boost.factor, isThrusting(props.intents.current));
   });
 };
 
