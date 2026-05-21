@@ -296,8 +296,8 @@ describe('buildStarfieldSpec — twinkle variety', () => {
   });
 });
 
-describe('buildStarfieldSpec — luminous default (filled in Task 2)', () => {
-  it('produces a luminous array initialised to all zeros (Task 2 fills it)', () => {
+describe('buildStarfieldSpec — luminous default', () => {
+  it('produces a luminous array initialised to all zeros', () => {
     const spec = buildDefaultFar();
     for (let i = 0; i < spec.count; i++) {
       expect(spec.luminous[i] ?? -1).toBe(0);

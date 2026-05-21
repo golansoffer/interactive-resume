@@ -30,9 +30,12 @@ export const TWINKLE_AMP_LUMINOUS_CAP = 0.25;
 export const TWINKLE_SPEED_MIN = 0.4;
 export const TWINKLE_SPEED_MAX = 2.5;
 
-export type StarfieldSpecParams =
-  | { readonly layer: 'far'; readonly seed: number; readonly count: number; readonly radius: number }
-  | { readonly layer: 'near'; readonly seed: number; readonly count: number; readonly radius: number };
+export type StarfieldSpecParams = {
+  readonly layer: 'far' | 'near';
+  readonly seed: number;
+  readonly count: number;
+  readonly radius: number;
+};
 
 export type StarfieldSpec = {
   readonly kind: 'starfield_spec';
@@ -66,7 +69,7 @@ const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const TWO_PI = Math.PI * 2;
 
 type PaletteEntry = { readonly rgb: readonly [number, number, number]; readonly weight: number };
-type Palette = ReadonlyArray<PaletteEntry>;
+type Palette = readonly [PaletteEntry, ...PaletteEntry[]];
 
 const hex = (h: number): readonly [number, number, number] => [
   ((h >> 16) & 0xff) / 255,
@@ -101,95 +104,107 @@ const PALETTE_DIM: Palette = [
 
 const sampleColor = (palette: Palette, u: number): readonly [number, number, number] => {
   let acc = 0;
+  let last: PaletteEntry = palette[0];
   for (const entry of palette) {
+    last = entry;
     acc += entry.weight;
     if (u <= acc) return entry.rgb;
   }
-  const last = palette.at(-1);
-  if (last === undefined) throw new Error('palette is empty');
   return last.rgb;
 };
 
-type StarArrays = {
-  readonly positions: Float32Array;
-  readonly sizes: Float32Array;
-  readonly brightness: Float32Array;
-  readonly colors: Float32Array;
-  readonly luminous: Float32Array;
-  readonly twinkleAmps: Float32Array;
-  readonly twinkleSpeeds: Float32Array;
-  readonly twinkleSharps: Float32Array;
-  readonly twinklePhases: Float32Array;
+type StarValues = {
+  readonly position: readonly [number, number, number];
+  readonly size: number;
+  readonly brightness: number;
+  readonly color: readonly [number, number, number];
+  readonly twinkleAmp: number;
+  readonly twinkleSpeed: number;
+  readonly twinkleSharp: 0 | 1;
+  readonly twinklePhase: number;
 };
 
-const fillTwinkler = (i: number, arrays: StarArrays, rng: Rng): void => {
+const computeTwinkler = (rng: Rng): Pick<StarValues, 'twinkleAmp' | 'twinkleSpeed' | 'twinkleSharp' | 'twinklePhase'> => {
   const isSharp = rng() < TWINKLE_SHARP_FRACTION;
-  arrays.twinkleSharps[i] = isSharp ? 1 : 0;
-  arrays.twinkleAmps[i] = isSharp
-    ? lerp(TWINKLE_AMP_SHARP_MIN, TWINKLE_AMP_SHARP_MAX, rng())
-    : lerp(TWINKLE_AMP_SMOOTH_MIN, TWINKLE_AMP_SMOOTH_MAX, rng());
-  arrays.twinkleSpeeds[i] = lerp(TWINKLE_SPEED_MIN, TWINKLE_SPEED_MAX, rng());
-  arrays.twinklePhases[i] = rng() * TWO_PI;
+  return {
+    twinkleSharp: isSharp ? 1 : 0,
+    twinkleAmp: isSharp
+      ? lerp(TWINKLE_AMP_SHARP_MIN, TWINKLE_AMP_SHARP_MAX, rng())
+      : lerp(TWINKLE_AMP_SMOOTH_MIN, TWINKLE_AMP_SMOOTH_MAX, rng()),
+    twinkleSpeed: lerp(TWINKLE_SPEED_MIN, TWINKLE_SPEED_MAX, rng()),
+    twinklePhase: rng() * TWO_PI,
+  };
 };
 
-const fillStar = (i: number, radius: number, arrays: StarArrays, rng: Rng): void => {
+const NO_TWINKLE = {
+  twinkleAmp: 0,
+  twinkleSpeed: 0,
+  twinkleSharp: 0 as const,
+  twinklePhase: 0,
+};
+
+const computeStar = (radius: number, rng: Rng): StarValues => {
   const u1 = rng();
   const u2 = rng();
   const theta = TWO_PI * u1;
   const phi = Math.acos(1 - 2 * u2);
   const sinPhi = Math.sin(phi);
-  arrays.positions[i * 3 + 0] = radius * sinPhi * Math.cos(theta);
-  arrays.positions[i * 3 + 1] = radius * Math.cos(phi);
-  arrays.positions[i * 3 + 2] = radius * sinPhi * Math.sin(theta);
-
+  const position: readonly [number, number, number] = [
+    radius * sinPhi * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * sinPhi * Math.sin(theta),
+  ];
   const sizeT = rng();
-  const sizeShaped = sizeT * sizeT * sizeT;
-  const size = lerp(STAR_SIZE_MIN, STAR_SIZE_MAX, sizeShaped);
-  arrays.sizes[i] = size;
-
+  const size = lerp(STAR_SIZE_MIN, STAR_SIZE_MAX, sizeT * sizeT * sizeT);
   const sizeNorm = (size - STAR_SIZE_MIN) / (STAR_SIZE_MAX - STAR_SIZE_MIN);
-  arrays.brightness[i] = lerp(STAR_BRIGHTNESS_MIN, STAR_BRIGHTNESS_MAX, sizeNorm);
-
-  const palette: Palette = sizeT < 0.3 ? PALETTE_DIM : PALETTE_BASE;
-  const [cr, cg, cb] = sampleColor(palette, rng());
-  arrays.colors[i * 3 + 0] = cr;
-  arrays.colors[i * 3 + 1] = cg;
-  arrays.colors[i * 3 + 2] = cb;
-
-  if (rng() < TWINKLE_FRACTION) {
-    fillTwinkler(i, arrays, rng);
-    return;
-  }
-  arrays.twinkleAmps[i] = 0;
-  arrays.twinkleSpeeds[i] = 0;
-  arrays.twinkleSharps[i] = 0;
-  arrays.twinklePhases[i] = 0;
+  const brightness = lerp(STAR_BRIGHTNESS_MIN, STAR_BRIGHTNESS_MAX, sizeNorm);
+  const color = sampleColor(sizeT < 0.3 ? PALETTE_DIM : PALETTE_BASE, rng());
+  const twinkle = rng() < TWINKLE_FRACTION ? computeTwinkler(rng) : NO_TWINKLE;
+  return { position, size, brightness, color, ...twinkle };
 };
 
 export const buildStarfieldSpec = (params: StarfieldSpecParams): StarfieldSpec => {
   const { layer, seed, count, radius } = params;
   const rng = mulberry32(seed);
 
-  const arrays: StarArrays = {
-    positions: new Float32Array(count * 3),
-    sizes: new Float32Array(count),
-    brightness: new Float32Array(count),
-    colors: new Float32Array(count * 3),
-    luminous: new Float32Array(count),
-    twinkleAmps: new Float32Array(count),
-    twinkleSpeeds: new Float32Array(count),
-    twinkleSharps: new Float32Array(count),
-    twinklePhases: new Float32Array(count),
-  };
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const brightness = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const luminous = new Float32Array(count);
+  const twinkleAmps = new Float32Array(count);
+  const twinkleSpeeds = new Float32Array(count);
+  const twinkleSharps = new Float32Array(count);
+  const twinklePhases = new Float32Array(count);
 
   for (let i = 0; i < count; i++) {
-    fillStar(i, radius, arrays, rng);
+    const v = computeStar(radius, rng);
+    positions[i * 3 + 0] = v.position[0];
+    positions[i * 3 + 1] = v.position[1];
+    positions[i * 3 + 2] = v.position[2];
+    sizes[i] = v.size;
+    brightness[i] = v.brightness;
+    colors[i * 3 + 0] = v.color[0];
+    colors[i * 3 + 1] = v.color[1];
+    colors[i * 3 + 2] = v.color[2];
+    twinkleAmps[i] = v.twinkleAmp;
+    twinkleSpeeds[i] = v.twinkleSpeed;
+    twinkleSharps[i] = v.twinkleSharp;
+    twinklePhases[i] = v.twinklePhase;
   }
 
   return {
     kind: 'starfield_spec',
     layer,
     count,
-    ...arrays,
+    positions,
+    sizes,
+    brightness,
+    colors,
+    luminous,
+    twinkleAmps,
+    twinkleSpeeds,
+    twinkleSharps,
+    twinklePhases,
   };
 };
