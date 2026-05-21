@@ -176,73 +176,50 @@ const computeStar = (radius: number, rng: Rng): StarValues => {
 export const buildStarfieldSpec = (params: StarfieldSpecParams): StarfieldSpec => {
   const { layer, seed, count, radius } = params;
   const rng = mulberry32(seed);
-
-  const positions = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
-  const brightness = new Float32Array(count);
-  const colors = new Float32Array(count * 3);
-  const luminous = new Float32Array(count);
-  const twinkleAmps = new Float32Array(count);
-  const twinkleSpeeds = new Float32Array(count);
-  const twinkleSharps = new Float32Array(count);
-  const twinklePhases = new Float32Array(count);
+  const arrays = {
+    positions: new Float32Array(count * 3),
+    sizes: new Float32Array(count),
+    brightness: new Float32Array(count),
+    colors: new Float32Array(count * 3),
+    luminous: new Float32Array(count),
+    twinkleAmps: new Float32Array(count),
+    twinkleSpeeds: new Float32Array(count),
+    twinkleSharps: new Float32Array(count),
+    twinklePhases: new Float32Array(count),
+  };
 
   for (let i = 0; i < count; i++) {
     const v = computeStar(radius, rng);
-    positions[i * 3 + 0] = v.position[0];
-    positions[i * 3 + 1] = v.position[1];
-    positions[i * 3 + 2] = v.position[2];
-    sizes[i] = v.size;
-    brightness[i] = v.brightness;
-    colors[i * 3 + 0] = v.color[0];
-    colors[i * 3 + 1] = v.color[1];
-    colors[i * 3 + 2] = v.color[2];
-    twinkleAmps[i] = v.twinkleAmp;
-    twinkleSpeeds[i] = v.twinkleSpeed;
-    twinkleSharps[i] = v.twinkleSharp;
-    twinklePhases[i] = v.twinklePhase;
+    arrays.positions[i * 3 + 0] = v.position[0];
+    arrays.positions[i * 3 + 1] = v.position[1];
+    arrays.positions[i * 3 + 2] = v.position[2];
+    arrays.sizes[i] = v.size;
+    arrays.brightness[i] = v.brightness;
+    arrays.colors[i * 3 + 0] = v.color[0];
+    arrays.colors[i * 3 + 1] = v.color[1];
+    arrays.colors[i * 3 + 2] = v.color[2];
+    arrays.twinkleAmps[i] = v.twinkleAmp;
+    arrays.twinkleSpeeds[i] = v.twinkleSpeed;
+    arrays.twinkleSharps[i] = v.twinkleSharp;
+    arrays.twinklePhases[i] = v.twinklePhase;
   }
 
-  const sortedBrightness = Array.from(brightness).slice().sort((a, b) => a - b);
-  const thresholdIdx = Math.floor(LUMINOUS_PERCENTILE * count);
-  const pThreshold = sortedBrightness[thresholdIdx] ?? 0;
-  const pMax = sortedBrightness[count - 1] ?? pThreshold;
-  const lumRange = Math.max(pMax - pThreshold, 1e-6);
-
-  for (let i = 0; i < count; i++) {
-    const b = brightness[i] ?? 0;
-    if (b < pThreshold) continue;
-    luminous[i] = Math.min(Math.max((b - pThreshold) / lumRange, 0), 1);
-  }
-
+  const sortedBrightness = Array.from(arrays.brightness).sort((a, b) => a - b);
+  const pThreshold = sortedBrightness[Math.floor(LUMINOUS_PERCENTILE * count)] ?? 0;
+  const lumRange = Math.max((sortedBrightness[count - 1] ?? pThreshold) - pThreshold, 1e-6);
   const recolorRng = mulberry32((seed ^ 0x10000000) >>> 0);
+
   for (let i = 0; i < count; i++) {
-    if ((luminous[i] ?? 0) <= 0) continue;
+    const b = arrays.brightness[i] ?? 0;
+    if (b < pThreshold) continue;
+    arrays.luminous[i] = Math.min(Math.max((b - pThreshold) / lumRange, 0), 1);
     const [cr, cg, cb] = sampleColor(PALETTE_LUMINOUS, recolorRng());
-    colors[i * 3 + 0] = cr;
-    colors[i * 3 + 1] = cg;
-    colors[i * 3 + 2] = cb;
+    arrays.colors[i * 3 + 0] = cr;
+    arrays.colors[i * 3 + 1] = cg;
+    arrays.colors[i * 3 + 2] = cb;
+    const amp = arrays.twinkleAmps[i] ?? 0;
+    if (amp > TWINKLE_AMP_LUMINOUS_CAP) arrays.twinkleAmps[i] = TWINKLE_AMP_LUMINOUS_CAP;
   }
 
-  for (let i = 0; i < count; i++) {
-    if ((luminous[i] ?? 0) <= 0) continue;
-    const amp = twinkleAmps[i] ?? 0;
-    if (amp <= TWINKLE_AMP_LUMINOUS_CAP) continue;
-    twinkleAmps[i] = TWINKLE_AMP_LUMINOUS_CAP;
-  }
-
-  return {
-    kind: 'starfield_spec',
-    layer,
-    count,
-    positions,
-    sizes,
-    brightness,
-    colors,
-    luminous,
-    twinkleAmps,
-    twinkleSpeeds,
-    twinkleSharps,
-    twinklePhases,
-  };
+  return { kind: 'starfield_spec', layer, count, ...arrays };
 };

@@ -59,7 +59,6 @@
       "files": ["**/services/renderer/starfieldSpec.ts"],
       "rules": {
         "unicorn/prefer-math-trunc": "off",
-        "max-lines-per-function": "off",
         "unicorn/no-array-sort": "off"
       }
     }
