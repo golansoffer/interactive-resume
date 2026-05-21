@@ -61,8 +61,6 @@ const bodyClassName = cn(
 // restrained ring/divider register (cyan is reserved for CTAs and
 // visual captions, not chrome).
 const cornerClassName = cn('pointer-events-none absolute h-8 w-8 border-(--color-fg)/15');
-const cornerTopLeft = cn(cornerClassName, 'left-4 top-4 border-l border-t');
-const cornerTopRight = cn(cornerClassName, 'right-4 top-4 border-r border-t');
 const cornerBottomLeft = cn(cornerClassName, 'bottom-4 left-4 border-b border-l');
 const cornerBottomRight = cn(cornerClassName, 'bottom-4 right-4 border-b border-r');
 
@@ -70,8 +68,8 @@ export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element 
   const { ships, hover, onHoverEnter, onHoverLeave } = useShipSelector();
   return (
     <div className={containerClassName} style={BACKDROP_STYLE}>
-      <span className={cornerTopLeft} aria-hidden="true" />
-      <span className={cornerTopRight} aria-hidden="true" />
+      
+      
       <span className={cornerBottomLeft} aria-hidden="true" />
       <span className={cornerBottomRight} aria-hidden="true" />
       <header className={headerClassName}>
