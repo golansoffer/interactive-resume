@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 export default defineConfig({
+  // Served at https://golansoffer.github.io/interactive-resume/ on GitHub Pages.
+  // Dev keeps '/' so localhost paths stay unchanged.
+  base: process.env['NODE_ENV'] === 'production' ? '/interactive-resume/' : '/',
   plugins: [
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
     react(),

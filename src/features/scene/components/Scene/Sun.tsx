@@ -9,6 +9,7 @@ import {
   PlaneGeometry,
   type Object3D,
 } from 'three';
+import { assetUrl } from '@/lib/assetUrl';
 import {
   PLANET_PATHS,
   COLORSHEET_PATH,
@@ -89,8 +90,8 @@ const useSunFrame = (
 };
 
 export const Sun = (props: SunProps): JSX.Element => {
-  const { scene } = useGLTF(PLANET_PATHS['sun_b']);
-  const colorsheet = useTexture(COLORSHEET_PATH);
+  const { scene } = useGLTF(assetUrl(PLANET_PATHS['sun_b']));
+  const colorsheet = useTexture(assetUrl(COLORSHEET_PATH));
 
   const prepared = useMemo(() => {
     configureColorsheet(colorsheet);

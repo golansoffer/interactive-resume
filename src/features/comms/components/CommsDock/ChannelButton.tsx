@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import { cn } from '@/lib/utils';
+import { assetUrl } from '@/lib/assetUrl';
 import type { Channel, ChannelId } from '../../types/channel';
 import type { MotionPreference } from '../../types/motion-preference';
 
@@ -44,7 +45,7 @@ export const ChannelButton = (props: ChannelButtonProps): JSX.Element => {
       onClick={() => props.onActivate(props.channel.id)}
       className={BUTTON_CLASSNAME}
     >
-      <img data-icon src={props.channel.iconSrc} alt="" className={ICON_CLASSNAME} />
+      <img data-icon src={assetUrl(props.channel.iconSrc)} alt="" className={ICON_CLASSNAME} />
       <span data-label className="hidden sm:inline">{props.channel.label}</span>
     </button>
   );

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, useTexture } from '@react-three/drei';
 import type { Group, MeshStandardMaterial, Object3D } from 'three';
+import { assetUrl } from '@/lib/assetUrl';
 import type { PlanetAssetId } from '../../types/planet';
 import {
   COLORSHEET_PATH,
@@ -55,8 +56,8 @@ const phaseFromAsset = (assetId: string): number => {
 };
 
 const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
-  const { scene } = useGLTF(PLANET_PATHS[assetId]);
-  const colorsheet = useTexture(COLORSHEET_PATH);
+  const { scene } = useGLTF(assetUrl(PLANET_PATHS[assetId]));
+  const colorsheet = useTexture(assetUrl(COLORSHEET_PATH));
   return useMemo(() => {
     configureColorsheet(colorsheet);
     const look = resolvePlanetLook(assetId);

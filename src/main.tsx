@@ -4,7 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 
-const router = createRouter({ routeTree });
+// Strip the trailing slash so TanStack treats '/' as empty (dev) and
+// '/interactive-resume/' as '/interactive-resume' (Pages prod).
+const basepath = import.meta.env.BASE_URL.replace(/\/$/u, '');
+const router = createRouter({ routeTree, basepath });
 
 declare module '@tanstack/react-router' {
   interface Register {

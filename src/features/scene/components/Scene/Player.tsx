@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
 import type { Group, Material, Mesh, Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
+import { assetUrl } from '@/lib/assetUrl';
 import { clampToColliders } from '../../services/renderer/clampToColliders';
 import { integrateMotion } from '../../services/renderer/integrateMotion';
 import type { CameraBasis } from '../../services/renderer/integrateMotion';
@@ -203,7 +204,7 @@ const usePlayerFrame = (
 };
 
 export const Player = (props: PlayerProps): JSX.Element => {
-  const { scene } = useGLTF(props.ship.glbPath);
+  const { scene } = useGLTF(assetUrl(props.ship.glbPath));
   const dressed = useMemo(() => cloneAndDressShip(scene), [scene]);
   const shipScale = useMemo<readonly [number, number, number]>(
     () => [props.ship.scale, props.ship.scale, props.ship.scale],

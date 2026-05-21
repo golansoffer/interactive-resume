@@ -1,5 +1,6 @@
 import type { CSSProperties, JSX, ReactNode } from 'react';
 import { Html } from '@react-three/drei';
+import { assetUrl } from '@/lib/assetUrl';
 import type { LabelProjection } from '../../types/projections';
 
 type PlanetLabelsProps = {
@@ -61,7 +62,7 @@ const plateStyleFor = (backdrop: 'light' | 'dark'): CSSProperties =>
 const renderLabelBody = (label: LabelProjection): ReactNode => {
   switch (label.kind) {
     case 'icon':
-      return <img src={label.iconSrc} alt="" style={ICON_STYLE} />;
+      return <img src={assetUrl(label.iconSrc)} alt="" style={ICON_STYLE} />;
     case 'text':
       return <span style={TEXT_STYLE}>{label.text}</span>;
   }

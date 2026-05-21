@@ -2,6 +2,7 @@ import type { CSSProperties, JSX } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, View } from '@react-three/drei';
 import { cn } from '@/lib/utils';
+import { assetUrl } from '@/lib/assetUrl';
 import { ShipSelector } from '../../components/ShipSelector/ShipSelector';
 import { ALL_SHIPS } from '../../types/shipRegistry';
 import type { ShipId } from '../../types/ship';
@@ -96,4 +97,4 @@ export const ShipSelectorWidget = (props: ShipSelectorWidgetProps): JSX.Element 
   );
 };
 
-for (const ship of ALL_SHIPS) useGLTF.preload(ship.glbPath);
+for (const ship of ALL_SHIPS) useGLTF.preload(assetUrl(ship.glbPath));

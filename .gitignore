@@ -9,3 +9,6 @@ build
 
 .tanstack
 src/routeTree.gen.ts
+
+.claude/
+CLAUDE.md

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Center, PerspectiveCamera, useGLTF } from '@react-three/drei';
 import type { Group } from 'three';
+import { assetUrl } from '@/lib/assetUrl';
 import type { ShipEntry } from '../../types/ship';
 import { tickRotation } from './tickRotation';
 
@@ -90,7 +91,7 @@ const StudioLights = ({ keyIntensity }: { readonly keyIntensity: number }): JSX.
 // empty. Clone per instance — static Kenney meshes need no skinning
 // fixup; `clone(true)` is the correct recursive clone.
 const useClonedScene = (glbPath: string): Group => {
-  const { scene } = useGLTF(glbPath);
+  const { scene } = useGLTF(assetUrl(glbPath));
   return useMemo(() => scene.clone(true), [scene]);
 };
 

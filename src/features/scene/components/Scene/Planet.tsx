@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Center, useGLTF, useTexture } from '@react-three/drei';
 import type { Object3D } from 'three';
+import { assetUrl } from '@/lib/assetUrl';
 import type { PlanetAssetId } from '../../types/planet';
 import type { PlanetRole } from '../../types/planet-role';
 import {
@@ -109,8 +110,8 @@ const usePlanetFrame = (
 };
 
 export const Planet = (props: PlanetProps): JSX.Element => {
-  const { scene } = useGLTF(PLANET_PATHS[props.assetId]);
-  const colorsheet = useTexture(COLORSHEET_PATH);
+  const { scene } = useGLTF(assetUrl(PLANET_PATHS[props.assetId]));
+  const colorsheet = useTexture(assetUrl(COLORSHEET_PATH));
   const look = useMemo(() => resolvePlanetLook(props.assetId), [props.assetId]);
   const phase = useMemo(() => phaseFromId(props.wiring.id), [props.wiring.id]);
   const plan = useMemo<PlanetVisualPlan>(() => {
@@ -148,5 +149,5 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   );
 };
 
-useTexture.preload(COLORSHEET_PATH);
-for (const path of Object.values(PLANET_PATHS)) useGLTF.preload(path);
+useTexture.preload(assetUrl(COLORSHEET_PATH));
+for (const path of Object.values(PLANET_PATHS)) useGLTF.preload(assetUrl(path));
