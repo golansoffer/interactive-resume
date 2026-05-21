@@ -20,6 +20,8 @@ const classify = (code: string): KeyClassification => {
     case 'KeyD':
     case 'ArrowRight':
       return { kind: 'continuous', intent: 'strafe_right' };
+    case 'Space':
+      return { kind: 'continuous', intent: 'boost' };
     case 'KeyE':
       return { kind: 'discrete', command: { kind: 'interact' } };
     case 'Escape':

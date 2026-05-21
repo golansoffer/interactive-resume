@@ -1,20 +1,18 @@
-import { asCompanyId } from '../../types/company';
-import type { CompanyEntry } from '../../types/company';
+import { asCompanyId, type CompanyEntry } from '../../types/company';
 
-const RING_RADIUS = 80;
-const RING_COUNT = 5;
-
-const ringPosition = (index: number): readonly [number, number, number] => {
-  const angle = (index / RING_COUNT) * Math.PI * 2;
-  const x = Math.cos(angle) * RING_RADIUS;
-  const z = Math.sin(angle) * RING_RADIUS;
-  return [x, 0, z];
-};
-
-const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
+// Order: current role first (innermost +Z stop), oldest role last. The tuple
+// shape carries the non-empty proof so downstream projections never need to
+// guard for an empty route.
+export const CAREER_ROUTE: readonly [
+  CompanyEntry,
+  CompanyEntry,
+  CompanyEntry,
+  CompanyEntry,
+  CompanyEntry,
+] = [
   {
     id: asCompanyId('mave'),
-    planet: { assetId: 'jupiter_b', placement: ringPosition(0) },
+    planet: { assetId: 'saturn_b', placement: [0, 0, 70] },
     info: {
       companyName: 'Mave',
       logo: { kind: 'with_icon', src: '/icons/mave.svg', backdrop: 'light' },
@@ -27,7 +25,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('8fig'),
-    planet: { assetId: 'saturn_b', placement: ringPosition(1) },
+    planet: { assetId: 'jupiter_b', placement: [0, 0, 170] },
     info: {
       companyName: '8fig',
       logo: { kind: 'with_icon', src: '/icons/8fig.svg', backdrop: 'light' },
@@ -44,7 +42,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('riverside'),
-    planet: { assetId: 'mars_b', placement: ringPosition(2) },
+    planet: { assetId: 'mars_b', placement: [0, 0, 250] },
     info: {
       companyName: 'Riverside',
       logo: { kind: 'with_icon', src: '/icons/riverside.svg', backdrop: 'light' },
@@ -61,7 +59,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('streamelements'),
-    planet: { assetId: 'venus_b', placement: ringPosition(3) },
+    planet: { assetId: 'earth_b', placement: [0, 0, 325] },
     info: {
       companyName: 'StreamElements',
       logo: { kind: 'with_icon', src: '/icons/streamelements.svg', backdrop: 'dark' },
@@ -78,7 +76,7 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
   },
   {
     id: asCompanyId('tgs'),
-    planet: { assetId: 'uranus_b', placement: ringPosition(4) },
+    planet: { assetId: 'venus_b', placement: [0, 0, 395] },
     info: {
       companyName: 'TGS',
       logo: { kind: 'no_icon' },
@@ -93,6 +91,6 @@ const COMPANY_ENTRIES: ReadonlyArray<CompanyEntry> = [
         'Frontend engineer on a complex, high-traffic travel engine used by major airline customers, including EasyJet and Singapore Airlines. Built a white-label frontend architecture for multiple enterprise clients.',
     },
   },
-];
+] as const;
 
-export const getCompanyEntries = (): ReadonlyArray<CompanyEntry> => COMPANY_ENTRIES;
+export const getCompanyEntries = (): ReadonlyArray<CompanyEntry> => CAREER_ROUTE;

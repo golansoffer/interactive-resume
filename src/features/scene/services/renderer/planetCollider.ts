@@ -1,4 +1,4 @@
-import type { Sphere } from './clampOutOfSphere';
+import type { Sphere } from '../../types/sphere';
 import type { BodyExtraction } from './planetTypes';
 
 // Builds the collision sphere for a planet from its extracted body and

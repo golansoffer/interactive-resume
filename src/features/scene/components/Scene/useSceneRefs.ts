@@ -1,79 +1,23 @@
 import type { RefObject } from 'react';
 import { useRef } from 'react';
 import type { Object3D } from 'three';
-import type { CompanyId } from '../../types/company';
-import type { Sphere } from '../../services/renderer/clampOutOfSphere';
-
-// TotalMap-style proof-bearing registry for per-planet activation radii.
-// `read` always returns `number` — the internal "not-yet-measured" case is
-// folded into 0 inside the boundary, never surfacing as `number | undefined`.
-// Callers never write lookup-shaped `??` or undefined-narrows at the call
-// site (Iron Law 3, producer-reshape rule).
-export type PlanetRadii = {
-  readonly read: (id: CompanyId) => number;
-  readonly write: (id: CompanyId, value: number) => void;
-};
-
-const createPlanetRadii = (): PlanetRadii => {
-  const inner = new Map<CompanyId, number>();
-  return {
-    read: (id) => {
-      const value = inner.get(id);
-      if (value === undefined) return 0;
-      return value;
-    },
-    write: (id, value) => {
-      inner.set(id, value);
-    },
-  };
-};
-
-// Visual-activation registry — independent of the SceneMachine's single
-// `revealing.objectId`. Each Planet asks "am I currently inside my own
-// activation radius?" and the answer is a per-planet boolean, so multiple
-// planets can be visually active at once if the player is within several
-// activation radii simultaneously. ProximityWatcher publishes the current
-// set every frame.
-export type PlanetActivations = {
-  readonly isActive: (id: CompanyId) => boolean;
-  readonly publish: (active: ReadonlySet<CompanyId>) => void;
-};
-
-const createPlanetActivations = (): PlanetActivations => {
-  let active: ReadonlySet<CompanyId> = new Set();
-  return {
-    isActive: (id) => active.has(id),
-    publish: (next) => {
-      active = next;
-    },
-  };
-};
-
-// String-keyed registry of sphere colliders. Sun and each planet register
-// their body sphere under a stable id; Player.tsx folds clampOutOfSphere
-// across list() each frame. Unregistered colliders never appear in list(),
-// so the fold's initial position is the identity when nothing is measured
-// yet — no `undefined` ever leaks (Iron Law 3).
-export type SphereColliders = {
-  readonly register: (id: string, sphere: Sphere) => void;
-  readonly list: () => ReadonlyArray<Sphere>;
-};
-
-export const createSphereColliders = (): SphereColliders => {
-  const inner = new Map<string, Sphere>();
-  return {
-    register: (id, sphere) => {
-      inner.set(id, sphere);
-    },
-    list: () => [...inner.values()],
-  };
-};
+import type {
+  BoostSignal,
+  PlanetActivations,
+  PlanetRadii,
+  SphereColliders,
+} from '../../types/scene-refs';
+import { createBoostSignal } from '../../services/registries/boostSignal';
+import { createPlanetActivations } from '../../services/registries/planetActivations';
+import { createPlanetRadii } from '../../services/registries/planetRadii';
+import { createSphereColliders } from '../../services/registries/sphereColliders';
 
 type SceneRefs = {
   readonly meshRef: RefObject<Object3D | null>;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
   readonly sphereCollidersRef: RefObject<SphereColliders>;
+  readonly boostSignalRef: RefObject<BoostSignal>;
 };
 
 export const useSceneRefs = (): SceneRefs => {
@@ -81,7 +25,8 @@ export const useSceneRefs = (): SceneRefs => {
   const planetRadiiRef = useRef<PlanetRadii>(createPlanetRadii());
   const planetActivationsRef = useRef<PlanetActivations>(createPlanetActivations());
   const sphereCollidersRef = useRef<SphereColliders>(createSphereColliders());
-  return { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef };
+  const boostSignalRef = useRef<BoostSignal>(createBoostSignal());
+  return { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef, boostSignalRef };
 };
 
 export type { SceneRefs };

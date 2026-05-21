@@ -2,17 +2,23 @@ import type { JSX, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
-import type { Group, Object3D, Vector3 as Vector3Impl } from 'three';
+import type { Group, Material, Mesh, Object3D, Vector3 as Vector3Impl } from 'three';
 import { Vector3 } from 'three';
-import { clampOutOfSphere } from '../../services/renderer/clampOutOfSphere';
+import { clampToColliders } from '../../services/renderer/clampToColliders';
 import { integrateMotion } from '../../services/renderer/integrateMotion';
 import type { CameraBasis } from '../../services/renderer/integrateMotion';
+import type { Sphere } from '../../types/sphere';
+import { createBoostController } from '../../services/renderer/boostController';
+import { createOrientationController } from '../../services/renderer/orientationController';
+import { parseTrailMaterial } from '../../services/renderer/parseTrailMaterial';
+import { deriveBasis, integratesIn } from '../../services/renderer/shipFrame';
 import { cloneAndDressShip } from '../../services/renderer/shipVisualPlan';
-import { MAX_SPEED, type Kinematics } from '../../types/kinematics';
+import type { Kinematics } from '../../types/kinematics';
 import type { IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
-import type { SphereColliders } from './useSceneRefs';
+import { ShipRig } from './ShipRig';
+import type { BoostSignal, PlanetActivations, SphereColliders } from '../../types/scene-refs';
 
 type PlayerProps = {
   readonly ship: ShipEntry;
@@ -21,192 +27,141 @@ type PlayerProps = {
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly meshRef: RefObject<Object3D | null>;
   readonly sphereCollidersRef: RefObject<SphereColliders>;
+  readonly planetActivationsRef: RefObject<PlanetActivations>;
+  readonly boostSignalRef: RefObject<BoostSignal>;
 };
 
-// Visual feel — banking and pitch derived from velocity in the camera basis.
-// Heading is held at the JSX-set base yaw (no input-driven yaw — camera-relative motion).
-// MAX_PITCH ≈ 12° nose-down at full forward thrust.
-const MAX_PITCH = Math.PI / 15;
-// MAX_ROLL ≈ 26° wing-dip at full strafe.
-const MAX_ROLL = Math.PI / 7;
-// ORIENT_LERP — ~300ms time-to-target; floaty and weighty.
-const ORIENT_LERP = 0.1;
+// Engine trail — two stacked Trails cross-faded by the smoothed boost factor.
+// 'base' (cyan) reads "engaged but cruising"; 'boost' (pale cyan) reads
+// "burst". drei applies lineWidth = 0.1 * variant.width; buffer holds
+// variant.length * 10 samples; at TRAIL_DECAY=1 and 60fps, the longer boost
+// trail covers ~1.33s of history (~18.6 world units at MAX_SPEED * 3).
+// decay > 1 writes the same sample N times per frame (Trail.js:52) which
+// causes visible banding at thick widths — keep decay = 1. Attenuation
+// pinches the tail.
+type TrailRole = 'base' | 'boost';
 
-// Engine trail — cyan wake behind the speeder. Anchored to TAIL_OFFSET_Z
-// inside the flip group so heading lerp carries the trail along.
-// drei applies lineWidth = 0.1 * TRAIL_WIDTH; buffer holds TRAIL_LENGTH * 10
-// samples; at TRAIL_DECAY=1 and 60fps, ~0.667s of history (~9.3 world units
-// at MAX_SPEED). decay > 1 writes the same sample N times per frame
-// (Trail.js:52), which is invisible at thin widths but causes visible
-// banding/graininess at thick widths — keep decay = 1. Attenuation
-// pinches the tail to a point.
+type TrailVariant = {
+  readonly role: TrailRole;
+  readonly color: string;
+  readonly width: number;
+  readonly length: number;
+  readonly initialOpacity: 0 | 1;
+};
+
+const TRAIL_VARIANTS: readonly [TrailVariant, TrailVariant] = [
+  { role: 'base', color: '#5fd6ff', width: 6, length: 4, initialOpacity: 1 },
+  { role: 'boost', color: '#aeefff', width: 8, length: 8, initialOpacity: 0 },
+] as const;
+
 const TAIL_OFFSET_Z = 0.75;
-const TRAIL_WIDTH = 6.0;
-const TRAIL_LENGTH = 4;
-const TRAIL_COLOR = '#5fd6ff';
 const TRAIL_DECAY = 1;
 const TRAIL_ATTENUATION = (t: number): number => t * t;
 
-// Ship-local studio rig — additive on top of the scene's global ambient +
-// key light, so the craft carries its own warm/cool/rim signature in
-// ship-world axes regardless of where it flies relative to the sun.
-const RIG_KEY_COLOR = '#fff5e8';
-const RIG_FILL_COLOR = '#a8d4ff';
-const RIG_RIM_COLOR = '#5fd6ff';
-const RIG_HEMI_TOP = '#7aa8ff';
-const RIG_HEMI_BOTTOM = '#08111e';
+// Cross-fade by role: 'base' fades out as boost ramps in; 'boost' fades in
+// as boost ramps in. Sum stays at 1 so the visual brightness is constant.
+const opacityFor = (role: TrailRole, factor: number): number =>
+  role === 'base' ? 1 - factor : factor;
 
-const RIG_KEY_INTENSITY = 2.4;
-const RIG_FILL_INTENSITY = 0.7;
-const RIG_RIM_INTENSITY = 1.4;
-const RIG_HEMI_INTENSITY = 0.35;
+type TrailMaterialSlot = RefObject<Material | null>;
+type TrailMaterials = { readonly [R in TrailRole]: TrailMaterialSlot };
 
-// Idle motion — sine oscillations always present, scaled down with speed
-// (see IDLE_RATIO_FLOOR in computeIdleMotion). The aircraft is the LIGHT
-// object in the scene, so its flutter should always be visible — contrast
-// against the heavier, slower-bobbing planets. Two distinct frequencies
-// so bob and sway never lock into a single rhythm.
-const IDLE_BOB_AMPLITUDE = 0.12;
-const IDLE_BOB_FREQ_HZ = 0.7;
-// IDLE_SWAY_AMPLITUDE ≈ 3.3° applied to rotation.z = roll (wing dip), not lateral position.
-const IDLE_SWAY_AMPLITUDE = Math.PI / 55;
-const IDLE_SWAY_FREQ_HZ = 0.55;
-const IDLE_RATIO_FLOOR = 0.4;
-
-// Velocity-derived heading — outer yaw lerps toward atan2(vx, vz) so the
-// ship faces its motion direction on diagonal moves. Held below threshold
-// to avoid jitter at near-zero speed.
-const HEADING_LERP = 0.06;
-const HEADING_THRESHOLD = 0.5;
-const TWO_PI = Math.PI * 2;
-
-const FORWARD_EPSILON = 1e-6;
-
-const DEFAULT_BASIS: CameraBasis = {
-  forward: { x: 0, y: 0, z: -1 },
-  right: { x: 1, y: 0, z: 0 },
-};
-
-const integratesIn = (state: SceneState): boolean =>
-  state.kind === 'playing' || state.kind === 'revealing';
-
-const deriveBasis = (
-  cameraForward: Vector3Impl,
-  forwardScratch: Vector3Impl,
-  rightScratch: Vector3Impl,
-  upScratch: Vector3Impl,
-): CameraBasis => {
-  forwardScratch.copy(cameraForward);
-  forwardScratch.y = 0;
-  const forwardLength = forwardScratch.length();
-  if (forwardLength < FORWARD_EPSILON) return DEFAULT_BASIS;
-  forwardScratch.divideScalar(forwardLength);
-  rightScratch.crossVectors(forwardScratch, upScratch);
-  return {
-    forward: { x: forwardScratch.x, y: forwardScratch.y, z: forwardScratch.z },
-    right: { x: rightScratch.x, y: rightScratch.y, z: rightScratch.z },
+// Capture-callback for drei's Trail ref. drei forwards a Mesh ref; we
+// keep the Mesh's material handle so the frame loop can drive opacity by
+// role. Side-effects (transparent / depthWrite / initialOpacity) are
+// written once at capture time.
+const writeTrailMaterial =
+  (slot: TrailMaterialSlot, variant: TrailVariant) =>
+  (mesh: Mesh | null): void => {
+    if (mesh === null) {
+      slot.current = null;
+      return;
+    }
+    const mat = parseTrailMaterial(mesh);
+    mat.transparent = true;
+    mat.opacity = variant.initialOpacity;
+    mat.depthWrite = false;
+    slot.current = mat;
   };
+
+const writeTrailOpacities = (mats: TrailMaterials, factor: number): void => {
+  for (const variant of TRAIL_VARIANTS) {
+    const mat = mats[variant.role].current;
+    if (mat === null) continue;
+    mat.opacity = opacityFor(variant.role, factor);
+  }
 };
 
-type IdleMotion = { readonly bobY: number; readonly swayZ: number };
-
-const computeIdleMotion = (speedRatio: number, time: number): IdleMotion => {
-  // Floor at IDLE_RATIO_FLOOR so the ship keeps fluttering during flight,
-  // not just at rest. Lighter object = always-visible micro-motion.
-  const idleRatio = IDLE_RATIO_FLOOR + (1 - IDLE_RATIO_FLOOR) * (1 - speedRatio);
-  return {
-    bobY: Math.sin(time * IDLE_BOB_FREQ_HZ * 2 * Math.PI) * IDLE_BOB_AMPLITUDE * idleRatio,
-    swayZ: Math.sin(time * IDLE_SWAY_FREQ_HZ * 2 * Math.PI) * IDLE_SWAY_AMPLITUDE * idleRatio,
-  };
+type Scratch = {
+  readonly cameraWorldDir: Vector3Impl;
+  readonly forward: Vector3Impl;
+  readonly right: Vector3Impl;
+  readonly up: Vector3Impl;
 };
 
-type RotationTargets = { readonly pitch: number; readonly roll: number };
+const createScratch = (): Scratch => ({
+  cameraWorldDir: new Vector3(),
+  forward: new Vector3(),
+  right: new Vector3(),
+  up: new Vector3(0, 1, 0),
+});
 
-const computeRotationTargets = (
-  velocity: { readonly x: number; readonly z: number },
+// Integrate one frame and clamp the result out of registered collider
+// spheres. Identity short-circuit (same reference) avoids reallocating the
+// Kinematics object when no collider clamp was needed.
+const stepKinematics = (
+  current: Kinematics,
+  intents: IntentStream,
   basis: CameraBasis,
-): RotationTargets => {
-  const forwardSpeed = velocity.x * basis.forward.x + velocity.z * basis.forward.z;
-  const rightSpeed = velocity.x * basis.right.x + velocity.z * basis.right.z;
-  return {
-    pitch: -(forwardSpeed / MAX_SPEED) * MAX_PITCH,
-    roll: -(rightSpeed / MAX_SPEED) * MAX_ROLL,
-  };
+  multiplier: 1 | 3,
+  delta: number,
+  colliders: ReadonlyArray<Sphere>,
+): Kinematics => {
+  const integrated = integrateMotion(current, intents.current, delta, basis, multiplier);
+  const clampedPosition = clampToColliders(integrated.position, colliders);
+  if (clampedPosition === integrated.position) return integrated;
+  return { ...integrated, position: clampedPosition };
 };
 
-const applyHeadingLerp = (
-  mesh: Object3D,
-  velocity: { readonly x: number; readonly z: number },
-  speed: number,
+const usePlayerFrame = (
+  props: PlayerProps,
+  visualRef: RefObject<Group | null>,
+  trailMats: TrailMaterials,
 ): void => {
-  if (speed <= HEADING_THRESHOLD) return;
-  const targetHeading = Math.atan2(velocity.x, velocity.z);
-  let headingDelta = targetHeading - mesh.rotation.y;
-  while (headingDelta > Math.PI) {
-    headingDelta -= TWO_PI;
-  }
-  while (headingDelta < -Math.PI) {
-    headingDelta += TWO_PI;
-  }
-  mesh.rotation.y += headingDelta * HEADING_LERP;
-};
-
-const usePlayerFrame = (props: PlayerProps, visualRef: RefObject<Group | null>): void => {
   const camera = useThree((three) => three.camera);
-  const cameraWorldDir = useMemo(() => new Vector3(), []);
-  const forwardScratch = useMemo(() => new Vector3(), []);
-  const rightScratch = useMemo(() => new Vector3(), []);
-  const upScratch = useMemo(() => new Vector3(0, 1, 0), []);
-  const baselinePitch = useRef(0);
-  const baselineRoll = useRef(0);
+  const scratch = useMemo<Scratch>(createScratch, []);
+  const boostController = useMemo(
+    () => createBoostController(props.boostSignalRef.current),
+    [props.boostSignalRef],
+  );
+  const orientationController = useMemo(() => createOrientationController(), []);
 
   useFrame((state, delta) => {
     if (!integratesIn(props.sceneState)) return;
     const mesh = props.meshRef.current;
     if (mesh === null) return;
-    camera.getWorldDirection(cameraWorldDir);
-    const basis = deriveBasis(cameraWorldDir, forwardScratch, rightScratch, upScratch);
-    const integrated = integrateMotion(
+
+    const boostHeld = props.intents.current.has('boost');
+    const inAnyActivation = props.planetActivationsRef.current.anyActive();
+    const boost = boostController.tick(boostHeld, inAnyActivation, delta);
+
+    camera.getWorldDirection(scratch.cameraWorldDir);
+    const basis = deriveBasis(scratch.cameraWorldDir, scratch.forward, scratch.right, scratch.up);
+
+    const next = stepKinematics(
       props.kinematicsRef.current,
-      props.intents.current,
-      delta,
+      props.intents,
       basis,
+      boost.multiplier,
+      delta,
+      props.sphereCollidersRef.current.list(),
     );
-    const clampedPosition = props.sphereCollidersRef.current
-      .list()
-      .reduce((pos, sphere) => clampOutOfSphere(pos, sphere), integrated.position);
-    const next: Kinematics =
-      clampedPosition === integrated.position
-        ? integrated
-        : { ...integrated, position: clampedPosition };
     props.kinematicsRef.current = next;
 
-    const speed = Math.hypot(next.velocity.x, next.velocity.z);
-    const speedRatio = speed === 0 ? 0 : Math.min(1, speed / MAX_SPEED);
-    const idle = computeIdleMotion(speedRatio, state.clock.elapsedTime);
-    mesh.position.set(next.position.x, next.position.y, next.position.z);
-    // Bob lives on the visual sub-group so it doesn't pollute the trail anchor's transform.
-    const visual = visualRef.current;
-    if (visual !== null) visual.position.y = idle.bobY;
-
-    applyHeadingLerp(mesh, next.velocity, speed);
-
-    const target = computeRotationTargets(next.velocity, basis);
-    baselinePitch.current += (target.pitch - baselinePitch.current) * ORIENT_LERP;
-    baselineRoll.current += (target.roll - baselineRoll.current) * ORIENT_LERP;
-    mesh.rotation.x = baselinePitch.current;
-    mesh.rotation.z = baselineRoll.current + idle.swayZ;
+    orientationController.tick(mesh, visualRef.current, next, basis, state.clock.elapsedTime);
+    writeTrailOpacities(trailMats, boost.factor);
   });
 };
-
-const ShipRig = (): JSX.Element => (
-  <>
-    <directionalLight position={[6, 8, 5]} intensity={RIG_KEY_INTENSITY} color={RIG_KEY_COLOR} />
-    <directionalLight position={[-5, 4, 3]} intensity={RIG_FILL_INTENSITY} color={RIG_FILL_COLOR} />
-    <directionalLight position={[0, 3, -6]} intensity={RIG_RIM_INTENSITY} color={RIG_RIM_COLOR} />
-    <hemisphereLight args={[RIG_HEMI_TOP, RIG_HEMI_BOTTOM, RIG_HEMI_INTENSITY]} />
-  </>
-);
 
 export const Player = (props: PlayerProps): JSX.Element => {
   const { scene } = useGLTF(props.ship.glbPath);
@@ -216,7 +171,10 @@ export const Player = (props: PlayerProps): JSX.Element => {
     [props.ship.scale],
   );
   const visualRef = useRef<Group | null>(null);
-  usePlayerFrame(props, visualRef);
+  const baseSlot = useRef<Material | null>(null);
+  const boostSlot = useRef<Material | null>(null);
+  const trailMats = useMemo<TrailMaterials>(() => ({ base: baseSlot, boost: boostSlot }), []);
+  usePlayerFrame(props, visualRef, trailMats);
   return (
     <group ref={props.meshRef} scale={shipScale} rotation={[0, 0, 0, 'YXZ']}>
       {/* Rig sits outside the 180° flip so key/fill/rim stay in ship-world axes. */}
@@ -229,15 +187,19 @@ export const Player = (props: PlayerProps): JSX.Element => {
         </group>
       </group>
       <group rotation={[0, Math.PI, 0]}>
-        <Trail
-          width={TRAIL_WIDTH}
-          length={TRAIL_LENGTH}
-          color={TRAIL_COLOR}
-          decay={TRAIL_DECAY}
-          attenuation={TRAIL_ATTENUATION}
-        >
-          <group position={[0, 0, TAIL_OFFSET_Z]} />
-        </Trail>
+        {TRAIL_VARIANTS.map((variant) => (
+          <Trail
+            key={variant.role}
+            width={variant.width}
+            length={variant.length}
+            color={variant.color}
+            decay={TRAIL_DECAY}
+            attenuation={TRAIL_ATTENUATION}
+            ref={writeTrailMaterial(trailMats[variant.role], variant)}
+          >
+            <group position={[0, 0, TAIL_OFFSET_Z]} />
+          </Trail>
+        ))}
       </group>
     </group>
   );

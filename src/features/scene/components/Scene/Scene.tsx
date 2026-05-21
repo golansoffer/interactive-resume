@@ -1,35 +1,37 @@
 import type { JSX, RefObject } from 'react';
 import { useMemo } from 'react';
 import type { CompanyEntry } from '../../types/company';
+import type { FillerPlanetEntry } from '../../types/filler-planet';
 import type { IntentStream } from '../../types/intent';
-import type { LabelProjection, PlanetProjection } from '../../types/projections';
+import type { LabelProjection } from '../../types/projections';
+import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
 import type { Kinematics } from '../../types/kinematics';
 import { Asteroids } from './Asteroids';
 import { Companies } from './Companies';
+import { FillerPlanets } from './FillerPlanets';
 import { FollowCamera } from './FollowCamera';
 import { PlanetLabels } from './PlanetLabels';
 import { Player } from './Player';
 import { ProximityWatcher } from './ProximityWatcher';
 import { Starfield } from './Starfield';
 import { Sun } from './Sun';
+import { WaypointBeam } from './WaypointBeam';
+import { WaypointMarker } from './WaypointMarker';
 import { useSceneRefs } from './useSceneRefs';
 
 type SceneProps = {
   readonly ship: ShipEntry;
   readonly state: SceneState;
   readonly entries: ReadonlyArray<CompanyEntry>;
+  readonly fillerPlanets: ReadonlyArray<FillerPlanetEntry>;
   readonly intents: IntentStream;
   readonly onEvent: (event: SceneEvent) => void;
   readonly kinematicsRef: RefObject<Kinematics>;
+  readonly routeProjection: RouteProjection;
 };
-
-const projectPlanets = (
-  entries: ReadonlyArray<CompanyEntry>,
-): ReadonlyArray<PlanetProjection> =>
-  entries.map((entry) => ({ id: entry.id, planet: entry.planet }));
 
 const projectLabels = (
   entries: ReadonlyArray<CompanyEntry>,
@@ -48,9 +50,9 @@ const projectLabels = (
   });
 
 export const Scene = (props: SceneProps): JSX.Element => {
-  const { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef } = useSceneRefs();
+  const { meshRef, planetRadiiRef, planetActivationsRef, sphereCollidersRef, boostSignalRef } =
+    useSceneRefs();
 
-  const planets = useMemo(() => projectPlanets(props.entries), [props.entries]);
   const labels = useMemo(() => projectLabels(props.entries), [props.entries]);
 
   return (
@@ -61,7 +63,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
       <ambientLight intensity={0.4} />
       <directionalLight position={[10, 18, 6]} intensity={1.6} castShadow={false} />
       <directionalLight position={[-8, 6, -10]} intensity={0.2} castShadow={false} />
-      <FollowCamera kinematicsRef={props.kinematicsRef} />
+      <FollowCamera kinematicsRef={props.kinematicsRef} boostSignalRef={boostSignalRef} />
       <Player
         ship={props.ship}
         sceneState={props.state}
@@ -69,18 +71,22 @@ export const Scene = (props: SceneProps): JSX.Element => {
         kinematicsRef={props.kinematicsRef}
         meshRef={meshRef}
         sphereCollidersRef={sphereCollidersRef}
+        planetActivationsRef={planetActivationsRef}
+        boostSignalRef={boostSignalRef}
       />
       <Companies
-        planets={planets}
+        entries={props.entries}
         planetRadiiRef={planetRadiiRef}
         planetActivationsRef={planetActivationsRef}
         sphereCollidersRef={sphereCollidersRef}
       />
+      <FillerPlanets fillerPlanets={props.fillerPlanets} sphereCollidersRef={sphereCollidersRef} />
       <Asteroids />
       <PlanetLabels labels={labels} />
+      <WaypointBeam projection={props.routeProjection} />
+      <WaypointMarker projection={props.routeProjection} kinematicsRef={props.kinematicsRef} />
       <ProximityWatcher
         sceneState={props.state}
-        entries={props.entries}
         kinematicsRef={props.kinematicsRef}
         planetRadiiRef={planetRadiiRef}
         planetActivationsRef={planetActivationsRef}

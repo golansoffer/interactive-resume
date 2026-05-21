@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { AdditiveBlending, ShaderMaterial, Vector3 } from 'three';
-import { createSunCoronaMaterial, createSunHaloMaterial } from './sunMaterial';
+import {
+  createSunCoronaMaterial,
+  createSunHaloMaterial,
+  type SunBillboardMaterial,
+} from './sunMaterial';
 
-const readVec3 = (material: ShaderMaterial, name: string): Vector3 => {
-  const u = material.uniforms[name];
+const readVec3 = (billboard: SunBillboardMaterial, name: string): Vector3 => {
+  const u = billboard.material.uniforms[name];
   if (u === undefined) throw new Error(`${name} uniform missing`);
   const value: unknown = u.value;
   if (!(value instanceof Vector3)) throw new Error(`${name}.value is not a Vector3`);
   return value;
 };
 
-const readNumber = (material: ShaderMaterial, name: string): number => {
-  const u = material.uniforms[name];
+const readNumber = (billboard: SunBillboardMaterial, name: string): number => {
+  const u = billboard.material.uniforms[name];
   if (u === undefined) throw new Error(`${name} uniform missing`);
   const value = u.value;
   if (typeof value !== 'number') throw new Error(`${name}.value is not a number`);
@@ -19,12 +23,14 @@ const readNumber = (material: ShaderMaterial, name: string): number => {
 };
 
 describe('createSunCoronaMaterial', () => {
-  it('returns a ShaderMaterial instance', () => {
-    expect(createSunCoronaMaterial()).toBeInstanceOf(ShaderMaterial);
+  it('returns a typed handle wrapping a ShaderMaterial instance', () => {
+    const handle = createSunCoronaMaterial();
+    expect(handle.material).toBeInstanceOf(ShaderMaterial);
+    expect(typeof handle.setOpacityScale).toBe('function');
   });
 
   it('uses additive blending with depthWrite off and tone mapping off', () => {
-    const m = createSunCoronaMaterial();
+    const m = createSunCoronaMaterial().material;
     expect(m.blending).toBe(AdditiveBlending);
     expect(m.depthWrite).toBe(false);
     expect(m.transparent).toBe(true);
@@ -56,15 +62,23 @@ describe('createSunCoronaMaterial', () => {
   it('exposes uPeakOpacity equal to 1 (corona is bright)', () => {
     expect(readNumber(createSunCoronaMaterial(), 'uPeakOpacity')).toBe(1);
   });
+
+  it('setOpacityScale mutates the uOpacityScale uniform value', () => {
+    const handle = createSunCoronaMaterial();
+    handle.setOpacityScale(0.42);
+    expect(readNumber(handle, 'uOpacityScale')).toBe(0.42);
+  });
 });
 
 describe('createSunHaloMaterial', () => {
-  it('returns a ShaderMaterial instance', () => {
-    expect(createSunHaloMaterial()).toBeInstanceOf(ShaderMaterial);
+  it('returns a typed handle wrapping a ShaderMaterial instance', () => {
+    const handle = createSunHaloMaterial();
+    expect(handle.material).toBeInstanceOf(ShaderMaterial);
+    expect(typeof handle.setOpacityScale).toBe('function');
   });
 
   it('uses additive blending with depthWrite off and tone mapping off', () => {
-    const m = createSunHaloMaterial();
+    const m = createSunHaloMaterial().material;
     expect(m.blending).toBe(AdditiveBlending);
     expect(m.depthWrite).toBe(false);
     expect(m.transparent).toBe(true);
@@ -86,5 +100,11 @@ describe('createSunHaloMaterial', () => {
 
   it('exposes uOpacityScale initialised to 1', () => {
     expect(readNumber(createSunHaloMaterial(), 'uOpacityScale')).toBe(1);
+  });
+
+  it('setOpacityScale mutates the uOpacityScale uniform value', () => {
+    const handle = createSunHaloMaterial();
+    handle.setOpacityScale(0.17);
+    expect(readNumber(handle, 'uOpacityScale')).toBe(0.17);
   });
 });

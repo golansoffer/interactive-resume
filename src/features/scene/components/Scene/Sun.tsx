@@ -8,7 +8,6 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   type Object3D,
-  type ShaderMaterial,
 } from 'three';
 import {
   PLANET_PATHS,
@@ -20,20 +19,20 @@ import { planetCollider } from '../../services/renderer/planetCollider';
 import {
   createSunCoronaMaterial,
   createSunHaloMaterial,
+  type SunBillboardMaterial,
 } from '../../services/renderer/sunMaterial';
 import { sunAnimationAt } from '../../services/renderer/sunAnimation';
-import type { SphereColliders } from './useSceneRefs';
+import type { SphereColliders } from '../../types/scene-refs';
 
 type SunProps = {
   readonly sphereCollidersRef: RefObject<SphereColliders>;
 };
 
-// Sun sits well outside the planet ring (radius 80) on the same horizontal
-// plane (y = 0) the ship and planets occupy, so flying straight at the sun
-// would pierce its center rather than pass under it. From inside the ring
-// the sun reads as a distant beacon; the corona/halo billboards never
-// overlap the gameplay area on screen.
-const SUN_POSITION: readonly [number, number, number] = [180, 0, -320];
+// Sun sits on-axis at the journey terminus past Venus, on the same
+// horizontal plane (y = 0) the ship and planets occupy. From inside the
+// ring the sun reads as a distant beacon at the end of the corridor; the
+// corona/halo billboards never overlap the gameplay area on screen.
+const SUN_POSITION: readonly [number, number, number] = [0, 0, 560];
 // Scaled up from the original 5×-planets to compensate for distance — at
 // ~367 world units away, this reads as a large but clearly-distant sun.
 const SUN_BODY_SCALE = 17;
@@ -65,25 +64,15 @@ const cloneAndOverride = (source: Object3D): Object3D => {
   return cloned;
 };
 
-type Billboard = { readonly mesh: Mesh; readonly material: ShaderMaterial };
+type Billboard = { readonly mesh: Mesh; readonly billboard: SunBillboardMaterial };
 
 // Billboards live OUTSIDE the body's scaled group, so we size them in world
 // units directly: world diameter = bodyRadiusLocal * 2 * SUN_BODY_SCALE * scale.
-const makeBillboard = (material: ShaderMaterial, worldDiameter: number): Billboard => {
+const makeBillboard = (billboard: SunBillboardMaterial, worldDiameter: number): Billboard => {
   const geometry = new PlaneGeometry(worldDiameter, worldDiameter);
-  const mesh = new Mesh(geometry, material);
+  const mesh = new Mesh(geometry, billboard.material);
   mesh.renderOrder = 1;
-  return { mesh, material };
-};
-
-// Uniform names live in a string-indexed map (Three's design — the type
-// system's actual blind spot). We narrow at read time and throw on missing
-// keys. This is the parse-boundary pattern, not a defensive runtime check
-// on typed values.
-const setOpacityScale = (material: ShaderMaterial, value: number): void => {
-  const u = material.uniforms['uOpacityScale'];
-  if (u === undefined) throw new Error('uOpacityScale uniform missing on sun material');
-  u.value = value;
+  return { mesh, billboard };
 };
 
 const useSunFrame = (
@@ -95,8 +84,8 @@ const useSunFrame = (
     const body = bodyRef.current;
     const animation = sunAnimationAt(state.clock.elapsedTime);
     if (body !== null) body.rotation.y = animation.bodyRotationY;
-    setOpacityScale(corona.material, animation.coronaOpacityScale);
-    setOpacityScale(halo.material, animation.haloOpacityScale);
+    corona.billboard.setOpacityScale(animation.coronaOpacityScale);
+    halo.billboard.setOpacityScale(animation.haloOpacityScale);
     corona.mesh.quaternion.copy(state.camera.quaternion);
     halo.mesh.quaternion.copy(state.camera.quaternion);
   });

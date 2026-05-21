@@ -1,30 +1,28 @@
 import type { JSX, RefObject } from 'react';
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { proximityCheck } from '../../services/renderer/proximityCheck';
 import type { Kinematics } from '../../types/kinematics';
-import type { CompanyEntry, CompanyId } from '../../types/company';
+import type { CompanyId } from '../../types/company';
 import type { CompanyInfo } from '../../types/company-info';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
-import type { PlanetActivations, PlanetRadii } from './useSceneRefs';
+import type { PlanetActivations, PlanetRadii } from '../../types/scene-refs';
 
 type ProximityWatcherProps = {
   readonly sceneState: SceneState;
-  readonly entries: ReadonlyArray<CompanyEntry>;
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly planetRadiiRef: RefObject<PlanetRadii>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
   readonly onEvent: (event: SceneEvent) => void;
 };
 
-type StaticTargetFields = {
+type ProximityTarget = {
   readonly id: CompanyId;
   readonly info: CompanyInfo;
   readonly placement: readonly [number, number, number];
+  readonly radius: number;
 };
-
-type ProximityTarget = StaticTargetFields & { readonly radius: number };
 
 const EMPTY: ReadonlySet<CompanyId> = new Set<CompanyId>();
 
@@ -34,27 +32,19 @@ const emitsIn = (state: SceneState): boolean =>
 const suppressesEnter = (state: SceneState, id: CompanyId): boolean =>
   state.kind === 'revealing' && state.objectId === id;
 
-const projectStaticTargets = (
-  entries: ReadonlyArray<CompanyEntry>,
-): ReadonlyArray<StaticTargetFields> =>
-  entries.map((entry) => ({
-    id: entry.id,
-    info: entry.info,
-    placement: entry.planet.placement,
-  }));
-
-const resolveTargets = (
-  staticTargets: ReadonlyArray<StaticTargetFields>,
-  radii: PlanetRadii,
-): ReadonlyArray<ProximityTarget> =>
-  staticTargets.map((t) => ({ ...t, radius: radii.read(t.id) }));
+// Materialize the per-frame target list by iterating the registry — Planet
+// pushed (info, placement) plus the live radius cell at attach time, so no
+// id-keyed join is required at the call site.
+const collectTargets = (radii: PlanetRadii): ReadonlyArray<ProximityTarget> => {
+  const out: ProximityTarget[] = [];
+  radii.forEach((id, info, placement, radius) => {
+    out.push({ id, info, placement, radius });
+  });
+  return out;
+};
 
 export const ProximityWatcher = (props: ProximityWatcherProps): JSX.Element => {
   const previousRef = useRef<ReadonlySet<CompanyId>>(EMPTY);
-  const staticTargets = useMemo(
-    () => projectStaticTargets(props.entries),
-    [props.entries],
-  );
 
   useFrame(() => {
     if (!emitsIn(props.sceneState)) {
@@ -64,7 +54,7 @@ export const ProximityWatcher = (props: ProximityWatcherProps): JSX.Element => {
     }
 
     const position = props.kinematicsRef.current.position;
-    const targets = resolveTargets(staticTargets, props.planetRadiiRef.current);
+    const targets = collectTargets(props.planetRadiiRef.current);
     const matches = proximityCheck(position, targets);
     const previous = previousRef.current;
     const current = new Set<CompanyId>(matches.map((m) => m.id));

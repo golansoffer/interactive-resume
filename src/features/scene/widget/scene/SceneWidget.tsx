@@ -16,7 +16,16 @@ type SceneWidgetProps = {
 };
 
 export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
-  const { state, entries, intents, onEvent, revealProjection, kinematicsRef } = useScene();
+  const {
+    state,
+    entries,
+    fillerPlanets,
+    intents,
+    onEvent,
+    revealProjection,
+    routeProjection,
+    kinematicsRef,
+  } = useScene();
 
   return (
     <>
@@ -25,9 +34,11 @@ export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
           ship={props.ship}
           state={state}
           entries={entries}
+          fillerPlanets={fillerPlanets}
           intents={intents}
           onEvent={onEvent}
           kinematicsRef={kinematicsRef}
+          routeProjection={routeProjection}
         />
       </Canvas>
       <CompanyInfoPanel projection={revealProjection} />

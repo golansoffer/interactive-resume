@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { Center, Trail, useGLTF } from '@react-three/drei';
 import { AdditiveBlending, NormalBlending } from 'three';
 import type { Blending, Mesh, Object3D } from 'three';
+import { parseTrailMaterial } from '../../services/renderer/parseTrailMaterial';
 
 type AsteroidAssetId = 'moon_a' | 'moon_b' | 'mercury_a' | 'mercury_b';
 
@@ -41,8 +42,8 @@ const ASTEROID_TRAIL_LENGTH = 3;
 const ASTEROID_TRAIL_COLOR = '#6e7378';
 const ASTEROID_TRAIL_OPACITY = 0.22;
 
-const COMET_SCALE_MIN = 0.2;
-const COMET_SCALE_MAX = 0.45;
+const COMET_SCALE_MIN = 0.1;
+const COMET_SCALE_MAX = 0.225;
 const COMET_VEL_MIN = 0.05;
 const COMET_VEL_MAX = 0.13;
 // Comet trail — long icy streak, additive-blended for that AAA "glow"
@@ -187,15 +188,14 @@ type HorizonBodyProps = {
   readonly meshRef: (node: Object3D | null) => void;
 };
 
-// drei's Trail forwards a ref to its inner Mesh. We can read mesh.material
-// (which is a Material — base class supports transparent / opacity / blending /
-// depthWrite) and mutate those props directly, no meshline import needed.
+// drei's Trail forwards a ref to its inner Mesh. parseTrailMaterial reads
+// the single Material drei contracts to produce; the array case is a
+// library-contract violation and throws at the parse boundary (Iron Law 3).
 const tweakTrailMaterial =
   (spec: TrailSpec) =>
   (mesh: Mesh | null): void => {
     if (mesh === null) return;
-    const mat = mesh.material;
-    if (Array.isArray(mat)) return;
+    const mat = parseTrailMaterial(mesh);
     mat.transparent = true;
     mat.opacity = spec.opacity;
     mat.depthWrite = false;

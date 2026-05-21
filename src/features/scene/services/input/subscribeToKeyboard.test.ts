@@ -75,6 +75,7 @@ describe('subscribeToKeyboard', () => {
       { code: 'ArrowLeft', intent: 'strafe_left' },
       { code: 'KeyD', intent: 'strafe_right' },
       { code: 'ArrowRight', intent: 'strafe_right' },
+      { code: 'Space', intent: 'boost' },
     ];
 
     cases.forEach(({ code, intent }) => {
@@ -96,6 +97,7 @@ describe('subscribeToKeyboard', () => {
       { code: 'ArrowLeft', intent: 'strafe_left' },
       { code: 'KeyD', intent: 'strafe_right' },
       { code: 'ArrowRight', intent: 'strafe_right' },
+      { code: 'Space', intent: 'boost' },
     ];
 
     cases.forEach(({ code, intent }) => {
@@ -129,10 +131,33 @@ describe('subscribeToKeyboard', () => {
     });
   });
 
-  describe('Space — unbound after switching to camera-relative controls', () => {
-    it('does not invoke onSignal when Space is pressed or released', () => {
+  describe('Space — boost intent', () => {
+    it("invokes onSignal with { kind: 'intent_down', intent: 'boost' } when Space is pressed", () => {
       target.dispatchEvent(keyDownEvent({ code: 'Space' }));
+      expect(onSignal).toHaveBeenCalledTimes(1);
+      expect(onSignal).toHaveBeenCalledWith({ kind: 'intent_down', intent: 'boost' });
+    });
+
+    it("invokes onSignal with { kind: 'intent_up', intent: 'boost' } when Space is released", () => {
+      target.dispatchEvent(keyDownEvent({ code: 'Space' }));
+      onSignal.mockClear();
       target.dispatchEvent(keyUpEvent({ code: 'Space' }));
+      expect(onSignal).toHaveBeenCalledTimes(1);
+      expect(onSignal).toHaveBeenCalledWith({ kind: 'intent_up', intent: 'boost' });
+    });
+
+    it('invokes onSignal only once with intent_down for Space when keydown is followed by OS auto-repeat keydown events', () => {
+      target.dispatchEvent(keyDownEvent({ code: 'Space' }));
+      target.dispatchEvent(keyDownEvent({ code: 'Space', repeat: true }));
+      target.dispatchEvent(keyDownEvent({ code: 'Space', repeat: true }));
+      const downCalls = onSignal.mock.calls.filter(
+        ([signal]) => signal.kind === 'intent_down' && signal.intent === 'boost',
+      );
+      expect(downCalls).toHaveLength(1);
+    });
+
+    it('does not invoke onSignal when Shift+Space is pressed (modifier-key chord)', () => {
+      target.dispatchEvent(keyDownEvent({ code: 'Space', shiftKey: true }));
       expect(onSignal).not.toHaveBeenCalled();
     });
   });

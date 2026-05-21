@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { clampOutOfSphere, type Sphere } from './clampOutOfSphere';
+import { clampOutOfSphere } from './clampOutOfSphere';
+import type { Sphere } from '../../types/sphere';
 import type { Vec3 } from '../../types/kinematics';
 
 const SUN: Sphere = { center: { x: 0, y: 0, z: 0 }, radius: 10 };

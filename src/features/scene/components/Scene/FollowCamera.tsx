@@ -5,9 +5,11 @@ import { PerspectiveCamera } from '@react-three/drei';
 import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { Vector3 } from 'three';
 import { MAX_SPEED, type Kinematics, type Vec3 } from '../../types/kinematics';
+import type { BoostSignal } from '../../types/scene-refs';
 
 type FollowCameraProps = {
   readonly kinematicsRef: RefObject<Kinematics>;
+  readonly boostSignalRef: RefObject<BoostSignal>;
 };
 
 type ChaseMemory = {
@@ -22,6 +24,7 @@ type ChaseMemory = {
   followHeading: number;
   followAngularVelocity: number;
   snapped: boolean;
+  boostFactor: number;
 };
 
 const CHASE_OFFSET = new Vector3(0, 6, -10);
@@ -38,6 +41,14 @@ const LOOK_AHEAD_LERP = 0.07;
 const BASE_FOV = 60;
 const MAX_FOV = 64;
 const FOV_LERP = 0.04;
+
+// Boost lifts — additive on top of the speed-driven FOV/look-ahead. Driven
+// by the smoothed boost factor (0 → 1) so the world widens and pulls ahead
+// as the boost ramps in, independently of raw speed ratio.
+// FOV target += factor × 8 → 64 → 72 at boost peak.
+const BOOST_FOV_LIFT = 8;
+// Look-ahead amplitude += factor × 1.8 → 1.8 → 3.6 at boost peak.
+const BOOST_LOOK_AHEAD_LIFT = 1.8;
 
 // Camera bank — subtle roll in strafe direction (~3°).
 // Much milder than the ship's bank so they layer rather than compete.
@@ -174,14 +185,17 @@ const updateChaseCamera = (
   const localRight = writeDesiredChasePosition(position, velocity, memory);
   stepPositionSpring(camera, memory, delta);
 
+  const boostFactor = memory.boostFactor;
+  const targetFov = BASE_FOV + (MAX_FOV - BASE_FOV) * speedRatio + boostFactor * BOOST_FOV_LIFT;
+  const liftedLookAhead = MAX_LOOK_AHEAD + boostFactor * BOOST_LOOK_AHEAD_LIFT;
+
   const directionScale = speed === 0 ? 0 : 1 / speed;
-  const targetAheadX = velocity.x * directionScale * speedRatio * MAX_LOOK_AHEAD;
+  const targetAheadX = velocity.x * directionScale * speedRatio * liftedLookAhead;
   const forwardVz = Math.max(0, velocity.z);
-  const targetAheadZ = forwardVz * directionScale * speedRatio * MAX_LOOK_AHEAD;
+  const targetAheadZ = forwardVz * directionScale * speedRatio * liftedLookAhead;
   memory.lookAheadOffset.x += (targetAheadX - memory.lookAheadOffset.x) * LOOK_AHEAD_LERP;
   memory.lookAheadOffset.z += (targetAheadZ - memory.lookAheadOffset.z) * LOOK_AHEAD_LERP;
 
-  const targetFov = BASE_FOV + (MAX_FOV - BASE_FOV) * speedRatio;
   camera.fov += (targetFov - camera.fov) * FOV_LERP;
   camera.updateProjectionMatrix();
 
@@ -209,6 +223,7 @@ const createMemory = (): ChaseMemory => ({
   followHeading: 0,
   followAngularVelocity: 0,
   snapped: false,
+  boostFactor: 0,
 });
 
 export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
@@ -218,6 +233,7 @@ export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
   useFrame((_root, delta) => {
     const camera = cameraRef.current;
     if (camera === null) return;
+    memoryRef.current.boostFactor = props.boostSignalRef.current.read().factor;
     updateChaseCamera(camera, props.kinematicsRef.current, memoryRef.current, delta);
   });
 
@@ -228,7 +244,7 @@ export const FollowCamera = (props: FollowCameraProps): JSX.Element => {
       position={cameraInitial}
       fov={BASE_FOV}
       near={0.1}
-      far={500}
+      far={800}
     />
   );
 };

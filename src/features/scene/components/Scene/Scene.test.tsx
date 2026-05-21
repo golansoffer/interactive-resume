@@ -4,6 +4,7 @@ import { cleanup, render } from '@testing-library/react';
 import { asCompanyId } from '../../types/company';
 import type { CompanyEntry } from '../../types/company';
 import type { IntentStream } from '../../types/intent';
+import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
@@ -79,6 +80,11 @@ const acmeEntry: CompanyEntry = {
     period: { kind: 'ongoing', start: { year: 2024, month: 1 } },
     description: 'Acme description.',
   },
+};
+
+const EMPTY_ROUTE: RouteProjection = {
+  kind: 'pre_route',
+  firstTarget: { id: acme, placement: [5, 0, 0] },
 };
 
 const globexEntry: CompanyEntry = {
@@ -165,9 +171,11 @@ const mount = (
       ship={testShip}
       state={state}
       entries={entries}
+      fillerPlanets={[]}
       intents={intents}
       onEvent={onEvent}
       kinematicsRef={createKinematicsRef()}
+      routeProjection={EMPTY_ROUTE}
     />,
   );
 };

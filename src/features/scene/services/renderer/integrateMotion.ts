@@ -52,12 +52,13 @@ export const integrateMotion = (
   intents: ReadonlySet<Intent['kind']>,
   dt: number,
   basis: CameraBasis,
+  multiplier: 1 | 3,
 ): Kinematics => {
   const direction = desiredDirection(intents, basis);
   const targetVelocity: Vec3 = {
-    x: direction.x * MAX_SPEED,
-    y: direction.y * MAX_SPEED,
-    z: direction.z * MAX_SPEED,
+    x: direction.x * MAX_SPEED * multiplier,
+    y: direction.y * MAX_SPEED * multiplier,
+    z: direction.z * MAX_SPEED * multiplier,
   };
   const pushing = intents.size > 0 && (direction.x !== 0 || direction.y !== 0 || direction.z !== 0);
   const rate = pushing ? ACCELERATION : DECELERATION;

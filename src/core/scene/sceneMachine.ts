@@ -9,9 +9,22 @@ export type SceneMachineEvent =
   | { readonly type: 'entered_proximity'; readonly objectId: CompanyId }
   | { readonly type: 'exited_proximity'; readonly objectId: CompanyId };
 
-type SceneMachineContext = { readonly scene: SceneState };
+type SceneMachineContext = {
+  readonly scene: SceneState;
+  readonly visited: ReadonlyArray<CompanyId>;
+};
 
 const INITIAL_SCENE: SceneState = { kind: 'loading' };
+const INITIAL_VISITED: ReadonlyArray<CompanyId> = [];
+
+const reduceVisited = (
+  visited: ReadonlyArray<CompanyId>,
+  event: SceneMachineEvent,
+): ReadonlyArray<CompanyId> => {
+  if (event.type !== 'entered_proximity') return visited;
+  const withoutId = visited.filter((id) => id !== event.objectId);
+  return [...withoutId, event.objectId];
+};
 
 const reduceOnStart = (scene: SceneState): SceneState => {
   switch (scene.kind) {
@@ -98,11 +111,12 @@ const machineSetup = setup({
 
 const reduceAction = machineSetup.assign({
   scene: ({ context, event }) => reduceScene(context.scene, event),
+  visited: ({ context, event }) => reduceVisited(context.visited, event),
 });
 
 export const sceneMachine = machineSetup.createMachine({
   id: 'scene',
-  context: { scene: INITIAL_SCENE },
+  context: { scene: INITIAL_SCENE, visited: INITIAL_VISITED },
   initial: 'active',
   states: {
     active: {
@@ -121,3 +135,6 @@ type SceneMachineSnapshot = { readonly context: SceneMachineContext };
 
 export const getSceneState = (snapshot: SceneMachineSnapshot): SceneState =>
   snapshot.context.scene;
+
+export const getVisited = (snapshot: SceneMachineSnapshot): ReadonlyArray<CompanyId> =>
+  snapshot.context.visited;

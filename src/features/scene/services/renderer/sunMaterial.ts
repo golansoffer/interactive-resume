@@ -39,16 +39,25 @@ void main() {
 }
 `;
 
-// Inner corona — bright, sharp-edged disk.
-export const createSunCoronaMaterial = (): ShaderMaterial =>
-  new ShaderMaterial({
-    uniforms: {
-      uColorCore: { value: new Vector3(1.0, 0.91, 0.69) },
-      uColorRim: { value: new Vector3(1.0, 0.81, 0.45) },
-      uFalloff: { value: 2.4 },
-      uPeakOpacity: { value: 1.0 },
-      uOpacityScale: { value: 1.0 },
-    },
+// Typed handle returned by the corona/halo factories. The factory captures
+// the uOpacityScale uniform reference at construction time and exposes a
+// strongly-typed setter — no by-name uniform lookup at the call site, no
+// `IUniform | undefined` observable beyond the parse boundary below.
+export type SunBillboardMaterial = {
+  readonly material: ShaderMaterial;
+  readonly setOpacityScale: (value: number) => void;
+};
+
+// Builds the shared sun-billboard material, captures the uOpacityScale
+// uniform reference, and returns the typed handle. The uniform-lookup
+// narrow happens ONCE at construction (parse-boundary check — if it fires,
+// the ShaderMaterial config above diverged from the uniform name, which is
+// a programming error in this file, not a runtime case).
+const buildBillboardMaterial = (
+  uniforms: Record<string, { value: unknown }>,
+): SunBillboardMaterial => {
+  const material = new ShaderMaterial({
+    uniforms,
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     transparent: true,
@@ -56,23 +65,38 @@ export const createSunCoronaMaterial = (): ShaderMaterial =>
     blending: AdditiveBlending,
     toneMapped: false,
   });
+  const uniform = material.uniforms['uOpacityScale'];
+  if (uniform === undefined) {
+    throw new Error(
+      'sunMaterial: uOpacityScale uniform missing — shader and uniform definitions are out of sync',
+    );
+  }
+  return {
+    material,
+    setOpacityScale: (value) => {
+      uniform.value = value;
+    },
+  };
+};
+
+// Inner corona — bright, sharp-edged disk.
+export const createSunCoronaMaterial = (): SunBillboardMaterial =>
+  buildBillboardMaterial({
+    uColorCore: { value: new Vector3(1.0, 0.91, 0.69) },
+    uColorRim: { value: new Vector3(1.0, 0.81, 0.45) },
+    uFalloff: { value: 2.4 },
+    uPeakOpacity: { value: 1.0 },
+    uOpacityScale: { value: 1.0 },
+  });
 
 // Outer halo — soft, wide, low-opacity glow.
-export const createSunHaloMaterial = (): ShaderMaterial =>
-  new ShaderMaterial({
-    uniforms: {
-      uColorCore: { value: new Vector3(1.0, 0.81, 0.45) },
-      // Lower blue than corona rim — halo is warmer/oranger so the outer
-      // glow reads as a separate band, not a continuation of the corona.
-      uColorRim: { value: new Vector3(1.0, 0.6, 0.23) },
-      uFalloff: { value: 1.4 },
-      uPeakOpacity: { value: 0.45 },
-      uOpacityScale: { value: 1.0 },
-    },
-    vertexShader: VERTEX_SHADER,
-    fragmentShader: FRAGMENT_SHADER,
-    transparent: true,
-    depthWrite: false,
-    blending: AdditiveBlending,
-    toneMapped: false,
+export const createSunHaloMaterial = (): SunBillboardMaterial =>
+  buildBillboardMaterial({
+    uColorCore: { value: new Vector3(1.0, 0.81, 0.45) },
+    // Lower blue than corona rim — halo is warmer/oranger so the outer
+    // glow reads as a separate band, not a continuation of the corona.
+    uColorRim: { value: new Vector3(1.0, 0.6, 0.23) },
+    uFalloff: { value: 1.4 },
+    uPeakOpacity: { value: 0.45 },
+    uOpacityScale: { value: 1.0 },
   });

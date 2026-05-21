@@ -1,9 +1,5 @@
 import type { Vec3 } from '../../types/kinematics';
-
-export type Sphere = {
-  readonly center: Vec3;
-  readonly radius: number;
-};
+import type { Sphere } from '../../types/sphere';
 
 // Projects a point that lies inside a sphere outward onto the sphere's
 // surface along the center→point ray. Outside-points and surface-points

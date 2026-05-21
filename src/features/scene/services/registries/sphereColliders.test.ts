@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createSphereColliders } from './useSceneRefs';
-import type { Sphere } from '../../services/renderer/clampOutOfSphere';
+import { createSphereColliders } from './sphereColliders';
+import type { Sphere } from '../../types/sphere';
 
 const sphereA: Sphere = { center: { x: 1, y: 2, z: 3 }, radius: 4 };
 const sphereB: Sphere = { center: { x: 5, y: 6, z: 7 }, radius: 8 };

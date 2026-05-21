@@ -1,49 +1,51 @@
 import { describe, expect, it } from 'vitest';
 import { createActor } from 'xstate';
-import { asCompanyId } from '../../features/scene/types/company';
+import { asCompanyId, type CompanyId } from '../../features/scene/types/company';
 import type { SceneState } from '../../features/scene/types/scene-state';
-import { getSceneState, sceneMachine } from './sceneMachine';
+import { sceneMachine } from './sceneMachine';
 import type { SceneMachineEvent } from './sceneMachine';
 
 const acme = asCompanyId('acme');
 const globex = asCompanyId('globex');
 
-const runFromInitial = (events: ReadonlyArray<SceneMachineEvent>): SceneState => {
+type SceneOutcome = { readonly state: SceneState; readonly visited: ReadonlyArray<CompanyId> };
+
+const runFromInitial = (events: ReadonlyArray<SceneMachineEvent>): SceneOutcome => {
   const actor = createActor(sceneMachine).start();
   for (const event of events) {
     actor.send(event);
   }
-  const state = getSceneState(actor.getSnapshot());
+  const context = actor.getSnapshot().context;
   actor.stop();
-  return state;
+  return { state: context.scene, visited: context.visited };
 };
 
 describe('sceneMachine — initial state and `loading` exit', () => {
   it('starts in `{ kind: "loading" }`', () => {
-    expect(runFromInitial([])).toEqual({ kind: 'loading' });
+    expect(runFromInitial([]).state).toEqual({ kind: 'loading' });
   });
 
   it('transitions from `loading` to `playing` on `start`', () => {
-    expect(runFromInitial([{ type: 'start' }])).toEqual({ kind: 'playing' });
+    expect(runFromInitial([{ type: 'start' }]).state).toEqual({ kind: 'playing' });
   });
 
   it('stays in `loading` on `pause_toggle`', () => {
-    expect(runFromInitial([{ type: 'pause_toggle' }])).toEqual({ kind: 'loading' });
+    expect(runFromInitial([{ type: 'pause_toggle' }]).state).toEqual({ kind: 'loading' });
   });
 
   it('stays in `loading` on `interact`', () => {
-    expect(runFromInitial([{ type: 'interact' }])).toEqual({ kind: 'loading' });
+    expect(runFromInitial([{ type: 'interact' }]).state).toEqual({ kind: 'loading' });
   });
 
   it('stays in `loading` on `entered_proximity { objectId }`', () => {
     expect(
-      runFromInitial([{ type: 'entered_proximity', objectId: acme }]),
+      runFromInitial([{ type: 'entered_proximity', objectId: acme }]).state,
     ).toEqual({ kind: 'loading' });
   });
 
   it('stays in `loading` on `exited_proximity { objectId }`', () => {
     expect(
-      runFromInitial([{ type: 'exited_proximity', objectId: acme }]),
+      runFromInitial([{ type: 'exited_proximity', objectId: acme }]).state,
     ).toEqual({ kind: 'loading' });
   });
 });
@@ -54,7 +56,7 @@ describe('sceneMachine — proximity transitions', () => {
       runFromInitial([
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 
@@ -64,7 +66,7 @@ describe('sceneMachine — proximity transitions', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'exited_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'playing' });
   });
 
@@ -74,7 +76,7 @@ describe('sceneMachine — proximity transitions', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'exited_proximity', objectId: globex },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 
@@ -83,7 +85,7 @@ describe('sceneMachine — proximity transitions', () => {
       runFromInitial([
         { type: 'start' },
         { type: 'exited_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'playing' });
   });
 
@@ -93,7 +95,7 @@ describe('sceneMachine — proximity transitions', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'entered_proximity', objectId: globex },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: globex });
   });
 
@@ -103,7 +105,7 @@ describe('sceneMachine — proximity transitions', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'entered_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 });
@@ -111,7 +113,7 @@ describe('sceneMachine — proximity transitions', () => {
 describe('sceneMachine — pause / resume round-trips', () => {
   it('transitions from `playing` to `paused { resumeTo: { kind: "playing" } }` on `pause_toggle`', () => {
     expect(
-      runFromInitial([{ type: 'start' }, { type: 'pause_toggle' }]),
+      runFromInitial([{ type: 'start' }, { type: 'pause_toggle' }]).state,
     ).toEqual({ kind: 'paused', resumeTo: { kind: 'playing' } });
   });
 
@@ -121,7 +123,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'pause_toggle' },
-      ]),
+      ]).state,
     ).toEqual({
       kind: 'paused',
       resumeTo: { kind: 'revealing', objectId: acme },
@@ -134,7 +136,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'pause_toggle' },
         { type: 'pause_toggle' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'playing' });
   });
 
@@ -145,7 +147,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'entered_proximity', objectId: acme },
         { type: 'pause_toggle' },
         { type: 'pause_toggle' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 
@@ -156,7 +158,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'entered_proximity', objectId: acme },
         { type: 'pause_toggle' },
         { type: 'pause_toggle' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 
@@ -166,7 +168,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'pause_toggle' },
         { type: 'entered_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'paused', resumeTo: { kind: 'playing' } });
   });
 
@@ -176,7 +178,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'pause_toggle' },
         { type: 'exited_proximity', objectId: acme },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'paused', resumeTo: { kind: 'playing' } });
   });
 
@@ -186,7 +188,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'pause_toggle' },
         { type: 'interact' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'paused', resumeTo: { kind: 'playing' } });
   });
 
@@ -196,7 +198,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'start' },
         { type: 'pause_toggle' },
         { type: 'start' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'paused', resumeTo: { kind: 'playing' } });
   });
 
@@ -208,7 +210,7 @@ describe('sceneMachine — pause / resume round-trips', () => {
         { type: 'pause_toggle' },
         { type: 'entered_proximity', objectId: globex },
         { type: 'pause_toggle' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 });
@@ -216,13 +218,13 @@ describe('sceneMachine — pause / resume round-trips', () => {
 describe('sceneMachine — `playing` no-ops', () => {
   it('stays in `playing` on `interact` (no-op in foundations)', () => {
     expect(
-      runFromInitial([{ type: 'start' }, { type: 'interact' }]),
+      runFromInitial([{ type: 'start' }, { type: 'interact' }]).state,
     ).toEqual({ kind: 'playing' });
   });
 
   it('stays in `playing` on `start` (already started)', () => {
     expect(
-      runFromInitial([{ type: 'start' }, { type: 'start' }]),
+      runFromInitial([{ type: 'start' }, { type: 'start' }]).state,
     ).toEqual({ kind: 'playing' });
   });
 });
@@ -234,7 +236,7 @@ describe('sceneMachine — `revealing` no-ops', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'interact' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 
@@ -244,7 +246,8 @@ describe('sceneMachine — `revealing` no-ops', () => {
         { type: 'start' },
         { type: 'entered_proximity', objectId: acme },
         { type: 'start' },
-      ]),
+      ]).state,
     ).toEqual({ kind: 'revealing', objectId: acme });
   });
 });
+
