@@ -151,7 +151,14 @@ const buildCometSpec = (i: number): HorizonBody => {
       lerp(COMET_VEL_MIN, COMET_VEL_MAX, hashIndex(i, 4)) * directionFor(i, 5),
     trail: {
       width: lerp(COMET_TRAIL_WIDTH_MIN, COMET_TRAIL_WIDTH_MAX, hashIndex(i, 6)),
-      length: lerp(COMET_TRAIL_LENGTH_MIN, COMET_TRAIL_LENGTH_MAX, hashIndex(i, 7)),
+      // drei's Trail allocates Float32Array(length * 10 * 3); a fractional
+      // length truncates to a non-multiple-of-3 buffer, and meshline's
+      // setPoints then reads `points[j+1]/points[j+2]` past the end → NaN
+      // positions → infinite computeBoundingSphere/Box warnings every frame.
+      // Sample count is inherently discrete, so round at construction.
+      length: Math.round(
+        lerp(COMET_TRAIL_LENGTH_MIN, COMET_TRAIL_LENGTH_MAX, hashIndex(i, 7)),
+      ),
       color: cometTrailColorFor(i),
       opacity: lerp(COMET_TRAIL_OPACITY_MIN, COMET_TRAIL_OPACITY_MAX, hashIndex(i, 8)),
       blending: AdditiveBlending,
