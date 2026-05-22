@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asCompanyId, type CompanyEntry } from '../../types/company';
+import { asShortCode } from '../../types/short-code';
 import { projectRoute } from './projectRoute';
 
 const mave = asCompanyId('mave');
@@ -12,6 +13,7 @@ const placement = (z: number): readonly [number, number, number] => [0, 0, z];
 
 const entryFor = (id: CompanyEntry['id'], z: number): CompanyEntry => ({
   id,
+  shortCode: asShortCode('XYZ'),
   planet: { assetId: 'mars_b', placement: placement(z) },
   info: {
     companyName: 'X',

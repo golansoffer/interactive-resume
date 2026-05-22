@@ -138,4 +138,30 @@ describe('getCompanyEntries', () => {
       }
     }
   });
+
+  it('every entry carries a non-empty short code', () => {
+    for (const entry of getCompanyEntries()) {
+      expect(entry.shortCode.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('mave entry has shortCode "MAV"', () => {
+    expect(findById('mave').shortCode).toBe('MAV');
+  });
+
+  it('8fig entry has shortCode "8FG"', () => {
+    expect(findById('8fig').shortCode).toBe('8FG');
+  });
+
+  it('riverside entry has shortCode "RVS"', () => {
+    expect(findById('riverside').shortCode).toBe('RVS');
+  });
+
+  it('streamelements entry has shortCode "STE"', () => {
+    expect(findById('streamelements').shortCode).toBe('STE');
+  });
+
+  it('tgs entry has shortCode "TGS"', () => {
+    expect(findById('tgs').shortCode).toBe('TGS');
+  });
 });

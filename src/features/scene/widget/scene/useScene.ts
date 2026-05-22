@@ -8,7 +8,7 @@ import { projectReveal, type RevealProjection } from './projectReveal';
 import { projectRoute } from './projectRoute';
 import { useKeyboardIntents } from './useKeyboardIntents';
 import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
-import type { CompanyEntry } from '../../types/company';
+import type { CompanyEntry, CompanyId } from '../../types/company';
 import type { FillerPlanetEntry } from '../../types/filler-planet';
 import type { IntentStream } from '../../types/intent';
 import type { RouteProjection } from '../../types/route-projection';
@@ -30,6 +30,7 @@ const NOOP_AUDIO: SpaceshipAudio = {
 
 type UseSceneResult = {
   readonly state: SceneState;
+  readonly visited: ReadonlyArray<CompanyId>;
   readonly entries: ReadonlyArray<CompanyEntry>;
   readonly fillerPlanets: ReadonlyArray<FillerPlanetEntry>;
   readonly intents: IntentStream;
@@ -108,6 +109,7 @@ export const useScene = (): UseSceneResult => {
 
   return {
     state,
+    visited,
     entries,
     fillerPlanets: FILLER_PLANETS,
     intents,

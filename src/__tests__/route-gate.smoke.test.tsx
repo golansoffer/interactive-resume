@@ -78,6 +78,22 @@ vi.mock('@react-three/drei', () => ({
   ),
 }));
 
+// PlanetCanvas drives the real planet-rendering pipeline (cloneAndDress,
+// computePlanetPreviewFit, etc.) which expects a real three.js Object3D.
+// In this smoke test we only care that the route gate composes correctly,
+// not that planets render — stub the whole helper.
+vi.mock('../features/progress/components/ProgressCard/PlanetCanvas', () => ({
+  PlanetCanvas: ({
+    assetId,
+    rotates,
+  }: {
+    readonly assetId: string;
+    readonly rotates: boolean;
+  }): ReactNode => (
+    <div data-mock-planet data-asset={assetId} data-rotates={String(rotates)} />
+  ),
+}));
+
 const mountAt = (initial: string) => {
   const history = createMemoryHistory({ initialEntries: [initial] });
   const router = createRouter({ routeTree, history });
@@ -102,7 +118,10 @@ describe('route gate', () => {
   it('renders the scene when a valid ship is in the URL', async () => {
     const { ui } = mountAt('/?ship=speederA');
     render(ui);
-    expect(await screen.findByTestId('canvas')).toBeDefined();
+    // Multiple Canvas instances now: the main scene canvas, the
+    // progress card's headline planet, and 5 pip canvases.
+    const canvases = await screen.findAllByTestId('canvas');
+    expect(canvases.length).toBeGreaterThan(0);
     expect(screen.queryByText('Choose your ship')).toBeNull();
   });
 
@@ -168,7 +187,7 @@ describe('root-level device-support gate', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Open this on desktop.' }),
     ).toBeDefined();
-    expect(screen.queryByTestId('canvas')).toBeNull();
+    expect(screen.queryAllByTestId('canvas').length).toBe(0);
     expect(screen.queryByText('Choose your ship')).toBeNull();
   });
 
@@ -176,7 +195,8 @@ describe('root-level device-support gate', () => {
     stubMatchMedia(createFakeMediaQueryList(true));
     const { ui } = mountAt('/?ship=speederA');
     render(ui);
-    expect(await screen.findByTestId('canvas')).toBeDefined();
+    const canvases = await screen.findAllByTestId('canvas');
+    expect(canvases.length).toBeGreaterThan(0);
     expect(
       screen.queryByRole('heading', { level: 1, name: 'Open this on desktop.' }),
     ).toBeNull();

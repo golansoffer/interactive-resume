@@ -190,3 +190,100 @@ body,
     animation: none;
   }
 }
+
+/* ============================================================
+ * Progress card — animations
+ *
+ * The progress card surfaces visit moments with layered effects
+ * driven by data-* attributes:
+ *   data-burst="active" on the card → border swell (via Tailwind)
+ *   data-burst="active" on a pip    → 3 concentric ripples + pip pump
+ *   data-flipping on counter visited → brief text-shadow glow
+ *   data-state="complete" on the card → persistent breathing border
+ * ============================================================ */
+
+@keyframes progress-pip-ripple-small {
+  from { opacity: 0.6; transform: scale(1); }
+  to   { opacity: 0;   transform: scale(2.2); }
+}
+@keyframes progress-pip-ripple-big {
+  from { opacity: 0.35; transform: scale(1); }
+  to   { opacity: 0;    transform: scale(2.6); }
+}
+@keyframes progress-pip-ripple-huge {
+  from { opacity: 0.2; transform: scale(1); }
+  to   { opacity: 0;   transform: scale(2.8); }
+}
+
+[data-progress-card] [data-pip][data-burst='active'] [data-ripple='small'] {
+  animation: progress-pip-ripple-small 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0ms;
+}
+[data-progress-card] [data-pip][data-burst='active'] [data-ripple='big'] {
+  animation: progress-pip-ripple-big 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 100ms;
+}
+[data-progress-card] [data-pip][data-burst='active'] [data-ripple='huge'] {
+  animation: progress-pip-ripple-huge 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 200ms;
+}
+
+/* Pip scale pump during burst — peaks at 1.18 around t=300ms and returns. */
+@keyframes progress-pip-peak {
+  0%   { transform: scale(1.0); }
+  35%  { transform: scale(1.18); }
+  100% { transform: scale(1.0); }
+}
+[data-progress-card] [data-pip][data-burst='active'] {
+  animation: progress-pip-peak 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Counter flip glow — when [data-flipping] value changes, a fresh
+   animation instance is created via the attribute-change-driven key. */
+@keyframes progress-counter-flip-glow {
+  0%   { text-shadow: none; }
+  20%  { text-shadow: 0 0 8px var(--color-accent); }
+  100% { text-shadow: none; }
+}
+[data-progress-card] [data-count='visited'] {
+  animation: progress-counter-flip-glow 200ms ease-out;
+  animation-fill-mode: both;
+}
+[data-progress-card][data-state='complete'] [data-count='visited'],
+[data-progress-card][data-state='complete'] [data-count='total'] {
+  text-shadow: none;
+}
+
+/* Persistent breathing border on completion. Referenced by the Tailwind
+   arbitrary animation in ProgressCard: animate-[progress-card-breathe_…]. */
+@keyframes progress-card-breathe {
+  0%, 100% {
+    border-color: rgba(123, 224, 162, 0.18);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.45),
+      0 0 12px rgba(123, 224, 162, 0.05);
+  }
+  50% {
+    border-color: rgba(123, 224, 162, 0.35);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.45),
+      0 0 18px rgba(123, 224, 162, 0.10);
+  }
+}
+
+/* Reduced motion: turn off all progress-card animations. The state changes
+ * (color, count, data-state) still apply — we strip only the transitions. */
+@media (prefers-reduced-motion: reduce) {
+  [data-progress-card] [data-pip][data-burst='active'],
+  [data-progress-card] [data-pip][data-burst='active'] [data-ripple],
+  [data-progress-card] [data-count='visited'],
+  [data-progress-card][data-state='complete'] {
+    animation: none !important;
+  }
+}
+[data-progress-card][data-motion='reduced'] [data-pip][data-burst='active'],
+[data-progress-card][data-motion='reduced'] [data-pip][data-burst='active'] [data-ripple],
+[data-progress-card][data-motion='reduced'] [data-count='visited'],
+[data-progress-card][data-motion='reduced'][data-state='complete'] {
+  animation: none !important;
+}

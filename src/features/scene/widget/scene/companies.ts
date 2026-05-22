@@ -1,4 +1,5 @@
 import { asCompanyId, type CompanyEntry } from '../../types/company';
+import { asShortCode } from '../../types/short-code';
 
 // Order: most recent role first (innermost +Z stop), oldest role last. The
 // tuple shape proves the route is never empty, so downstream projections
@@ -12,6 +13,7 @@ export const CAREER_ROUTE: readonly [
 ] = [
   {
     id: asCompanyId('mave'),
+    shortCode: asShortCode('MAV'),
     planet: { assetId: 'saturn_b', placement: [80, 0, 80] },
     info: {
       companyName: 'Mave',
@@ -36,6 +38,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('8fig'),
+    shortCode: asShortCode('8FG'),
     planet: { assetId: 'jupiter_b', placement: [60, 0, 180] },
     info: {
       companyName: '8fig',
@@ -60,6 +63,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('riverside'),
+    shortCode: asShortCode('RVS'),
     planet: { assetId: 'mars_b', placement: [30, 0, 290] },
     info: {
       companyName: 'Riverside.fm',
@@ -88,6 +92,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('streamelements'),
+    shortCode: asShortCode('STE'),
     planet: { assetId: 'earth_b', placement: [-10, 0, 400] },
     info: {
       companyName: 'StreamElements',
@@ -112,6 +117,7 @@ export const CAREER_ROUTE: readonly [
   },
   {
     id: asCompanyId('tgs'),
+    shortCode: asShortCode('TGS'),
     planet: { assetId: 'venus_b', placement: [-50, 0, 510] },
     info: {
       companyName: 'TGS',

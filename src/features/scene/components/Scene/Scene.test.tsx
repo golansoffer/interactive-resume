@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { asCompanyId } from '../../types/company';
 import type { CompanyEntry } from '../../types/company';
+import { asShortCode } from '../../types/short-code';
 import type { IntentStream } from '../../types/intent';
 import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
@@ -81,6 +82,7 @@ const globex = asCompanyId('globex');
 
 const acmeEntry: CompanyEntry = {
   id: acme,
+  shortCode: asShortCode('ACM'),
   planet: { assetId: 'earth_b', placement: [5, 0, 0] },
   info: {
     companyName: 'Acme',
@@ -103,6 +105,7 @@ const EMPTY_ROUTE: RouteProjection = {
 
 const globexEntry: CompanyEntry = {
   id: globex,
+  shortCode: asShortCode('GLX'),
   planet: { assetId: 'saturn_b', placement: [-5, 0, 0] },
   info: {
     companyName: 'Globex',
@@ -129,6 +132,7 @@ const hooli = asCompanyId('hooli');
 
 const initechEntry: CompanyEntry = {
   id: initech,
+  shortCode: asShortCode('INI'),
   planet: { assetId: 'mars_b', placement: [0, 0, 7] },
   info: {
     companyName: 'Initech',
@@ -146,6 +150,7 @@ const initechEntry: CompanyEntry = {
 
 const umbrellaEntry: CompanyEntry = {
   id: umbrella,
+  shortCode: asShortCode('UMB'),
   planet: { assetId: 'venus_b', placement: [0, 0, -7] },
   info: {
     companyName: 'Umbrella',
@@ -163,6 +168,7 @@ const umbrellaEntry: CompanyEntry = {
 
 const soylentEntry: CompanyEntry = {
   id: soylent,
+  shortCode: asShortCode('SOY'),
   planet: { assetId: 'uranus_b', placement: [7, 0, 0] },
   info: {
     companyName: 'Soylent',
@@ -180,6 +186,7 @@ const soylentEntry: CompanyEntry = {
 
 const hooliEntry: CompanyEntry = {
   id: hooli,
+  shortCode: asShortCode('HOO'),
   planet: { assetId: 'neptune_b', placement: [0, 0, 11] },
   info: {
     companyName: 'Hooli',

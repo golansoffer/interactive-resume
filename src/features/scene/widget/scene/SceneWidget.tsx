@@ -4,7 +4,9 @@ import { Scene } from '../../components/Scene/Scene';
 import { CompanyInfoPanel } from '../../components/CompanyInfoPanel/CompanyInfoPanel';
 import { CommsDockWidget } from '../../../comms/widget/dock/CommsDockWidget';
 import { AudioControlsWidget } from '../../../audio/widget/controls/AudioControlsWidget';
+import { ProgressCardWidget } from '../../../progress/widget/card/ProgressCardWidget';
 import type { ShipEntry } from '../../../ships/types/ship';
+import { CAREER_ROUTE } from './companies';
 import { useScene } from './useScene';
 
 const CANVAS_WRAPPER_STYLE: CSSProperties = {
@@ -19,6 +21,7 @@ type SceneWidgetProps = {
 export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
   const {
     state,
+    visited,
     entries,
     fillerPlanets,
     intents,
@@ -45,6 +48,7 @@ export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
         />
       </Canvas>
       <CompanyInfoPanel projection={revealProjection} />
+      <ProgressCardWidget state={state} visited={visited} route={CAREER_ROUTE} />
       <CommsDockWidget kinematicsRef={kinematicsRef} sceneState={state} />
       <AudioControlsWidget />
     </>
