@@ -17,4 +17,4 @@ export const INITIAL_KINEMATICS: Kinematics = {
   heading: Math.atan2(20, 45),
 };
 
-export const MAX_SPEED = 14;
+export const MAX_SPEED = 50;

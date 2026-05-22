@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useCommsDock } from './useCommsDock';
 import { createHarness, createKinematicsRef, sample } from './useCommsDockTestHarness';
 import { asCompanyId } from '../../../scene/types/company';
+import { MAX_SPEED } from '../../../scene/types/kinematics';
 import type { SceneState } from '../../../scene/types/scene-state';
+
+const BOOST_TOP_SPEED = MAX_SPEED * 3;
+const HALF_BOOST_SPEED = BOOST_TOP_SPEED / 2;
 
 const playing: SceneState = { kind: 'playing' };
 const loading: SceneState = { kind: 'loading' };
@@ -31,10 +35,10 @@ describe('useCommsDock — velocity readout wiring', () => {
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(21, 0));
+      h.kinematics.push(sample(HALF_BOOST_SPEED, 0));
     });
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(21);
-    // Denominator is MAX_SPEED * 3 = 42 (full cruise-to-boost range); 21/42 = 0.5.
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(HALF_BOOST_SPEED);
+    // Denominator is MAX_SPEED * 3 (full cruise-to-boost range); half of that = 0.5.
     expect(result.current.readout.ratio).toBeCloseTo(0.5);
   });
 
@@ -56,10 +60,10 @@ describe('useCommsDock — velocity readout wiring', () => {
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(42, 0));
+      h.kinematics.push(sample(BOOST_TOP_SPEED, 0));
     });
     expect(result.current.readout.ratio).toBe(1);
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(42);
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(BOOST_TOP_SPEED);
   });
 
   it('state.readout exposes only parsed Readout values (never raw Kinematics fields)', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Object3D, Group } from 'three';
 import { createOrientationController } from './orientationController';
 import type { CameraBasis } from './integrateMotion';
-import type { Kinematics } from '../../types/kinematics';
+import { MAX_SPEED, type Kinematics } from '../../types/kinematics';
 
 const AXIS_BASIS: CameraBasis = {
   forward: { x: 0, y: 0, z: 1 },
@@ -15,10 +15,10 @@ const restingKinematics = (): Kinematics => ({
   heading: 0,
 });
 
-// Velocity z = 14 is MAX_SPEED forward.
+// Velocity z = MAX_SPEED forward.
 const movingKinematics = (): Kinematics => ({
   position: { x: 1, y: 2, z: 3 },
-  velocity: { x: 0, y: 0, z: 14 },
+  velocity: { x: 0, y: 0, z: MAX_SPEED },
   heading: 0,
 });
 
