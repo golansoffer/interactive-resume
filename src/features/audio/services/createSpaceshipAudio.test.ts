@@ -340,3 +340,41 @@ describe('createSpaceshipAudio — late buffer arrival', () => {
     expect(startedAfterMusic).toBe(3);
   });
 });
+
+describe('createSpaceshipAudio — dispose', () => {
+  it('dispose() before gesture: subsequent gesture is a no-op (state stays suspended)', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.dispose();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    expect(deps.handle.ctx.state).toBe('suspended');
+    expect(deps.handle.gains.length).toBe(0);
+    expect(deps.handle.sources.length).toBe(0);
+  });
+
+  it('dispose() after ready: stops all started sources', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.dispose();
+    const stoppedCount = deps.handle.sources.filter((src) => src.stopped).length;
+    expect(stoppedCount).toBe(deps.handle.sources.length);
+  });
+
+  it('setters after dispose do not throw and do not affect gains', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.dispose();
+    const before = findChannelGains(deps.handle);
+    audio.setSceneAlive(true);
+    audio.setBoost(true, 1);
+    audio.setMuted(true);
+    audio.setVolume('master', 0.123);
+    const after = findChannelGains(deps.handle);
+    expect(after).toEqual(before);
+  });
+});

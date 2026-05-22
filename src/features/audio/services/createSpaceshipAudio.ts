@@ -193,11 +193,13 @@ type PublicApiDeps = {
 
 const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
   setSceneAlive: (alive: boolean): void => {
+    if (api.getState().kind === 'disposed') return;
     api.pending.sceneAlive = alive;
     const live = api.getState();
     if (live.kind === 'ready') applyChannelGains(live.graph, api.pending);
   },
   setBoost: (_active: boolean, factor: number): void => {
+    if (api.getState().kind === 'disposed') return;
     api.pending.boostFactor = factor;
     const live = api.getState();
     if (live.kind !== 'ready') return;
@@ -205,6 +207,7 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
     live.graph.channels.boost.gain.setValueAtTime(api.pending.settings.boost * factor, now);
   },
   setMuted: (muted: boolean): void => {
+    if (api.getState().kind === 'disposed') return;
     api.pending.settings = { ...api.pending.settings, muted };
     const live = api.getState();
     if (live.kind !== 'ready') return;
@@ -213,6 +216,7 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
     live.graph.muteGain.gain.linearRampToValueAtTime(target, now + MUTE_RAMP_SECONDS);
   },
   setVolume: (channel: AudioChannel, value: number): void => {
+    if (api.getState().kind === 'disposed') return;
     api.pending.settings = { ...api.pending.settings, [channel]: value };
     const live = api.getState();
     if (live.kind !== 'ready') return;
@@ -275,6 +279,13 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): Space
     getState: () => state,
     onDispose: (): void => {
       gesture.teardown();
+      if (state.kind === 'ready') {
+        const graph = state.graph;
+        for (const key of SOURCE_KEYS) {
+          const src = graph.sources[key];
+          if (src !== null) src.stop();
+        }
+      }
       state = { kind: 'disposed' };
     },
   });
