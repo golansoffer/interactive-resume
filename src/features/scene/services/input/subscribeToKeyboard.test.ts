@@ -172,26 +172,10 @@ describe('subscribeToKeyboard', () => {
       });
     });
 
-    it("invokes onSignal with { kind: 'command', command: { kind: 'pause_toggle' } } when Escape is pressed", () => {
-      target.dispatchEvent(keyDownEvent({ code: 'Escape' }));
-      expect(onSignal).toHaveBeenCalledTimes(1);
-      expect(onSignal).toHaveBeenCalledWith({
-        kind: 'command',
-        command: { kind: 'pause_toggle' },
-      });
-    });
-
     it("does not invoke onSignal for E's keyup event", () => {
       target.dispatchEvent(keyDownEvent({ code: 'KeyE' }));
       onSignal.mockClear();
       target.dispatchEvent(keyUpEvent({ code: 'KeyE' }));
-      expect(onSignal).not.toHaveBeenCalled();
-    });
-
-    it("does not invoke onSignal for Escape's keyup event", () => {
-      target.dispatchEvent(keyDownEvent({ code: 'Escape' }));
-      onSignal.mockClear();
-      target.dispatchEvent(keyUpEvent({ code: 'Escape' }));
       expect(onSignal).not.toHaveBeenCalled();
     });
 
@@ -204,16 +188,6 @@ describe('subscribeToKeyboard', () => {
           signal.kind === 'command' && signal.command.kind === 'interact',
       );
       expect(interactCalls).toHaveLength(1);
-    });
-
-    it('invokes onSignal only once with pause_toggle when Escape keydown is followed by OS auto-repeat keydown events', () => {
-      target.dispatchEvent(keyDownEvent({ code: 'Escape' }));
-      target.dispatchEvent(keyDownEvent({ code: 'Escape', repeat: true }));
-      const pauseCalls = onSignal.mock.calls.filter(
-        ([signal]) =>
-          signal.kind === 'command' && signal.command.kind === 'pause_toggle',
-      );
-      expect(pauseCalls).toHaveLength(1);
     });
 
     it('invokes onSignal with interact again after E is released and re-pressed', () => {

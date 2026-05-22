@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, MouseEvent } from 'react';
 import type { AudioChannel } from '../../types/audio-orchestrator';
 import type { AudioSettings } from '../../types/audio-settings';
 import { VolumeSlider } from './VolumeSlider';
@@ -25,6 +25,12 @@ const ROWS: ReadonlyArray<Row> = [
 const PANEL_CLASSES =
   'fixed top-[4.5rem] left-6 z-50 w-72 rounded-xl border border-white/10 bg-card/85 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md';
 
+// Mouse-click default focuses the button; without this preventDefault, the
+// reset button keeps focus and the next Space press (boost) would re-fire it.
+const swallowFocusOnMouseDown = (event: MouseEvent<HTMLButtonElement>): void => {
+  event.preventDefault();
+};
+
 export const AudioSettingsPanel = ({
   id,
   settings,
@@ -49,6 +55,7 @@ export const AudioSettingsPanel = ({
       <button
         type="button"
         onClick={onReset}
+        onMouseDown={swallowFocusOnMouseDown}
         className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
       >
         Reset to defaults

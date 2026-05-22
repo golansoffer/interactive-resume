@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parseAudioSettings } from '../../schema/parseAudioSettings';
+import { DEFAULT_AUDIO_SETTINGS } from '../../types/audio-settings';
 import { AudioControlsWidget } from './AudioControlsWidget';
 
 afterEach(() => {
@@ -67,6 +68,6 @@ describe('AudioControlsWidget', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     const master = screen.getByRole('slider', { name: 'Master' });
     if (!(master instanceof HTMLInputElement)) throw new Error('master not input');
-    expect(master.value).toBe('100');
+    expect(master.value).toBe(String(Math.round(DEFAULT_AUDIO_SETTINGS.master * 100)));
   });
 });

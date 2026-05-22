@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_AUDIO_SETTINGS } from '../../types/audio-settings';
 import { useAudioControls } from './useAudioControls';
 
 describe('useAudioControls', () => {
@@ -73,6 +74,6 @@ describe('useAudioControls', () => {
       result.current.reset();
     });
     expect(result.current.settings.muted).toBe(false);
-    expect(result.current.settings.master).toBe(1.0);
+    expect(result.current.settings.master).toBe(DEFAULT_AUDIO_SETTINGS.master);
   });
 });

@@ -24,8 +24,6 @@ const classify = (code: string): KeyClassification => {
       return { kind: 'continuous', intent: 'boost' };
     case 'KeyE':
       return { kind: 'discrete', command: { kind: 'interact' } };
-    case 'Escape':
-      return { kind: 'discrete', command: { kind: 'pause_toggle' } };
     default:
       return { kind: 'unmapped' };
   }
