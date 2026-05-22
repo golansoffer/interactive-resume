@@ -1,33 +1,35 @@
 # Spaceship Audio — Design
 
 **Date:** 2026-05-22
-**Scope:** Add two looping sound effects to the scene — `rocket_engine.mp3` (ambient engine, plays continuously while the scene is live) and `rocket_boost.mp3` (boost layer, fades in/out with the existing smoothed boost factor). Add a clickable mute toggle in the top-left corner with localStorage persistence. Designed so a future ambient music track is a strict additive change within the new feature.
+**Scope:** Add three audio sources to the scene — `rocket_engine.mp3` (ambient engine, plays whenever the scene is live), `rocket_boost.mp3` (boost layer, gain follows the existing smoothed boost factor), and `theme.mp3` (main soundtrack, plays whenever the scene is live). Add a top-left UI cluster: a mute toggle and a settings panel exposing four volume sliders (master, music, engine, boost) for live AAA-style mix tuning. All settings persisted in localStorage.
 
 ---
 
 ## Goal
 
-The scene currently has no audio. The user has dropped two `.mp3` files into `public/audio/`:
-- `rocket_engine.mp3` — covers both idle and moving states (one continuous engine loop).
-- `rocket_boost.mp3` — plays while space-bar boost is active.
+The scene currently has no audio. The user has dropped three `.mp3` files into `public/audio/`:
+- `rocket_engine.mp3` (~327 KB) — covers idle and moving (one continuous engine loop).
+- `rocket_boost.mp3` (~36 KB) — plays while space-bar boost is active.
+- `theme.mp3` (~6.1 MB) — main theme soundtrack, loops for the duration of the scene.
 
-Both are diegetic spaceship SFX, scene-only. The audio must:
+All three are scene-only. The audio must:
 
-1. Layer **additively**: engine = always on while the scene is live; boost = additional layer, gain follows the existing smoothed `boost.factor` so the cancel-on-proximity latch is honored for free.
-2. Be **silent** during `loading` and `paused`, resume on un-pause.
-3. Respect **browser autoplay policy**: the AudioContext stays `suspended` until the first user gesture (key press or pointer-down). No "click to enable sound" overlay.
-4. Be **mutable** via a single clickable icon. No keyboard shortcut. localStorage-persisted, default unmuted.
-5. Be **extensible**: a future ambient music track adds a setter and an audio node, no refactor.
+1. **Layer cleanly across three channels.** Engine + boost are diegetic SFX; theme is non-diegetic music sitting underneath. The mix must be tunable live.
+2. **Stay silent during `loading` and `paused`.** All three channels gate on `sceneAlive`. Boost additionally rides on the existing smoothed `boost.factor` so the cancel-on-proximity latch is honored for free.
+3. **Respect browser autoplay policy.** AudioContext stays `suspended` until the first user gesture (key press or pointer-down). No "click to enable sound" overlay.
+4. **Be controllable.** A mute toggle (instant) and a settings panel (4 sliders: Master / Music / Engine / Boost + Reset). No keyboard shortcut. All persisted in localStorage.
+5. **Default to a AAA-tuned starting mix.** Music sits underneath SFX; engine is ambient; boost peaks above. User tunes from there via the sliders.
+6. **Not block scene render on the 6 MB theme download.** Async decode in parallel with engine/boost; music starts when ready.
 
 ## Non-goals
 
-- No keyboard mute shortcut.
-- No theme/ambient music in this spec (the file does not exist yet). Future addition is documented as a strict additive change but **not scaffolded**.
-- No per-axis spatialization (no PannerNode, no positional audio). Engine + boost are 2D stereo loops.
-- No engine-volume modulation by speed. The single engine file is intended to cover both idle and moving — constant gain while scene is live.
-- No volume slider — mute toggle only. Per-channel master gains are constants in the service.
-- No audio settings persistence beyond the mute flag.
+- No keyboard mute or volume shortcuts.
+- No per-axis spatialization (no `PannerNode`). All three channels are 2D stereo.
+- No engine-volume modulation by speed. Single engine file covers idle and moving — constant gain while scene is live.
+- No music-skip / next-track UI. One looping theme.
+- No music ducking under reveal panels or boost. Theme stays at its slider-set level always.
 - No reactivity to motion-reduced preference (audio ≠ motion).
+- No audio analytics, no waveform visualization.
 - No core/ domain logic — audio is reactive plumbing over signals already shaped by core (`SceneState`, `BoostStep`).
 
 ---
@@ -36,92 +38,167 @@ Both are diegetic spaceship SFX, scene-only. The audio must:
 
 ### Layer placement
 
-New vertical-slice feature `features/audio/`, mirroring the existing shape of `features/comms/`, `features/scene/`, `features/ships/`.
+New vertical-slice feature `features/audio/`, mirroring the shape of `features/comms/`, `features/scene/`, `features/ships/`.
 
 ```
 features/audio/
 ├── types/
-│   └── audio-orchestrator.ts        — SpaceshipAudio port type
+│   ├── audio-orchestrator.ts        — SpaceshipAudio port + AudioChannel union
+│   └── audio-settings.ts            — AudioSettings shape + DEFAULT_AUDIO_SETTINGS
 ├── services/
 │   ├── createSpaceshipAudio.ts      — Web Audio adapter; pure callback API; no React
 │   └── createSpaceshipAudio.test.ts
 ├── components/
-│   └── MuteToggle/
-│       ├── MuteToggle.tsx           — pure controlled component, props in/events out
-│       └── MuteToggle.test.tsx
+│   ├── MuteToggle/
+│   │   ├── MuteToggle.tsx           — pure controlled icon-button
+│   │   └── MuteToggle.test.tsx
+│   ├── SettingsTrigger/
+│   │   ├── SettingsTrigger.tsx      — pure cog icon-button (toggles panel open)
+│   │   └── SettingsTrigger.test.tsx
+│   └── AudioSettingsPanel/
+│       ├── AudioSettingsPanel.tsx   — pure panel (header + 4 sliders + reset)
+│       ├── AudioSettingsPanel.test.tsx
+│       ├── VolumeSlider.tsx         — pure single-row slider component
+│       └── VolumeSlider.test.tsx
 └── widget/
-    └── mute/
-        ├── useMute.ts               — localStorage-backed mute state
-        ├── useMute.test.ts
-        └── MuteToggleWidget.tsx     — thin shell
+    └── controls/
+        ├── useAudioSettings.ts      — localStorage-backed AudioSettings
+        ├── useAudioSettings.test.ts
+        └── AudioControlsWidget.tsx  — composes mute + cog + panel; owns panel-open state
 ```
 
 Touch points outside the new feature:
 
 ```
-features/scene/widget/scene/useScene.ts        — instantiates createSpaceshipAudio(); pushes sceneAlive
-features/scene/widget/scene/SceneWidget.tsx    — mounts <MuteToggleWidget />; passes audio to Scene
+features/scene/widget/scene/useScene.ts        — instantiates createSpaceshipAudio(); subscribes to useAudioSettings(); pushes all signals
+features/scene/widget/scene/SceneWidget.tsx    — mounts <AudioControlsWidget />; passes audio to <Scene />
 features/scene/components/Scene/Scene.tsx      — accepts audio prop, threads to Player
 features/scene/components/Scene/Player.tsx     — calls audio.setBoost in useFrame after boostController.tick
 ```
 
-No `core/` addition. No new state machine. No new schema (no parsed input crosses a boundary). No new route. No URL state.
+No `core/` addition. No new state machine. No new schema (zod). No new route. No URL state.
 
 ### Dependency rule
 
 ```
-SceneWidget → MuteToggleWidget → MuteToggle (pure UI, lucide-react icon)
+SceneWidget → AudioControlsWidget → MuteToggle, SettingsTrigger, AudioSettingsPanel (pure UI; lucide-react icons)
 SceneWidget → useScene → createSpaceshipAudio (service)
-                       → useMute (localStorage hook)
+                       → useAudioSettings (localStorage hook)
 useScene → Scene → Player → audio.setBoost(…)  (per-frame)
-useScene → useEffect → audio.setSceneAlive(…)  (on state.kind transition)
-useMute → useEffect → audio.setMuted(…)        (on toggle)
+useScene → useEffect → audio.setSceneAlive(…)         (on state.kind transition)
+useScene → useEffect → audio.setMuted(…) + audio.setVolume(channel, value) × 4  (on settings change)
+AudioControlsWidget → useAudioSettings (independent subscription to same localStorage entry)
 ```
 
-All cross-feature traffic flows through declared ports (`SpaceshipAudio`, the existing `SceneState`, the existing `BoostStep`-shaped values). The audio service is unaware of React, the router, the FSM. The components are unaware of Web Audio.
+Cross-feature traffic flows only through declared ports (`SpaceshipAudio`, `AudioSettings`, the existing `SceneState`, the existing `BoostStep`-shaped values). The audio service is unaware of React, the router, the FSM. The components are unaware of Web Audio.
 
 ### Port
 
 ```typescript
 // features/audio/types/audio-orchestrator.ts
 
+export type AudioChannel = 'master' | 'music' | 'engine' | 'boost';
+
 export type SpaceshipAudio = {
   readonly setSceneAlive: (alive: boolean) => void;
   readonly setBoost: (active: boolean, factor: number) => void;
   readonly setMuted: (muted: boolean) => void;
+  readonly setVolume: (channel: AudioChannel, value: number) => void;
   readonly dispose: () => void;
 };
 ```
 
-Three orthogonal signals. Each setter is idempotent — re-pushing the same value is a no-op at the audio-graph level.
+Five methods. `setVolume` accepts a tagged channel name — the union of valid channels is the type itself, so "invalid channel" is unrepresentable at call sites. Each setter is idempotent (re-pushing the same value is a no-op at the graph level).
+
+### Settings shape
+
+```typescript
+// features/audio/types/audio-settings.ts
+
+export type AudioSettings = {
+  readonly muted: boolean;
+  readonly master: number;  // [0, 1]
+  readonly music: number;   // [0, 1]
+  readonly engine: number;  // [0, 1]
+  readonly boost: number;   // [0, 1]
+};
+
+export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  muted: false,
+  master: 1.0,   // Default to full; user pulls down if too loud overall.
+  music: 0.5,    // Theme sits underneath gameplay.
+  engine: 0.4,   // Ambient SFX, always present.
+  boost: 0.7,    // Peak impact when held.
+};
+```
+
+These are tuned against AAA-game convention: master at full, music ~50%, SFX 40–70% depending on prominence. Actual perceived balance depends on the recording levels of the `.mp3` files; the user dials in the final mix via the sliders.
 
 ### Internal state (discriminated union, Iron Law 2)
 
 ```typescript
 type AudioInternal =
-  | { readonly kind: 'pre_gesture'; readonly pending: PendingSetters }
+  | { readonly kind: 'pre_gesture'; readonly pending: PendingState }
   | {
       readonly kind: 'ready';
       readonly ctx: AudioContext;
-      readonly master: GainNode;
-      readonly engineGain: GainNode;
-      readonly boostGain: GainNode;
-      readonly engineSource: AudioBufferSourceNode;
-      readonly boostSource: AudioBufferSourceNode;
+      readonly muteGain: GainNode;
+      readonly masterGain: GainNode;
+      readonly channels: ChannelGraph;
+      readonly sources: SourceGraph;
+      readonly current: CurrentState;
     }
   | { readonly kind: 'disposed' };
 
-type PendingSetters = {
+type ChannelGraph = {
+  readonly music: GainNode;
+  readonly engine: GainNode;
+  readonly boost: GainNode;
+};
+
+type SourceGraph = {
+  readonly music: AudioBufferSourceNode;
+  readonly engine: AudioBufferSourceNode;
+  readonly boost: AudioBufferSourceNode;
+};
+
+type CurrentState = {
+  readonly sceneAlive: boolean;
+  readonly boostFactor: number;
+  readonly settings: AudioSettings;
+};
+
+type PendingState = {
   readonly sceneAlive: boolean;
   readonly boostActive: boolean;
   readonly boostFactor: number;
-  readonly muted: boolean;
+  readonly settings: AudioSettings;
 };
 ```
 
-This makes "playing audio before the browser has unlocked the context" structurally unrepresentable. In the `pre_gesture` state, setter calls update `pending`. On the first user gesture, the service decodes buffers, builds the node graph, transitions to `ready`, and replays `pending` into the live graph in one shot.
+Three discriminator variants:
+- `pre_gesture` — no graph; setter calls update `pending`.
+- `ready` — graph live; setter calls recompute gains and write through.
+- `disposed` — terminal; setter calls are no-ops.
 
-`disposed` is terminal — setter calls after dispose are no-ops.
+This makes "playing before unlock" and "setter after dispose" both structurally unrepresentable.
+
+### Audio graph (signal flow)
+
+```
+musicSource  → musicChannelGain ─┐
+engineSource → engineChannelGain ─┼→ masterGain → muteGain → ctx.destination
+boostSource  → boostChannelGain ──┘
+```
+
+Gain values at any moment:
+- `musicChannelGain.gain` = `sceneAlive ? settings.music : 0`
+- `engineChannelGain.gain` = `sceneAlive ? settings.engine : 0`
+- `boostChannelGain.gain` = `settings.boost * boostFactor` (always; `boostFactor` is naturally 0 when not held / not active)
+- `masterGain.gain` = `settings.master`
+- `muteGain.gain` = `settings.muted ? 0 : 1`
+
+`muteGain` is split out from `masterGain` so muting doesn't overwrite the user's master volume — un-muting restores the prior level cleanly.
 
 ---
 
@@ -129,28 +206,39 @@ This makes "playing audio before the browser has unlocked the context" structura
 
 ### Engine loop
 
-- Plays continuously while `sceneAlive === true && muted === false`.
-- Constant target gain: `ENGINE_TARGET = 0.35`.
-- On `setSceneAlive(true)`: `engineGain.gain.linearRampToValueAtTime(ENGINE_TARGET, now + 0.3)`.
-- On `setSceneAlive(false)`: ramp to 0 over 300ms. Source keeps looping (a Web Audio `AudioBufferSourceNode` can only be started once — we never stop it; we only mute its gain).
-- On mute toggle: handled at the master-gain layer (one place to cut everything cleanly).
+- Plays continuously while `sceneAlive === true`.
+- Channel gain = `settings.engine` while alive, ramped to 0 over 300ms on transition to non-alive.
+- Source starts at first-gesture unlock with `loop = true`; never stopped — gain controls audibility.
 
 ### Boost loop
 
-- Always looping. Gain target = `BOOST_MASTER * boost.factor` where `BOOST_MASTER = 0.55` and `boost.factor` is the smoothed value the upstream `boostController` already produces.
-- No double-smoothing — `setBoost` writes the gain directly via `setValueAtTime`. The visual `factor` and the audio `factor` will be perceptually locked.
+- Always looping. Channel gain = `settings.boost * boost.factor`.
+- `setBoost(active, factor)` writes directly via `setValueAtTime` (no double-smoothing — `factor` is already smoothed upstream by `boostController`).
 - `active` is part of the upstream `BoostStep` shape and is therefore part of the port signature for fidelity to the source value; gain is derived from `factor` alone since `factor` already encodes active-ness through the smoothing.
+
+### Music loop
+
+- Plays continuously while `sceneAlive === true`. No ducking, no skipping, no fade between sections.
+- Channel gain = `settings.music` while alive, ramped to 0 over 300ms on transition to non-alive.
+- Source starts at first-gesture unlock OR when the (6 MB) buffer finishes decoding — whichever is later. Until then, the music source slot is empty; the rest of the graph is fully functional.
+- `loop = true`.
 
 ### Mute
 
-- `muted === true`: master gain ramps to 0 over 150ms (prevents click).
-- `muted === false`: master gain ramps to 1 over 150ms.
-- All sub-gains stay at their natural levels — mute is a single global cut at the master node.
+- `setMuted(true)` ramps `muteGain` from 1 → 0 over 150ms.
+- `setMuted(false)` ramps `muteGain` from 0 → 1 over 150ms.
+- Per-channel and master gains stay at their user-set values — mute is a single global cut at the final node.
+
+### Volume changes
+
+- `setVolume(channel, value)` recomputes the affected gain and writes it directly.
+- No ramp on volume slider drags — sliders should feel immediate; tiny audible steps during drag are expected and fine.
+- One exception: when `boost` channel volume changes, the new value is multiplied with the live `boostFactor` and written through, so the slider takes effect mid-boost without dropping or jumping the level discontinuously.
 
 ### Pause / loading
 
 - `setSceneAlive(false)` fires when `state.kind === 'loading' || state.kind === 'paused'`.
-- Engine ramps out over 300ms; boost ramps out as `factor` decays (the existing boost controller stops being ticked when `integratesIn(sceneState)` is false, but `useScene` will explicitly `setBoost(false, 0)` on transition to non-alive to guarantee silence).
+- Engine + music channel gains ramp to 0 over 300ms; boost is forced to `(false, 0)` by `useScene` on the non-alive transition to guarantee silence.
 
 ### Tab blur
 
@@ -158,7 +246,8 @@ This makes "playing audio before the browser has unlocked the context" structura
 
 ### Asset load failure
 
-- If `fetch` or `decodeAudioData` fails, the service logs a single `console.warn`, transitions to `disposed`, and all setters become no-ops. No user-visible error. The scene continues silent.
+- If `fetch` or `decodeAudioData` fails for a given file, that channel stays silent for the session; others continue. Service logs a single `console.warn` per failure. No user-visible error.
+- If ALL three fail, the service transitions to `disposed` and all setters become no-ops.
 
 ---
 
@@ -166,27 +255,26 @@ This makes "playing audio before the browser has unlocked the context" structura
 
 Internal to `createSpaceshipAudio`:
 
-1. Construction:
-   - Create `AudioContext` (starts `suspended` in all modern browsers without prior user activation).
+1. **Construction:**
+   - Create `AudioContext` (starts `suspended`).
    - Register one-shot `pointerdown` and `keydown` listeners on `window`.
-   - Begin async fetch + decode of both `.mp3` files (in parallel, via `fetch` + `ctx.decodeAudioData`).
+   - Begin parallel `fetch` + `ctx.decodeAudioData` for all three files. Track each via its own promise.
    - State = `{ kind: 'pre_gesture', pending: defaultPending }`.
 
-2. Setter calls before first gesture:
-   - Update `pending`. Do not touch the graph (graph nodes don't exist yet anyway).
+2. **Setter calls before first gesture:**
+   - Update `pending`. Do not touch the graph.
 
-3. First gesture (whichever fires first):
+3. **First gesture (whichever fires first):**
    - `await ctx.resume()`.
-   - Await the in-flight buffer-decode promises.
-   - Build node graph: `source → channelGain → master → ctx.destination` (one chain per loop).
-   - Start both sources with `loop = true`. Engine starts at gain 0; ramp to target if `pending.sceneAlive`. Boost starts at gain 0; jump to `BOOST_MASTER * pending.boostFactor`.
-   - Apply `pending.muted` to master gain.
-   - Transition state to `ready`. Remove the gesture listeners.
+   - Build the static graph: `masterGain → muteGain → ctx.destination`, plus the three channel gains routed into `masterGain`. Apply pending settings to all gains.
+   - For each buffer-decode promise that has already resolved: create the source, connect to its channel gain, `start(0)` with `loop = true`.
+   - For each promise still in flight: when it resolves, create + start the source then.
+   - Remove the gesture listeners. Transition state to `ready` (the engine/boost may be playing already; music joins when its buffer arrives).
 
-4. Race: if `dispose()` is called before the gesture or before buffers decode:
-   - Transition state to `disposed`. Cancel listeners. Subsequent gesture fires are no-ops.
+4. **Race: `dispose()` before gesture or before any buffers decode:**
+   - Transition state to `disposed`. Cancel listeners. Any subsequent buffer-decode resolution is dropped.
 
-No user-visible overlay or prompt. The mute icon is clickable before the first gesture (clicking it counts as a gesture and unlocks the context — the click handler calls `setMuted(true)`, the service routes the gesture into unlock, and the toggle immediately reflects the muted state).
+No user-visible "click to enable" overlay. Clicking the mute icon, the cog, or any slider before the first gesture acts as the gesture and unlocks the context.
 
 ---
 
@@ -194,156 +282,256 @@ No user-visible overlay or prompt. The mute icon is clickable before the first g
 
 | Source | Signal | Pushed via | Cadence |
 |---|---|---|---|
-| `useScene` | `sceneAlive = state.kind === 'playing' \|\| state.kind === 'revealing'` | `useEffect([state.kind])` → `audio.setSceneAlive(alive)`. On the falsy transition also calls `audio.setBoost(false, 0)`. | On state-kind transition |
+| `useScene` | `sceneAlive = state.kind ∈ {playing, revealing}` | `useEffect([sceneAlive, audio])` → `audio.setSceneAlive(alive)`. On `false` transition also `audio.setBoost(false, 0)` for safety. | On state-kind transition |
 | `Player.tsx` `useFrame` | `boost.kind, boost.factor` (from `boostController.tick`) | `audio.setBoost(boost.kind === 'active', boost.factor)` after the existing `writeTrailOpacities` call | Per frame while `integratesIn(sceneState)` |
-| `useMute` (widget) | `muted` (localStorage-backed boolean) | `useEffect([muted])` → `audio.setMuted(muted)` | On toggle |
+| `useAudioSettings` (in `useScene`) | `settings: AudioSettings` | One `useEffect([settings, audio])` that calls `setMuted` + `setVolume` for all 4 channels | On any settings field change |
 
-`Player.tsx` already has the `boost` value in scope from `boostController.tick(...)` — adding `audio.setBoost(...)` is a one-line addition. The `audio` is passed through as a new prop on `Scene` and `Player`.
+`Player.tsx` already has the `boost` value in scope from `boostController.tick(...)` — adding `audio.setBoost(...)` is a one-line addition. `audio` is passed through as a new prop on `Scene` and `Player`.
 
 The audio service is purely reactive. No internal `requestAnimationFrame`. No internal tick.
 
 ---
 
-## Mute UI
+## UI
 
-### Visual
+### Top-left cluster
 
-- Position: `position: fixed; top: 1.5rem; left: 1.5rem; z-index: 50`. Symmetric with the existing `CompanyInfoPanel` at `top-6 right-6` so the two corners balance when the reveal panel is open. Clear of the bottom-center CommsDock.
-- Container: 40×40 button (a11y hit target), 24×24 icon inside, centered.
-- Visual treatment:
-  - Background: `rgba(0,0,0,0.25)` with `backdrop-filter: blur(8px)` for legibility over any scene content.
-  - Border: `1px solid rgba(255,255,255,0.08)` for definition.
-  - Border-radius: `9999px` (full circle).
-  - Idle opacity: 0.55. Hover/focus opacity: 1.0. Transition: 200ms ease.
-  - Focus ring: visible, matches existing button focus treatment.
-- Icons (from `lucide-react`, already a dep):
-  - Unmuted: `Volume2`
-  - Muted: `VolumeX`
-- Element: real `<button type="button">`, `aria-label="Mute audio"` / `aria-label="Unmute audio"` toggled by state, `aria-pressed={muted}`.
+Two icon-buttons arranged horizontally, both `position: fixed; top: 1.5rem; left: 1.5rem; z-index: 50`:
 
-### Behavior
+```
+[Mute] [Cog]   ←— 40×40 each, 8px gap
+```
 
-- Default: unmuted (localStorage key `audio.muted` absent or `"false"`).
-- Click: toggle. New value persisted to `localStorage` synchronously. `useEffect` watching `muted` pushes to `audio.setMuted(muted)`.
-- Always mounted whenever `SceneWidget` is mounted — visible regardless of scene state (visible during `loading` so the user can mute before audio starts).
+Symmetric balance with the `CompanyInfoPanel` at `top-6 right-6`. Always mounted with `SceneWidget` (visible during `loading` so the user can mute or tune before audio starts).
 
-### Component shape
+### MuteToggle component (pure)
+
+- 40×40 button, 24×24 lucide icon centered.
+- Icons: `Volume2` (unmuted) / `VolumeX` (muted) from `lucide-react`.
+- Visual: `bg-black/25` with `backdrop-blur-md`, `border border-white/10`, fully rounded.
+- Idle opacity 0.55, hover/focus 1.0, 200ms ease transition.
+- `<button type="button">`, `aria-label` toggled by state, `aria-pressed={muted}`, visible focus ring.
 
 ```typescript
-// MuteToggle.tsx — pure, controlled
 type MuteToggleProps = {
   readonly muted: boolean;
   readonly onToggle: () => void;
 };
 ```
 
-No data hooks. No router. No `useEffect`. Renders the right icon based on `muted`, emits `onToggle` on click.
+### SettingsTrigger component (pure)
 
-### Widget shape
+- Same shell as MuteToggle (40×40, same visual treatment).
+- Icon: `SlidersHorizontal` from `lucide-react`.
+- `<button type="button">`, `aria-label="Audio settings"`, `aria-expanded={open}`, `aria-controls="audio-settings-panel"`.
 
 ```typescript
-// useMute.ts
-type UseMuteResult = {
-  readonly muted: boolean;
+type SettingsTriggerProps = {
+  readonly open: boolean;
   readonly onToggle: () => void;
 };
-
-export const useMute = (): UseMuteResult;
 ```
 
+### AudioSettingsPanel component (pure)
+
+Floats below the cog, anchored to the top-left cluster. Closes on outside click, Escape key, or another cog click.
+
+- Position: `position: fixed; top: 4.5rem; left: 1.5rem; z-index: 50` (sits beneath the icon row).
+- Width: 18rem.
+- Visual: matches `CompanyInfoPanel` family — `bg-card/85`, `backdrop-blur-md`, `ring-1 ring-foreground/10`, `shadow-2xl`, `rounded-xl`, `p-4`.
+- Open/close animation: 200ms fade + 4px translate-up.
+
+Contents:
+1. Small header `Audio` (text-xs uppercase tracking-wider muted).
+2. Four `VolumeSlider` rows in order: `Master`, `Music`, `Engine`, `Boost`.
+3. Footer: small "Reset to defaults" link button on the right.
+
 ```typescript
-// MuteToggleWidget.tsx — thin shell
-export const MuteToggleWidget = (): JSX.Element => {
-  const { muted, onToggle } = useMute();
-  return <MuteToggle muted={muted} onToggle={onToggle} />;
+type AudioSettingsPanelProps = {
+  readonly settings: AudioSettings;
+  readonly onSetVolume: (channel: AudioChannel, value: number) => void;
+  readonly onReset: () => void;
+  readonly id: string;  // for aria-controls linkage from SettingsTrigger
 };
 ```
 
-The widget owns its own mute state. `useScene` does **not** own mute — it just receives the audio service handle and pushes scene-alive into it. Mute pushes happen via a separate `useEffect` inside whichever hook ends up owning the audio handle (see "Open wiring detail" below).
+The panel does not contain its own mute toggle — mute lives in the always-visible top-left button. Keeping them separate avoids a "double mute" UI.
+
+### VolumeSlider component (pure)
+
+A single row inside the panel — label, value readout, native range input.
+
+```typescript
+type VolumeSliderProps = {
+  readonly label: string;            // e.g., "Master"
+  readonly value: number;            // [0, 1]
+  readonly onChange: (value: number) => void;
+};
+```
+
+Layout:
+```
+Master                    80%
+[━━━━━━━━○━━━━━━━━━]
+```
+
+- Native `<input type="range" min="0" max="100" step="1">` styled with custom CSS (track + thumb). Keyboard arrows / Home / End all work for free.
+- Label: `text-xs uppercase tracking-wide text-muted-foreground` (matches existing app typography).
+- Value readout right-aligned, monospace, `text-xs tabular-nums text-muted-foreground`.
+- The value displayed and emitted as percentages (0–100) at the slider boundary; the `onChange` callback receives the [0, 1] domain value (divided by 100).
+- `aria-label={label}`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-valuenow={Math.round(value * 100)}`.
+
+### AudioControlsWidget composition
+
+```typescript
+export const AudioControlsWidget = (): JSX.Element => {
+  const { settings, setMuted, setVolume, reset } = useAudioSettings();
+  const [panelOpen, setPanelOpen] = useState(false);
+  // Outside-click + Escape close handlers via useEffect on panelOpen.
+  return (
+    <>
+      <div className="fixed top-6 left-6 z-50 flex gap-2">
+        <MuteToggle muted={settings.muted} onToggle={() => setMuted(!settings.muted)} />
+        <SettingsTrigger open={panelOpen} onToggle={() => setPanelOpen((p) => !p)} />
+      </div>
+      {panelOpen && (
+        <AudioSettingsPanel
+          settings={settings}
+          onSetMuted={setMuted}
+          onSetVolume={setVolume}
+          onReset={reset}
+          id="audio-settings-panel"
+        />
+      )}
+    </>
+  );
+};
+```
+
+The widget owns transient panel-open state (not persisted — opens closed on every page load). Settings are persisted via `useAudioSettings`.
 
 ### Wiring split
 
-`useMute` owns mute state with localStorage + `'storage'` event sync. It is called twice — once inside `useScene` (which pushes the boolean to the audio service via `useEffect`), once inside `MuteToggleWidget` (for the icon render). Same source of truth (localStorage), independently subscribed.
+`useAudioSettings` owns the persisted struct with localStorage + `'storage'` event sync. It is called **twice in the tree**:
+1. Inside `useScene` — for pushing values into the audio service via `useEffect`.
+2. Inside `AudioControlsWidget` — for rendering and editing.
 
-This keeps the audio plumbing and the mute UI as two unrelated consumers of one boolean — neither has to know the other exists, and `useScene` does not have to thread mute state down to a separate widget.
+Both subscribe to the same localStorage entry; cross-tab and cross-component sync happen via the `'storage'` event and synchronous re-read on update. This keeps the audio service and the UI as two unrelated consumers — neither has to thread state through the other.
 
 ---
 
-## Volume & smoothing constants
+## Persistence
 
-All in the service module, top-of-file:
+Single localStorage key: `audio.settings`. Value: JSON-encoded `AudioSettings`.
+
+`useAudioSettings`:
+- On mount: read + parse. If missing, malformed, or out-of-range, fall back to `DEFAULT_AUDIO_SETTINGS`.
+- On any setter: write the new struct atomically.
+- Subscribe to `window` `'storage'` event filtered on `e.key === 'audio.settings'`; reparse and update on cross-tab change.
+- `reset()` writes `DEFAULT_AUDIO_SETTINGS`.
+
+Parsing is defensive at the boundary (parse-don't-validate, Iron Law 3): a small parser function converts unknown JSON to `AudioSettings` or returns the default. Downstream consumers receive a guaranteed-valid struct.
+
+---
+
+## Volume & ramp constants
+
+In the service module, top-of-file:
 
 | Constant | Value | Why |
 |---|---|---|
-| `ENGINE_TARGET_GAIN` | 0.35 | Ambient — present but doesn't dominate |
-| `BOOST_MASTER_GAIN` | 0.55 | Foreground — distinctly audible during boost |
-| `ENGINE_RAMP_SECONDS` | 0.3 | Smooth fade in/out on scene transitions |
+| `CHANNEL_RAMP_SECONDS` | 0.3 | Smooth channel fade in/out on scene-alive transitions |
 | `MUTE_RAMP_SECONDS` | 0.15 | Quick but clickless mute toggle |
 
-Initial values. Tuning lives in this file only — if the perceived mix is wrong after hearing the audio in context, adjust the constants here, no graph changes.
+In `audio-settings.ts`:
+
+| Field | Default | Why |
+|---|---|---|
+| `master` | 1.0 | Full headroom; user pulls down if needed |
+| `music` | 0.5 | Theme sits underneath SFX |
+| `engine` | 0.4 | Ambient — present but not dominant |
+| `boost` | 0.7 | Peak impact moment |
+| `muted` | false | Audio on by default; user can mute |
+
+These defaults follow AAA convention (master at full headroom, music underneath SFX, ambient SFX gentle, peak SFX prominent). The sliders exist so the user can dial in the final mix once the files are heard in context — that tuning is the panel's reason to exist, not a deferred "we'll fix it later."
 
 ---
 
 ## Tests (TDD)
 
-All tests run under Vitest + jsdom (existing setup). Web Audio API is not in jsdom, so the service tests use a hand-rolled minimal `AudioContext` fake injected via constructor dependency injection.
+All tests run under Vitest + jsdom. Web Audio is not in jsdom — service tests inject a hand-rolled minimal `AudioContext` fake via a constructor parameter.
 
 ### `createSpaceshipAudio.test.ts`
 
-The service factory accepts an optional `AudioContextCtor` parameter (default `window.AudioContext`) for test injection.
+The service factory accepts an optional `AudioContextCtor` parameter (default `window.AudioContext`) for test injection. Plus an optional `fetch` injection for asset loading.
 
 Bullets:
-- `setSceneAlive(true)` before gesture: pending; no audio nodes created.
-- Gesture fires → context resumes → buffers decode → graph built → engine gain ramps to target.
-- `setSceneAlive(false)` after ready: engine gain ramps to 0 over 300ms.
-- `setBoost(true, 0.5)` after ready: boost gain set to `0.55 * 0.5 = 0.275`.
-- `setBoost(false, 0)`: boost gain set to 0.
-- `setMuted(true)`: master gain ramps to 0.
-- `setMuted(false)`: master gain ramps to 1.
-- `dispose()` before gesture: cancels listeners; subsequent gesture is a no-op.
-- `dispose()` after ready: stops both sources; subsequent setters are no-ops.
-- Asset fetch failure: state transitions to `disposed`; `console.warn` called once; subsequent setters are no-ops.
+- Construction → state is `pre_gesture`; no graph nodes yet; fetches initiated for all three files.
+- `setSceneAlive(true)` before gesture: pending captured; no audio nodes.
+- Gesture fires → ctx resumes → graph built (master + mute + three channels) → engine + boost sources start (if buffers decoded) → music source starts when its buffer arrives.
+- After ready, `setSceneAlive(false)`: engine + music gains ramp to 0 over 300ms.
+- After ready, `setBoost(true, 0.5)` with `settings.boost = 0.7`: boost channel gain = `0.7 * 0.5 = 0.35`.
+- After ready, `setBoost(false, 0)`: boost channel gain = 0.
+- `setMuted(true)`: muteGain ramps to 0 over 150ms.
+- `setMuted(false)`: muteGain ramps to 1 over 150ms.
+- `setVolume('master', 0.5)`: masterGain = 0.5.
+- `setVolume('music', 0.3)`: musicChannelGain = `sceneAlive ? 0.3 : 0`.
+- `setVolume('boost', 0.4)` while `boostFactor = 0.6`: boost channel gain = `0.4 * 0.6 = 0.24`.
+- `dispose()` before gesture: listeners cancelled; subsequent gesture is a no-op; pending buffer resolutions dropped.
+- `dispose()` after ready: stops all sources; setters become no-ops.
+- Per-file asset load failure: that channel stays silent; one `console.warn`; other channels work.
+- All-files failure: state transitions to `disposed`.
 
 ### `MuteToggle.test.tsx`
 
 - Renders `Volume2` icon when `muted === false`.
 - Renders `VolumeX` icon when `muted === true`.
 - Click fires `onToggle`.
-- Has `aria-label="Mute audio"` when unmuted, `aria-label="Unmute audio"` when muted.
-- Has `aria-pressed={muted}`.
+- `aria-label="Mute audio"` / `"Unmute audio"` toggle.
+- `aria-pressed={muted}`.
 
-### `useMute.test.ts`
+### `SettingsTrigger.test.tsx`
 
-- Default state is `muted: false` when localStorage is empty.
-- Reads existing `audio.muted="true"` from localStorage on mount.
-- `onToggle()` flips the value and writes to localStorage.
-- A `'storage'` event with the mute key updates the hook (cross-tab sync).
+- Renders `SlidersHorizontal` icon.
+- Click fires `onToggle`.
+- `aria-expanded={open}`, `aria-controls="audio-settings-panel"`.
+
+### `AudioSettingsPanel.test.tsx`
+
+- Renders four `VolumeSlider` rows labeled `Master`, `Music`, `Engine`, `Boost`.
+- Sliders show the correct values from `settings`.
+- Slider input fires `onSetVolume(channel, value)` with the right channel + [0, 1] domain value.
+- Reset button fires `onReset`.
+
+### `VolumeSlider.test.tsx`
+
+- Renders label, readout (e.g., `"80%"`), and `<input type="range">`.
+- Initial input value matches `value * 100`.
+- Input change fires `onChange(value / 100)`.
+- Has `aria-valuenow={Math.round(value * 100)}`, `aria-valuemin="0"`, `aria-valuemax="100"`.
+
+### `useAudioSettings.test.ts`
+
+- Default state is `DEFAULT_AUDIO_SETTINGS` when localStorage is empty.
+- Reads + parses existing JSON on mount; malformed JSON falls back to defaults.
+- Out-of-range values (e.g., `master: 5.0`) are clamped or fall back to defaults via the parser.
+- `setMuted(true)` updates state + writes localStorage.
+- `setVolume('music', 0.3)` updates state + writes localStorage.
+- `reset()` restores defaults + writes localStorage.
+- A `'storage'` event with the audio key triggers a re-read (cross-tab sync).
 
 ### Integration
 
-- Extend `useScene.smoke.test.tsx` with an assertion that the audio service is instantiated and `setSceneAlive` is called with `true` after the `start` event transitions scene to `playing`. Verify via the injected fake context.
-
----
-
-## Theme music (future, not built)
-
-When the music file lands, the addition is:
-
-1. Extend `SpaceshipAudio` port with `setMusic(playing: boolean)`.
-2. Add a third audio node chain (music source → music gain → master).
-3. Decide whether `MuteToggle` covers music too (likely yes — single mute = all audio off) or whether music gets its own separate control (probably for power-users; defer).
-4. Add `useEffect` in `useScene` pushing a music-playing boolean (e.g., scene-alive AND not in some specific moment).
-
-No core changes. No widget reshuffling. Strictly additive within `features/audio/`. This is documented here as the rationale for landing the audio feature in its own folder today — **not** as preemptive scaffolding (no music nodes, setters, or UI exist in this spec).
+- Extend `useScene.smoke.test.tsx` with an assertion that the audio service is instantiated and `setSceneAlive(true)` is called after the `start` event transitions scene to `playing`. Verify via injected fake context.
 
 ---
 
 ## Iron Law conformance
 
-- **Iron Law 1 (Hexagonal):** Audio service is a `services/` adapter — pure callback API, zero React, zero domain knowledge. Components (`MuteToggle`) are pure-render. Wiring (`useScene`, `useMute`) lives in composition roots. No layer reaches across — `Player` calls `audio.setBoost(...)` through the declared port type; the service does not know it's being called from a render loop.
-- **Iron Law 2 (Discriminated Unions):** `AudioInternal` is a flat tagged union. No optional-field soup. Pending-setter capture vs ready-graph are different variants with different fields.
-- **Iron Law 3 (Make Illegal States Unrepresentable):** "Playing audio before unlock" cannot happen — `pre_gesture` variant has no source/gain nodes; `ready` is the only variant with a graph. "Setter after dispose" is a no-op by exhaustive switch on the discriminator.
-- **Iron Law 4 (Solve More With Less):** No preemptive music scaffolding. No volume-slider primitive when only mute is needed. No abstraction layer between the boost signal and the audio gain — the upstream smoothing is reused directly. The audio service has four methods, period.
+- **Iron Law 1 (Hexagonal):** Audio service is a pure `services/` adapter — callback API, zero React, zero domain. Components are pure-render. Wiring lives in composition roots (`useScene`, `useAudioSettings`, `AudioControlsWidget`). No layer reaches across — `Player` calls `audio.setBoost(...)` through the declared port; the service does not know it's being called from a render loop. The panel does not know mute exists; the mute button does not know the panel exists; both observe the same localStorage truth via `useAudioSettings`.
+- **Iron Law 2 (Discriminated Unions):** `AudioInternal` is a flat tagged union (`pre_gesture | ready | disposed`). `AudioChannel` is a string-literal union. `AudioSettings` is a flat record with no optional fields.
+- **Iron Law 3 (Make Illegal States Unrepresentable):** "Playing audio before unlock" cannot happen — `pre_gesture` variant has no source/gain nodes; `ready` is the only variant with a graph. "Setter after dispose" is a no-op by exhaustive switch on the discriminator. "Invalid channel" cannot be passed — the union is the type. Parsing at the localStorage boundary returns either valid `AudioSettings` or the default — never a partial / invalid struct.
+- **Iron Law 4 (Solve More With Less):** Five setters cover all behavior; no per-channel-volume helpers. One JSON-encoded localStorage key, not five. One reactive `useEffect` pushes all settings to the service. No abstraction layer between the boost factor and the audio gain. The pure components have zero internal state — `AudioControlsWidget` owns only the panel-open boolean.
 
 ---
 
@@ -351,17 +539,24 @@ No core changes. No widget reshuffling. Strictly additive within `features/audio
 
 New:
 - `src/features/audio/types/audio-orchestrator.ts`
+- `src/features/audio/types/audio-settings.ts`
 - `src/features/audio/services/createSpaceshipAudio.ts`
 - `src/features/audio/services/createSpaceshipAudio.test.ts`
 - `src/features/audio/components/MuteToggle/MuteToggle.tsx`
 - `src/features/audio/components/MuteToggle/MuteToggle.test.tsx`
-- `src/features/audio/widget/mute/useMute.ts`
-- `src/features/audio/widget/mute/useMute.test.ts`
-- `src/features/audio/widget/mute/MuteToggleWidget.tsx`
+- `src/features/audio/components/SettingsTrigger/SettingsTrigger.tsx`
+- `src/features/audio/components/SettingsTrigger/SettingsTrigger.test.tsx`
+- `src/features/audio/components/AudioSettingsPanel/AudioSettingsPanel.tsx`
+- `src/features/audio/components/AudioSettingsPanel/AudioSettingsPanel.test.tsx`
+- `src/features/audio/components/AudioSettingsPanel/VolumeSlider.tsx`
+- `src/features/audio/components/AudioSettingsPanel/VolumeSlider.test.tsx`
+- `src/features/audio/widget/controls/useAudioSettings.ts`
+- `src/features/audio/widget/controls/useAudioSettings.test.ts`
+- `src/features/audio/widget/controls/AudioControlsWidget.tsx`
 
 Modified:
-- `src/features/scene/widget/scene/useScene.ts` — instantiate audio service; push sceneAlive + muted; return audio handle.
-- `src/features/scene/widget/scene/SceneWidget.tsx` — mount `<MuteToggleWidget />`; pass audio to `<Scene />`.
+- `src/features/scene/widget/scene/useScene.ts` — instantiate audio service; call useAudioSettings; push sceneAlive + all settings; return audio handle.
+- `src/features/scene/widget/scene/SceneWidget.tsx` — mount `<AudioControlsWidget />`; pass audio handle to `<Scene />`.
 - `src/features/scene/components/Scene/Scene.tsx` — accept `audio` prop; thread to `<Player />`.
 - `src/features/scene/components/Scene/Player.tsx` — accept `audio` prop; call `audio.setBoost(...)` in `useFrame` after the existing boost tick.
 - `src/features/scene/widget/scene/useScene.smoke.test.tsx` — extend with audio-instantiation assertion.
