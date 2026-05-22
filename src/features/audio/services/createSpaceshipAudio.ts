@@ -251,12 +251,28 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps): SpaceshipA
 
   beginBufferLoads(ctx, fetchImpl, buffers, tryStartSource);
 
+  // resume() succeeds the moment the document has prior user activation
+  // (e.g. a click on the previous route). If activation isn't present yet
+  // the promise rejects and we fall back to the gesture listeners that
+  // run on the next keydown / pointerdown anywhere on window.
+  // `unlocking` guards the await window: while one unlock attempt is in
+  // flight, additional callers (eager call + gesture handler firing in the
+  // same tick) bail out instead of stacking redundant resume() calls.
+  let unlocking = false;
   const unlock = async (): Promise<void> => {
     if (state.kind !== 'pre_gesture') return;
-    gesture.teardown();
-    await ctx.resume();
+    if (unlocking) return;
+    unlocking = true;
+    try {
+      await ctx.resume();
+    } catch {
+      unlocking = false;
+      return;
+    }
+    unlocking = false;
     const after: State = state;
     if (after.kind !== 'pre_gesture') return;
+    gesture.teardown();
     const graph = buildGraph(ctx);
     state = { kind: 'ready', graph };
     applyMasterAndMute(graph, pending);
@@ -265,6 +281,7 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps): SpaceshipA
   };
 
   const gesture = installGestureUnlock(unlock);
+  void unlock();
 
   return buildPublicApi({
     pending,
