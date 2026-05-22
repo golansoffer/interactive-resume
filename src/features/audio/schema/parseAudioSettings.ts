@@ -1,4 +1,4 @@
-import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from './audio-settings';
+import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../types/audio-settings';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;

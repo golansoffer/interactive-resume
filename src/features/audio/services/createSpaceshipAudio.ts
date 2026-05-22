@@ -6,7 +6,7 @@ import type {
   AudioBufferSourceNodeLike,
   AudioContextLike,
   GainNodeLike,
-} from './fakeAudioContext';
+} from '../types/audio-context';
 
 export type FetchLike = (url: string) => Promise<{
   readonly ok: boolean;
@@ -161,8 +161,7 @@ const tryStartSourceFor = (
 
 // Single async IIFE per key keeps the microtask chain flat: the load flows
 // inside one async frame, so a buffer can land and start its source within
-// the same microtask cycle the consumer awaits on. Splitting into chained
-// `.then(...)` calls extends the chain past what tests can flush.
+// the same microtask cycle the consumer awaits on.
 const beginBufferLoads = (
   ctx: AudioContextLike,
   fetchImpl: FetchLike,
@@ -202,7 +201,7 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
     const live = api.getState();
     if (live.kind === 'ready') applyChannelGains(live.graph, api.pending);
   },
-  setBoost: (_active: boolean, factor: number): void => {
+  setBoost: (factor: number): void => {
     if (api.getState().kind === 'disposed') return;
     api.pending.boostFactor = factor;
     const live = api.getState();

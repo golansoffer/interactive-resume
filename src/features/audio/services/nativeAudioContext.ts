@@ -4,7 +4,7 @@ import type {
   AudioContextLike,
   AudioParamLike,
   GainNodeLike,
-} from './fakeAudioContext';
+} from '../types/audio-context';
 
 const wrapNativeParam = (param: AudioParam): AudioParamLike => ({
   get value(): number {

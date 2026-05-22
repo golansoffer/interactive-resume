@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { parseAudioSettings } from '../../types/parseAudioSettings';
+import { parseAudioSettings } from '../../schema/parseAudioSettings';
 import { AudioControlsWidget } from './AudioControlsWidget';
 
 afterEach(() => {

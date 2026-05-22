@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSpaceshipAudio, type FetchLike } from './createSpaceshipAudio';
-import {
-  createFakeAudioContext,
-  type AudioContextLike,
-  type FakeContextHandle,
-} from './fakeAudioContext';
+import { createFakeAudioContext, type FakeContextHandle } from './fakeAudioContext';
+import type { AudioContextLike } from '../types/audio-context';
 
 type Deps = {
   readonly fetch: FetchLike;
@@ -53,7 +50,7 @@ describe('createSpaceshipAudio — pre-gesture', () => {
     const deps = setupDeps();
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     audio.setSceneAlive(true);
-    audio.setBoost(true, 0.5);
+    audio.setBoost(0.5);
     audio.setMuted(true);
     audio.setVolume('master', 0.5);
     expect(deps.handle.gains.length).toBe(0);
@@ -186,23 +183,23 @@ describe('createSpaceshipAudio — setSceneAlive', () => {
 });
 
 describe('createSpaceshipAudio — setBoost', () => {
-  it('setBoost(true, 0.5) with settings.boost=0.7 sets boost gain to 0.35', async () => {
+  it('setBoost(0.5) with settings.boost=0.7 sets boost gain to 0.35', async () => {
     const deps = setupDeps();
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     audio.setVolume('boost', 0.7);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
-    audio.setBoost(true, 0.5);
+    audio.setBoost(0.5);
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.35, 5);
   });
 
-  it('setBoost(false, 0) sets boost gain to 0', async () => {
+  it('setBoost(0) sets boost gain to 0', async () => {
     const deps = setupDeps();
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
-    audio.setBoost(true, 1);
-    audio.setBoost(false, 0);
+    audio.setBoost(1);
+    audio.setBoost(0);
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0, 5);
   });
 
@@ -210,7 +207,7 @@ describe('createSpaceshipAudio — setBoost', () => {
     const deps = setupDeps();
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     audio.setVolume('boost', 0.7);
-    audio.setBoost(true, 0.8);
+    audio.setBoost(0.8);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.7 * 0.8, 5);
@@ -245,7 +242,7 @@ describe('createSpaceshipAudio — setMuted', () => {
     audio.setVolume('music', 0.4);
     audio.setVolume('engine', 0.3);
     audio.setVolume('boost', 0.6);
-    audio.setBoost(true, 1);
+    audio.setBoost(1);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
     audio.setMuted(true);
@@ -302,7 +299,7 @@ describe('createSpaceshipAudio — setVolume', () => {
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
-    audio.setBoost(true, 0.6);
+    audio.setBoost(0.6);
     audio.setVolume('boost', 0.4);
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.24, 5);
   });
@@ -371,7 +368,7 @@ describe('createSpaceshipAudio — dispose', () => {
     audio.dispose();
     const before = findChannelGains(deps.handle);
     audio.setSceneAlive(true);
-    audio.setBoost(true, 1);
+    audio.setBoost(1);
     audio.setMuted(true);
     audio.setVolume('master', 0.123);
     const after = findChannelGains(deps.handle);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_AUDIO_SETTINGS } from './audio-settings';
+import { DEFAULT_AUDIO_SETTINGS } from '../types/audio-settings';
 import { parseAudioSettings } from './parseAudioSettings';
 
 describe('parseAudioSettings', () => {

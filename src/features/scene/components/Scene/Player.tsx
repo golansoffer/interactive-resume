@@ -206,7 +206,7 @@ const usePlayerFrame = (
 
     orientationController.tick(mesh, visualRef.current, next, basis, state.clock.elapsedTime);
     writeTrailOpacities(trailMats, boost.factor, isThrusting(props.intents.current));
-    props.audio.setBoost(boost.kind === 'active', boost.factor);
+    props.audio.setBoost(boost.factor);
   });
 };
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../../types/audio-settings';
 import type { AudioChannel } from '../../types/audio-orchestrator';
-import { parseAudioSettings } from '../../types/parseAudioSettings';
+import { parseAudioSettings } from '../../schema/parseAudioSettings';
 
 export const AUDIO_SETTINGS_STORAGE_KEY = 'audio.settings';
 
