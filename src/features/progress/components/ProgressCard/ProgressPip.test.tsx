@@ -1,24 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import type { JSX } from 'react';
 import { asCompanyId } from '../../../scene/types/company';
 import type { MotionPreference } from '../../../comms/types/motion-preference';
 import type { Pip } from '../../types/pip';
 import { ProgressPip } from './ProgressPip';
-
-vi.mock('./PlanetCanvas', () => ({
-  PlanetCanvas: ({
-    assetId,
-    rotates,
-  }: {
-    readonly assetId: string;
-    readonly rotates: boolean;
-  }): JSX.Element => (
-    <div data-asset={assetId} data-rotates={String(rotates)}>
-      mock-planet-canvas
-    </div>
-  ),
-}));
 
 const motion = (kind: MotionPreference['kind']): MotionPreference => ({ kind });
 

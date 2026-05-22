@@ -19,18 +19,13 @@ vi.mock('@react-three/drei', () => ({
 }));
 
 describe('PlanetCanvas', () => {
-  it('renders with data-rotates="true" when rotates=true', () => {
-    const { container } = render(<PlanetCanvas assetId="mars_b" rotates={true} />);
-    expect(container.querySelector('[data-rotates="true"]')).not.toBeNull();
-  });
-
-  it('renders with data-rotates="false" when rotates=false', () => {
-    const { container } = render(<PlanetCanvas assetId="mars_b" rotates={false} />);
-    expect(container.querySelector('[data-rotates="false"]')).not.toBeNull();
-  });
-
-  it('passes the assetId through as data-asset', () => {
-    const { container } = render(<PlanetCanvas assetId="saturn_b" rotates={true} />);
+  it('renders a wrapper for the given asset', () => {
+    const { container } = render(<PlanetCanvas assetId="saturn_b" />);
     expect(container.querySelector('[data-asset="saturn_b"]')).not.toBeNull();
+  });
+
+  it('mounts the Canvas inside the wrapper', () => {
+    const { container } = render(<PlanetCanvas assetId="mars_b" />);
+    expect(container.querySelector('[data-test-canvas]')).not.toBeNull();
   });
 });

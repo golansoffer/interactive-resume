@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import { cn } from '@/lib/utils';
 import type { MotionPreference } from '../../../comms/types/motion-preference';
 import type { Pip } from '../../types/pip';
-import { PlanetCanvas } from './PlanetCanvas';
+import { PipPlanet } from './PipPlanet';
 
 type ProgressPipProps = {
   readonly pip: Pip;
@@ -58,7 +58,7 @@ export const ProgressPip = (props: ProgressPipProps): JSX.Element => {
         'data-[motion=reduced]:transition-none',
       )}
     >
-      <PlanetCanvas assetId={props.pip.assetId} rotates={false} />
+      <PipPlanet assetId={props.pip.assetId} />
       {showRipples ? renderRipples() : null}
     </div>
   );

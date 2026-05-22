@@ -24,7 +24,6 @@ const FILL_COLOR = '#a8d4ff';
 
 type PlanetCanvasProps = {
   readonly assetId: PlanetAssetId;
-  readonly rotates: boolean;
 };
 
 type DressedScene =
@@ -114,38 +113,13 @@ const RotatingPlanetScene = (props: PlanetCanvasProps): JSX.Element => {
   );
 };
 
-const StaticPlanetScene = (props: PlanetCanvasProps): JSX.Element => {
-  const dressed = useDressedScene(props.assetId);
-  return (
-    <>
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[4, 6, 5]} intensity={2.0} color={KEY_COLOR} />
-      <directionalLight position={[-4, 2, -3]} intensity={0.9} color={FILL_COLOR} />
-      <group scale={1.4}>
-        <group scale={dressed.fit.uniformScale}>
-          <group position={dressed.fit.translation}>
-            <group quaternion={dressed.pose.alignQuaternion}>
-              <primitive object={dressed.scene} />
-            </group>
-          </group>
-        </group>
-      </group>
-    </>
-  );
-};
-
 export const PlanetCanvas = (props: PlanetCanvasProps): JSX.Element => (
   <div
     data-asset={props.assetId}
-    data-rotates={String(props.rotates)}
     className="relative h-full w-full overflow-hidden rounded-full"
   >
-    <Canvas
-      dpr={[1, 2]}
-      camera={{ position: [0, 0, 3.6], fov: 28 }}
-      frameloop={props.rotates ? 'always' : 'demand'}
-    >
-      {props.rotates ? <RotatingPlanetScene {...props} /> : <StaticPlanetScene {...props} />}
+    <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 3.6], fov: 28 }}>
+      <RotatingPlanetScene {...props} />
     </Canvas>
   </div>
 );

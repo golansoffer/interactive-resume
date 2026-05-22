@@ -9,16 +9,8 @@ import { HeadlinePlanet } from './HeadlinePlanet';
 // PlanetCanvas pulls in R3F + GLTF assets, neither of which load in jsdom.
 // Stub it out so the wrapper renders predictably.
 vi.mock('./PlanetCanvas', () => ({
-  PlanetCanvas: ({
-    assetId,
-    rotates,
-  }: {
-    readonly assetId: string;
-    readonly rotates: boolean;
-  }): JSX.Element => (
-    <div data-asset={assetId} data-rotates={String(rotates)}>
-      mock-planet-canvas
-    </div>
+  PlanetCanvas: ({ assetId }: { readonly assetId: string }): JSX.Element => (
+    <div data-asset={assetId}>mock-planet-canvas</div>
   ),
 }));
 
@@ -42,7 +34,6 @@ describe('HeadlinePlanet', () => {
     const { container } = render(<HeadlinePlanet headline={headline} />);
     expect(container.querySelector('[data-state="active"]')).not.toBeNull();
     expect(container.querySelector('[data-asset="mars_b"]')).not.toBeNull();
-    expect(container.querySelector('[data-rotates="true"]')).not.toBeNull();
   });
 
   it('renders with data-state="anchor" for anchor headline', () => {

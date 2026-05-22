@@ -49,7 +49,7 @@ export const HeadlinePlanet = (props: HeadlinePlanetProps): JSX.Element => {
       className={cn(BASE_CLASSNAME, SIZE_CLASSNAME, 'rounded-full', glowClassFor(props.headline.kind))}
       aria-label={`Planet for ${company.id}`}
     >
-      <PlanetCanvas assetId={company.assetId} rotates={true} />
+      <PlanetCanvas assetId={company.assetId} />
     </div>
   );
 };

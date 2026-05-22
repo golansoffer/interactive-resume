@@ -83,14 +83,8 @@ vi.mock('@react-three/drei', () => ({
 // In this smoke test we only care that the route gate composes correctly,
 // not that planets render — stub the whole helper.
 vi.mock('../features/progress/components/ProgressCard/PlanetCanvas', () => ({
-  PlanetCanvas: ({
-    assetId,
-    rotates,
-  }: {
-    readonly assetId: string;
-    readonly rotates: boolean;
-  }): ReactNode => (
-    <div data-mock-planet data-asset={assetId} data-rotates={String(rotates)} />
+  PlanetCanvas: ({ assetId }: { readonly assetId: string }): ReactNode => (
+    <div data-mock-planet data-asset={assetId} />
   ),
 }));
 
