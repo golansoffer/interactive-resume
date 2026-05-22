@@ -40,8 +40,11 @@ export const createOrientationController = (): OrientationController => {
 
       // kinematics.heading is the canonical "where the ship should face" signal,
       // maintained per-frame in Player.tsx from the active intent set (forward
-      // + strafe only — backward never yaws).
-      applyHeadingLerp(mesh, kinematics.heading);
+      // + strafe only — backward never yaws). Speed is forwarded so the lerp
+      // softens at rest — full-speed flight keeps the original snap, but a
+      // pure A/D tap with no forward input rotates gradually instead of
+      // pivoting 90° in a handful of frames.
+      applyHeadingLerp(mesh, kinematics.heading, speed);
 
       const target = computeRotationTargets(kinematics.velocity, basis);
       baselinePitch += (target.pitch - baselinePitch) * ORIENT_LERP;

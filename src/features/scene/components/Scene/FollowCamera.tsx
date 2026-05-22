@@ -128,7 +128,10 @@ const writeDesiredChasePosition = (
   const shipRightZ = -sinH;
   const localForward = velocity.x * shipForwardX + velocity.z * shipForwardZ;
   const localRight = velocity.x * shipRightX + velocity.z * shipRightZ;
-  const forwardComponent = Math.max(0, localForward) * LONGITUDINAL_OFFSET_FACTOR;
+  // abs(localForward) so the camera lags back equally on reverse as on
+  // forward thrust — without this, reverse drops the lag to zero and the
+  // chase distance shrinks compared to forward flight.
+  const forwardComponent = Math.abs(localForward) * LONGITUDINAL_OFFSET_FACTOR;
   const rightComponent = localRight * LATERAL_OFFSET_FACTOR;
   memory.desired.set(
     position.x + rotatedX + shipRightX * rightComponent + shipForwardX * forwardComponent,
@@ -188,10 +191,17 @@ const updateChaseCamera = (
   const targetFov = BASE_FOV + (MAX_FOV - BASE_FOV) * speedRatio + boostFactor * BOOST_FOV_LIFT;
   const liftedLookAhead = MAX_LOOK_AHEAD + boostFactor * BOOST_LOOK_AHEAD_LIFT;
 
-  const directionScale = speed === 0 ? 0 : 1 / speed;
-  const targetAheadX = velocity.x * directionScale * speedRatio * liftedLookAhead;
-  const forwardVz = Math.max(0, velocity.z);
-  const targetAheadZ = forwardVz * directionScale * speedRatio * liftedLookAhead;
+  // Look-ahead is anchored in the ship-forward direction (followHeading)
+  // rather than the velocity vector. This keeps the look target at a stable
+  // forward offset whether the player is thrusting, coasting, or reversing —
+  // backward motion no longer collapses the offset to the ship origin (which
+  // read as a sudden zoom-in and look-down on reverse). Magnitude still
+  // scales with speed so the look-ahead retracts at rest.
+  const headingSin = Math.sin(memory.followHeading);
+  const headingCos = Math.cos(memory.followHeading);
+  const targetAheadMagnitude = speedRatio * liftedLookAhead;
+  const targetAheadX = headingSin * targetAheadMagnitude;
+  const targetAheadZ = headingCos * targetAheadMagnitude;
   memory.lookAheadOffset.x += (targetAheadX - memory.lookAheadOffset.x) * LOOK_AHEAD_LERP;
   memory.lookAheadOffset.z += (targetAheadZ - memory.lookAheadOffset.z) * LOOK_AHEAD_LERP;
 

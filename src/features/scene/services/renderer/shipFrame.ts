@@ -32,9 +32,14 @@ const IDLE_SWAY_FREQ_HZ = 0.55;
 const IDLE_RATIO_FLOOR = 0.4;
 
 // Intent-driven heading — outer yaw lerps toward the direction implied by
-// forward + strafe intents in the camera basis. Pressing back NEVER yaws
-// the ship: reverse is straight reverse, not a 180° spin-then-drive.
-const HEADING_LERP = 0.06;
+// forward + strafe intents in the camera basis. The lerp factor scales
+// with forward speed (HEADING_LERP_AT_REST → HEADING_LERP_AT_SPEED) so a
+// pure strafe input at rest does not snap-rotate the ship 90° in a few
+// frames; turning in coupled motion stays as responsive as before.
+// Pressing back NEVER yaws the ship: reverse is straight reverse, not a
+// 180° spin-then-drive.
+const HEADING_LERP_AT_SPEED = 0.06;
+const HEADING_LERP_AT_REST = 0.022;
 const TWO_PI = Math.PI * 2;
 
 const FORWARD_EPSILON = 1e-6;
@@ -111,7 +116,11 @@ export const computeIntentHeading = (
   return Math.atan2(x, z);
 };
 
-export const applyHeadingLerp = (mesh: Object3D, targetHeading: number): void => {
+export const applyHeadingLerp = (
+  mesh: Object3D,
+  targetHeading: number,
+  speed: number,
+): void => {
   let headingDelta = targetHeading - mesh.rotation.y;
   while (headingDelta > Math.PI) {
     headingDelta -= TWO_PI;
@@ -119,6 +128,9 @@ export const applyHeadingLerp = (mesh: Object3D, targetHeading: number): void =>
   while (headingDelta < -Math.PI) {
     headingDelta += TWO_PI;
   }
-  mesh.rotation.y += headingDelta * HEADING_LERP;
+  const speedRatio = speed <= 0 ? 0 : Math.min(1, speed / MAX_SPEED);
+  const lerpFactor =
+    HEADING_LERP_AT_REST + (HEADING_LERP_AT_SPEED - HEADING_LERP_AT_REST) * speedRatio;
+  mesh.rotation.y += headingDelta * lerpFactor;
 };
 

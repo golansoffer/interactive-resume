@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Object3D } from 'three';
 import { applyHeadingLerp, computeIntentHeading } from './shipFrame';
+import { MAX_SPEED } from '../../types/kinematics';
 import type { CameraBasis } from './integrateMotion';
 import type { Intent } from '../../types/intent';
 
@@ -77,7 +78,7 @@ describe('applyHeadingLerp — lerps mesh.rotation.y toward the target heading',
   it('moves mesh.rotation.y toward the target without overshooting in a single step', () => {
     const mesh = new Object3D();
     mesh.rotation.y = 0;
-    applyHeadingLerp(mesh, 1);
+    applyHeadingLerp(mesh, 1, MAX_SPEED);
     expect(mesh.rotation.y).toBeGreaterThan(0);
     expect(mesh.rotation.y).toBeLessThan(1);
   });
@@ -85,14 +86,14 @@ describe('applyHeadingLerp — lerps mesh.rotation.y toward the target heading',
   it('does not change rotation.y when target equals current heading', () => {
     const mesh = new Object3D();
     mesh.rotation.y = 0.42;
-    applyHeadingLerp(mesh, 0.42);
+    applyHeadingLerp(mesh, 0.42, MAX_SPEED);
     expect(mesh.rotation.y).toBeCloseTo(0.42, 10);
   });
 
   it('wraps the shortest path across the ±π boundary (lerps from -π+ε toward π-ε via the short side)', () => {
     const mesh = new Object3D();
     mesh.rotation.y = -Math.PI + 0.1;
-    applyHeadingLerp(mesh, Math.PI - 0.1);
+    applyHeadingLerp(mesh, Math.PI - 0.1, MAX_SPEED);
     // Shortest path is via -π / +π wrap (delta ≈ -0.2), so rotation.y decreases.
     expect(mesh.rotation.y).toBeLessThan(-Math.PI + 0.1);
   });
@@ -101,8 +102,22 @@ describe('applyHeadingLerp — lerps mesh.rotation.y toward the target heading',
     const mesh = new Object3D();
     mesh.rotation.y = 0;
     for (let i = 0; i < 500; i += 1) {
-      applyHeadingLerp(mesh, 1);
+      applyHeadingLerp(mesh, 1, MAX_SPEED);
     }
     expect(mesh.rotation.y).toBeCloseTo(1, 5);
+  });
+
+  it('rotates noticeably slower at rest than at flight speed for the same target', () => {
+    const restMesh = new Object3D();
+    restMesh.rotation.y = 0;
+    applyHeadingLerp(restMesh, 1, 0);
+
+    const speedMesh = new Object3D();
+    speedMesh.rotation.y = 0;
+    applyHeadingLerp(speedMesh, 1, MAX_SPEED);
+
+    // Both step toward the target, but the stationary step is the slower one.
+    expect(restMesh.rotation.y).toBeGreaterThan(0);
+    expect(restMesh.rotation.y).toBeLessThan(speedMesh.rotation.y);
   });
 });

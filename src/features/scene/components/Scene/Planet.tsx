@@ -57,7 +57,7 @@ const PLANET_SWAY_FREQ_HZ = 0.05;
 const SCALE_BREATH_AMP = 0.025;
 const SCALE_BREATH_FREQ_HZ = 0.05;
 const ACTIVATION_LERP_RATE = 4.0;
-const ACTIVATION_RADIUS_MULTIPLIER = 4.5;
+const ACTIVATION_RADIUS_MULTIPLIER = 6.0;
 const TWO_PI = Math.PI * 2;
 
 const idEncoder = new TextEncoder();
