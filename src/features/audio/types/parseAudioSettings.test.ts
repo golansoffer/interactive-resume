@@ -8,7 +8,8 @@ describe('parseAudioSettings', () => {
   });
 
   it('returns defaults when input is undefined', () => {
-    expect(parseAudioSettings(undefined)).toEqual(DEFAULT_AUDIO_SETTINGS);
+    const absent: unknown = undefined;
+    expect(parseAudioSettings(absent)).toEqual(DEFAULT_AUDIO_SETTINGS);
   });
 
   it('returns defaults when input is a non-object primitive', () => {
