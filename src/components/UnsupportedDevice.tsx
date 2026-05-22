@@ -8,31 +8,40 @@ const BACKDROP_STYLE: CSSProperties = {
     'linear-gradient(180deg, #080808 0%, #0e0e0e 100%)',
 };
 
+// min-h-screen is the vh fallback; min-h-dvh (dynamic viewport height) takes over in
+// modern browsers so the splash never hides behind a mobile URL bar / safari chrome.
 const containerClassName = cn(
-  'relative flex h-screen w-screen items-center justify-center',
+  'relative flex min-h-screen min-h-dvh w-screen items-center justify-center',
   'text-(--color-fg) overflow-hidden',
 );
 
+// Corner brackets keep their absolute position relative to the viewport edges. They
+// scale down on the smallest screens so they don't dominate the layout on a 320px
+// phone while still reading as HUD chrome on tablet/desktop.
 const cornerBaseClassName = cn(
-  'pointer-events-none absolute h-8 w-8 border-(--color-fg)/15',
+  'pointer-events-none absolute h-6 w-6 sm:h-8 sm:w-8 border-(--color-fg)/15',
 );
-const cornerTopLeft = cn(cornerBaseClassName, 'top-4 left-4 border-l border-t');
-const cornerTopRight = cn(cornerBaseClassName, 'top-4 right-4 border-r border-t');
-const cornerBottomLeft = cn(cornerBaseClassName, 'bottom-4 left-4 border-b border-l');
-const cornerBottomRight = cn(cornerBaseClassName, 'bottom-4 right-4 border-b border-r');
+const cornerTopLeft = cn(cornerBaseClassName, 'top-3 left-3 sm:top-4 sm:left-4 border-l border-t');
+const cornerTopRight = cn(cornerBaseClassName, 'top-3 right-3 sm:top-4 sm:right-4 border-r border-t');
+const cornerBottomLeft = cn(cornerBaseClassName, 'bottom-3 left-3 sm:bottom-4 sm:left-4 border-b border-l');
+const cornerBottomRight = cn(cornerBaseClassName, 'bottom-3 right-3 sm:bottom-4 sm:right-4 border-b border-r');
 
-const contentClassName = cn('flex flex-col items-center text-center');
+// Padding lives on the centred content (NOT the container) so the HUD corners stay
+// pinned to the viewport edges while the text breathes inside.
+const contentClassName = cn('flex flex-col items-center text-center px-6 sm:px-8 max-w-xl');
 
+// Tracking eases on the smallest screens so the eyebrow doesn't overflow a 320 px viewport.
 const eyebrowClassName = cn(
-  'font-mono text-[10px] tracking-[0.4em] uppercase text-(--color-fg)/55',
+  'font-mono text-[10px] tracking-[0.28em] sm:tracking-[0.4em] uppercase text-(--color-fg)/55',
 );
 
 const titleClassName = cn(
-  'mt-3 text-2xl md:text-3xl font-semibold tracking-tight text-(--color-fg)',
+  'mt-3 text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-(--color-fg)',
 );
 
+// Subtitle ramps from text-sm on phones to text-base on tablet+ for readability.
 const subtitleClassName = cn(
-  'mt-4 max-w-md text-xs md:text-sm leading-relaxed tracking-wide text-(--color-fg)/60',
+  'mt-4 max-w-md text-sm md:text-base leading-relaxed tracking-wide text-(--color-fg)/60',
 );
 
 export const UnsupportedDevice = (): JSX.Element => {

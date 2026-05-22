@@ -38,7 +38,10 @@ export const createOrientationController = (): OrientationController => {
       mesh.position.set(kinematics.position.x, kinematics.position.y, kinematics.position.z);
       if (visual !== null) visual.position.y = idle.bobY;
 
-      applyHeadingLerp(mesh, kinematics.velocity, speed);
+      // kinematics.heading is the canonical "where the ship should face" signal,
+      // maintained per-frame in Player.tsx from the active intent set (forward
+      // + strafe only — backward never yaws).
+      applyHeadingLerp(mesh, kinematics.heading);
 
       const target = computeRotationTargets(kinematics.velocity, basis);
       baselinePitch += (target.pitch - baselinePitch) * ORIENT_LERP;

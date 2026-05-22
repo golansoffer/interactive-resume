@@ -1,4 +1,5 @@
 import type { Object3D, Vector3 as Vector3Impl } from 'three';
+import type { Intent } from '../../types/intent';
 import { MAX_SPEED } from '../../types/kinematics';
 import type { SceneState } from '../../types/scene-state';
 import type { CameraBasis } from './integrateMotion';
@@ -30,11 +31,10 @@ const IDLE_SWAY_AMPLITUDE = Math.PI / 55;
 const IDLE_SWAY_FREQ_HZ = 0.55;
 const IDLE_RATIO_FLOOR = 0.4;
 
-// Velocity-derived heading — outer yaw lerps toward atan2(vx, vz) so the
-// ship faces its motion direction on diagonal moves. Held below threshold
-// to avoid jitter at near-zero speed.
+// Intent-driven heading — outer yaw lerps toward the direction implied by
+// forward + strafe intents in the camera basis. Pressing back NEVER yaws
+// the ship: reverse is straight reverse, not a 180° spin-then-drive.
 const HEADING_LERP = 0.06;
-const HEADING_THRESHOLD = 0.5;
 const TWO_PI = Math.PI * 2;
 
 const FORWARD_EPSILON = 1e-6;
@@ -91,13 +91,27 @@ export const computeRotationTargets = (
   };
 };
 
-export const applyHeadingLerp = (
-  mesh: Object3D,
-  velocity: { readonly x: number; readonly z: number },
-  speed: number,
-): void => {
-  if (speed <= HEADING_THRESHOLD) return;
-  const targetHeading = Math.atan2(velocity.x, velocity.z);
+// Derives the ship's target facing heading from the current intent set in
+// the camera basis. The backward intent is intentionally NOT mapped into
+// any direction here — pressing back is pure reverse and must not rotate
+// the ship or the chase camera. When no forward/strafe intent is held the
+// previous heading is returned unchanged so coasting (including coasting
+// in reverse) preserves orientation.
+export const computeIntentHeading = (
+  intents: ReadonlySet<Intent['kind']>,
+  basis: CameraBasis,
+  previousHeading: number,
+): number => {
+  const forward = intents.has('move_forward') && !intents.has('move_backward') ? 1 : 0;
+  const right =
+    (intents.has('strafe_right') ? 1 : 0) - (intents.has('strafe_left') ? 1 : 0);
+  if (forward === 0 && right === 0) return previousHeading;
+  const x = basis.forward.x * forward + basis.right.x * right;
+  const z = basis.forward.z * forward + basis.right.z * right;
+  return Math.atan2(x, z);
+};
+
+export const applyHeadingLerp = (mesh: Object3D, targetHeading: number): void => {
   let headingDelta = targetHeading - mesh.rotation.y;
   while (headingDelta > Math.PI) {
     headingDelta -= TWO_PI;

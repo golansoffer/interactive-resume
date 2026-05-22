@@ -70,14 +70,13 @@ const SPRING_STIFFNESS = 8;
 const SPRING_DAMPING = 4.2;
 
 // Heading-follow spring — camera rotates around the ship to stay behind
-// its velocity direction. Softer than the position spring; damping ratio
-// ~0.71 (critical at stiffness 6 is 2*sqrt(6) ≈ 4.9). Visible swing on
-// hard turns, no oscillation. Below HEADING_THRESHOLD the heading is
-// held — prevents jitter at near-zero speed when atan2 of tiny velocity
-// would flip wildly.
+// the ship's facing direction (kinematics.heading), which is driven by
+// the player's forward/strafe intents and held during pure reverse so
+// the chase view does not orbit when backing up. Softer than the
+// position spring; damping ratio ~0.71 (critical at stiffness 6 is
+// 2*sqrt(6) ≈ 4.9). Visible swing on hard turns, no oscillation.
 const HEADING_STIFFNESS = 6;
 const HEADING_DAMPING = 3.5;
-const HEADING_THRESHOLD = 0.5;
 const TWO_PI = Math.PI * 2;
 
 const cameraInitial: readonly [number, number, number] = [0, 6, -10];
@@ -93,22 +92,19 @@ const wrapAngle = (delta: number): number => {
   return wrapped;
 };
 
-// Steps the camera's follow-heading by one frame. Above the speed
-// threshold the heading springs toward atan2(vx, vz); below it the
-// angular velocity damps to zero so the camera settles cleanly when
-// the ship stops, rather than drifting on residual momentum.
-const advanceFollowHeading = (velocity: Vec3, memory: ChaseMemory, delta: number): void => {
-  const speed = Math.hypot(velocity.x, velocity.z);
-  if (speed > HEADING_THRESHOLD) {
-    const desiredHeading = Math.atan2(velocity.x, velocity.z);
-    const headingDelta = wrapAngle(desiredHeading - memory.followHeading);
-    const angularAccel = headingDelta * HEADING_STIFFNESS - memory.followAngularVelocity * HEADING_DAMPING;
-    memory.followAngularVelocity += angularAccel * delta;
-    memory.followHeading += memory.followAngularVelocity * delta;
-    return;
-  }
-  const damp = Math.max(0, 1 - HEADING_DAMPING * delta);
-  memory.followAngularVelocity *= damp;
+// Steps the camera's follow-heading by one frame toward the ship's
+// intent-driven heading (kinematics.heading). Because the heading is
+// already smooth and stable (no atan2-of-tiny-velocity jitter, no flip
+// on reverse), no speed-gated fallback is needed.
+const advanceFollowHeading = (
+  shipHeading: number,
+  memory: ChaseMemory,
+  delta: number,
+): void => {
+  const headingDelta = wrapAngle(shipHeading - memory.followHeading);
+  const angularAccel =
+    headingDelta * HEADING_STIFFNESS - memory.followAngularVelocity * HEADING_DAMPING;
+  memory.followAngularVelocity += angularAccel * delta;
   memory.followHeading += memory.followAngularVelocity * delta;
 };
 
@@ -184,7 +180,7 @@ const updateChaseCamera = (
   if (!memory.snapped) {
     memory.followHeading = kinematics.heading;
   }
-  advanceFollowHeading(velocity, memory, delta);
+  advanceFollowHeading(kinematics.heading, memory, delta);
   const localRight = writeDesiredChasePosition(position, velocity, memory);
   stepPositionSpring(camera, memory, delta);
 

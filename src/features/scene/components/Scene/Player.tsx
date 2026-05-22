@@ -12,7 +12,7 @@ import type { Sphere } from '../../types/sphere';
 import { createBoostController } from '../../services/renderer/boostController';
 import { createOrientationController } from '../../services/renderer/orientationController';
 import { parseTrailMaterial } from '../../services/renderer/parseTrailMaterial';
-import { deriveBasis, integratesIn } from '../../services/renderer/shipFrame';
+import { computeIntentHeading, deriveBasis, integratesIn } from '../../services/renderer/shipFrame';
 import { cloneAndDressShip } from '../../services/renderer/shipVisualPlan';
 import type { CompanyId } from '../../types/company';
 import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
@@ -60,13 +60,13 @@ const TAIL_OFFSET_Z = 0.75;
 const TRAIL_DECAY = 1;
 const TRAIL_ATTENUATION = (t: number): number => t * t;
 
-// Trail represents engine exhaust — visible only while a directional thrust
-// intent is held. Without this gate drei's buffer keeps drawing ~1.3s of
-// stale samples after the player releases keys, producing the lingering
-// flicker behind a stopped ship.
+// Trail represents engine exhaust shooting out the rear — visible only while
+// a forward-or-strafe intent is held. Reverse (move_backward) is retro-thrust
+// the wrong way for a rear trail, so it does NOT light the trail. Without this
+// gate drei's buffer keeps drawing ~1.3s of stale samples after the player
+// releases keys, producing the lingering flicker behind a stopped ship.
 const THRUST_INTENTS: readonly Intent['kind'][] = [
   'move_forward',
-  'move_backward',
   'strafe_left',
   'strafe_right',
 ];
@@ -130,9 +130,10 @@ const createScratch = (): Scratch => ({
   up: new Vector3(0, 1, 0),
 });
 
-// Integrate one frame and clamp the result out of registered collider
-// spheres. Identity short-circuit (same reference) avoids reallocating the
-// Kinematics object when no collider clamp was needed.
+// Integrate one frame, clamp out of colliders, and derive the ship's
+// intent-driven heading. Identity short-circuit (same reference) avoids
+// reallocating the Kinematics object when neither a collider clamp nor a
+// heading change occurred.
 const stepKinematics = (
   current: Kinematics,
   intents: IntentStream,
@@ -143,8 +144,11 @@ const stepKinematics = (
 ): Kinematics => {
   const integrated = integrateMotion(current, intents.current, delta, basis, multiplier);
   const clampedPosition = clampToColliders(integrated.position, colliders);
-  if (clampedPosition === integrated.position) return integrated;
-  return { ...integrated, position: clampedPosition };
+  const heading = computeIntentHeading(intents.current, basis, current.heading);
+  if (clampedPosition === integrated.position && heading === integrated.heading) {
+    return integrated;
+  }
+  return { ...integrated, position: clampedPosition, heading };
 };
 
 // Per-frame edge: true on the first frame where any planet id appears in
