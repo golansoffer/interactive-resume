@@ -48,7 +48,7 @@ export const CAREER_ROUTE: readonly [
         end: { year: 2025, month: 1 },
       },
       oneLiner: 'Funds Amazon and Shopify sellers without taking equity.',
-      hook: 'Rebuilt the main dashboard. **8 seconds to near instant**.',
+      hook: 'Rebuilt the main dashboard.\n**8 seconds to near instant**.',
       decision: { kind: 'none' },
       work: [
         'Built the design system from scratch as the foundation for all subsequent frontend work.',

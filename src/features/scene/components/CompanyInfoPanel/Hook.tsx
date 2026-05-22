@@ -11,7 +11,7 @@ export const Hook = ({ text }: HookProps): JSX.Element => (
     aria-label="Position"
     className="px-5 pt-4"
   >
-    <p className="font-heading text-pretty text-xl font-semibold leading-[1.2] tracking-[-0.01em] text-foreground">
+    <p className="font-heading text-pretty whitespace-pre-line text-xl font-semibold leading-[1.2] tracking-[-0.01em] text-foreground">
       <RichText text={text} />
     </p>
   </section>
