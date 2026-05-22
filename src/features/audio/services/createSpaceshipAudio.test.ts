@@ -378,3 +378,57 @@ describe('createSpaceshipAudio — dispose', () => {
     expect(after).toEqual(before);
   });
 });
+
+const fetchStubBoostNotOk: FetchLike = (url) => {
+  if (url.endsWith('/audio/rocket_boost.mp3')) {
+    return Promise.resolve({
+      ok: false,
+      arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(0)),
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(8)),
+  });
+};
+
+const fetchStubAllOk: FetchLike = () =>
+  Promise.resolve({
+    ok: true,
+    arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(8)),
+  });
+
+describe('createSpaceshipAudio — asset failure', () => {
+  it('per-file fetch failure: that channel stays silent; others start', async () => {
+    const handle = createFakeAudioContext();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation((): void => {});
+    createSpaceshipAudio({ fetch: fetchStubBoostNotOk, createContext: () => handle.ctx });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const startedCount = handle.sources.filter((src) => src.started).length;
+    expect(startedCount).toBe(2);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
+
+  it('per-file decode rejection: that channel stays silent; others start', async () => {
+    const handle = createFakeAudioContext();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation((): void => {});
+    const originalDecode = handle.ctx.decodeAudioData.bind(handle.ctx);
+    let decodeCallCount = 0;
+    Object.defineProperty(handle.ctx, 'decodeAudioData', {
+      value: (data: ArrayBuffer): ReturnType<typeof handle.ctx.decodeAudioData> => {
+        decodeCallCount += 1;
+        if (decodeCallCount === 1) return Promise.reject(new Error('decode failed'));
+        return originalDecode(data);
+      },
+    });
+    createSpaceshipAudio({ fetch: fetchStubAllOk, createContext: () => handle.ctx });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const startedCount = handle.sources.filter((src) => src.started).length;
+    expect(startedCount).toBe(2);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
+});

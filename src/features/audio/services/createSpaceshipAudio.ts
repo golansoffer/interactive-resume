@@ -170,16 +170,20 @@ const beginBufferLoads = (
   onBufferReady: (key: SourceKey) => void,
 ): void => {
   for (const key of SOURCE_KEYS) {
+    const path = ASSET_PATHS[key];
     void (async (): Promise<void> => {
       try {
-        const response = await fetchImpl(assetUrl(ASSET_PATHS[key]));
-        if (!response.ok) return;
+        const response = await fetchImpl(assetUrl(path));
+        if (!response.ok) {
+          console.warn(`[audio] failed to fetch ${path}`);
+          return;
+        }
         const data = await response.arrayBuffer();
         const buffer = await ctx.decodeAudioData(data);
         buffers[key] = buffer;
         onBufferReady(key);
-      } catch {
-        // Asset load failure: the channel stays silent. Other channels are unaffected.
+      } catch (error) {
+        console.warn(`[audio] failed to load ${path}:`, error);
       }
     })();
   }
