@@ -177,6 +177,10 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
   },
   setBoost: (_active: boolean, factor: number): void => {
     api.pending.boostFactor = factor;
+    const live = api.getState();
+    if (live.kind !== 'ready') return;
+    const now = live.graph.ctx.currentTime;
+    live.graph.channels.boost.gain.setValueAtTime(api.pending.settings.boost * factor, now);
   },
   setMuted: (muted: boolean): void => {
     api.pending.settings = { ...api.pending.settings, muted };

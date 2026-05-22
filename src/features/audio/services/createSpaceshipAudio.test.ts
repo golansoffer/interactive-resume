@@ -184,3 +184,35 @@ describe('createSpaceshipAudio — setSceneAlive', () => {
     expect(gains.music).toBeCloseTo(0.5, 5);
   });
 });
+
+describe('createSpaceshipAudio — setBoost', () => {
+  it('setBoost(true, 0.5) with settings.boost=0.7 sets boost gain to 0.35', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setVolume('boost', 0.7);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setBoost(true, 0.5);
+    expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.35, 5);
+  });
+
+  it('setBoost(false, 0) sets boost gain to 0', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setBoost(true, 1);
+    audio.setBoost(false, 0);
+    expect(findChannelGains(deps.handle).boost).toBeCloseTo(0, 5);
+  });
+
+  it('setBoost called before gesture is applied at unlock', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setVolume('boost', 0.7);
+    audio.setBoost(true, 0.8);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.7 * 0.8, 5);
+  });
+});
