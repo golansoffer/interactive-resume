@@ -66,3 +66,55 @@ describe('createSpaceshipAudio — pre-gesture', () => {
     expect(deps.handle.ctx.state).toBe('suspended');
   });
 });
+
+const flushMicrotasks = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
+describe('createSpaceshipAudio — gesture unlock', () => {
+  it('keydown anywhere on window triggers ctx.resume', async () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    expect(deps.handle.ctx.state).toBe('running');
+  });
+
+  it('pointerdown anywhere on window triggers ctx.resume', async () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new PointerEvent('pointerdown'));
+    await flushMicrotasks();
+    expect(deps.handle.ctx.state).toBe('running');
+  });
+
+  it('after gesture, builds the gain graph (muteGain, masterGain, 3 channel gains)', async () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    expect(deps.handle.gains.length).toBe(5);
+  });
+
+  it('after gesture, starts the engine and boost sources (music starts when its buffer arrives)', async () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const startedCount = deps.handle.sources.filter((src) => src.started).length;
+    expect(startedCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it('subsequent keydown events do not re-trigger resume', async () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    const resumeSpy = vi.spyOn(deps.handle.ctx, 'resume');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }));
+    await flushMicrotasks();
+    expect(resumeSpy).toHaveBeenCalledTimes(1);
+  });
+});

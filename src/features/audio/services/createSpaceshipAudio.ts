@@ -1,7 +1,12 @@
 import { assetUrl } from '@/lib/assetUrl';
 import type { AudioChannel, SpaceshipAudio } from '../types/audio-orchestrator';
 import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../types/audio-settings';
-import type { AudioBufferLike, AudioContextLike } from './fakeAudioContext';
+import type {
+  AudioBufferLike,
+  AudioBufferSourceNodeLike,
+  AudioContextLike,
+  GainNodeLike,
+} from './fakeAudioContext';
 
 export type FetchLike = (url: string) => Promise<{
   readonly ok: boolean;
@@ -18,7 +23,30 @@ const ASSET_PATHS: Readonly<Record<SourceKey, string>> = {
   music: '/audio/theme.mp3',
 };
 
-type PendingState = {
+type State =
+  | { readonly kind: 'pre_gesture' }
+  | { readonly kind: 'ready'; readonly graph: ReadyGraph }
+  | { readonly kind: 'disposed' };
+
+type ReadyGraph = {
+  readonly ctx: AudioContextLike;
+  readonly muteGain: GainNodeLike;
+  readonly masterGain: GainNodeLike;
+  readonly channels: Readonly<Record<SourceKey, GainNodeLike>>;
+  readonly sources: {
+    engine: AudioBufferSourceNodeLike | null;
+    boost: AudioBufferSourceNodeLike | null;
+    music: AudioBufferSourceNodeLike | null;
+  };
+};
+
+type Buffers = {
+  engine: AudioBufferLike | null;
+  boost: AudioBufferLike | null;
+  music: AudioBufferLike | null;
+};
+
+type Pending = {
   sceneAlive: boolean;
   boostFactor: number;
   settings: AudioSettings;
@@ -41,41 +69,147 @@ const NOOP_AUDIO: SpaceshipAudio = {
 
 const defaultFetch: FetchLike = (url) => globalThis.fetch(url);
 
+const startSource = (
+  ctx: AudioContextLike,
+  buffer: AudioBufferLike,
+  channelGain: GainNodeLike,
+): AudioBufferSourceNodeLike => {
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  src.connect(channelGain);
+  src.start(0);
+  return src;
+};
+
+const buildGraph = (ctx: AudioContextLike): ReadyGraph => {
+  const muteGain = ctx.createGain();
+  const masterGain = ctx.createGain();
+  const musicChannel = ctx.createGain();
+  const engineChannel = ctx.createGain();
+  const boostChannel = ctx.createGain();
+  masterGain.connect(muteGain);
+  muteGain.connect(ctx.destination);
+  musicChannel.connect(masterGain);
+  engineChannel.connect(masterGain);
+  boostChannel.connect(masterGain);
+  return {
+    ctx,
+    muteGain,
+    masterGain,
+    channels: { engine: engineChannel, boost: boostChannel, music: musicChannel },
+    sources: { engine: null, boost: null, music: null },
+  };
+};
+
+// Single async IIFE per key keeps the microtask chain flat: the load flows
+// inside one async frame, so a buffer can land and start its source within
+// the same microtask cycle the consumer awaits on. Splitting into chained
+// `.then(...)` calls extends the chain past what tests can flush.
+const beginBufferLoads = (
+  ctx: AudioContextLike,
+  fetchImpl: FetchLike,
+  buffers: Buffers,
+  onBufferReady: (key: SourceKey) => void,
+): void => {
+  for (const key of SOURCE_KEYS) {
+    void (async (): Promise<void> => {
+      try {
+        const response = await fetchImpl(assetUrl(ASSET_PATHS[key]));
+        if (!response.ok) return;
+        const data = await response.arrayBuffer();
+        const buffer = await ctx.decodeAudioData(data);
+        buffers[key] = buffer;
+        onBufferReady(key);
+      } catch {
+        // Asset load failure: the channel stays silent. Other channels are unaffected.
+      }
+    })();
+  }
+};
+
+type PublicApiDeps = {
+  readonly pending: Pending;
+  readonly onDispose: () => void;
+};
+
+const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
+  setSceneAlive: (alive: boolean): void => {
+    api.pending.sceneAlive = alive;
+  },
+  setBoost: (_active: boolean, factor: number): void => {
+    api.pending.boostFactor = factor;
+  },
+  setMuted: (muted: boolean): void => {
+    api.pending.settings = { ...api.pending.settings, muted };
+  },
+  setVolume: (channel: AudioChannel, value: number): void => {
+    api.pending.settings = { ...api.pending.settings, [channel]: value };
+  },
+  dispose: api.onDispose,
+});
+
+type GestureWiring = {
+  readonly teardown: () => void;
+};
+
+const installGestureUnlock = (run: () => Promise<void>): GestureWiring => {
+  const onGesture = (): void => {
+    void run();
+  };
+  const teardown = (): void => {
+    window.removeEventListener('keydown', onGesture);
+    window.removeEventListener('pointerdown', onGesture);
+  };
+  window.addEventListener('keydown', onGesture);
+  window.addEventListener('pointerdown', onGesture);
+  return { teardown };
+};
+
 export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): SpaceshipAudio => {
   const fetchImpl = deps.fetch ?? defaultFetch;
   if (deps.createContext === undefined) return NOOP_AUDIO;
   const ctx = deps.createContext();
 
-  const pending: PendingState = {
+  let state: State = { kind: 'pre_gesture' };
+  const pending: Pending = {
     sceneAlive: false,
     boostFactor: 0,
     settings: DEFAULT_AUDIO_SETTINGS,
   };
+  const buffers: Buffers = { engine: null, boost: null, music: null };
 
-  for (const key of SOURCE_KEYS) {
-    const path = ASSET_PATHS[key];
-    void fetchImpl(assetUrl(path))
-      .then(async (response): Promise<AudioBufferLike | null> => {
-        if (!response.ok) return null;
-        const data = await response.arrayBuffer();
-        return ctx.decodeAudioData(data);
-      })
-      .catch((): AudioBufferLike | null => null);
-  }
-
-  return {
-    setSceneAlive: (alive: boolean): void => {
-      pending.sceneAlive = alive;
-    },
-    setBoost: (_active: boolean, factor: number): void => {
-      pending.boostFactor = factor;
-    },
-    setMuted: (muted: boolean): void => {
-      pending.settings = { ...pending.settings, muted };
-    },
-    setVolume: (channel: AudioChannel, value: number): void => {
-      pending.settings = { ...pending.settings, [channel]: value };
-    },
-    dispose: noop,
+  const tryStartSource = (key: SourceKey): void => {
+    const live: State = state;
+    if (live.kind !== 'ready') return;
+    if (live.graph.sources[key] !== null) return;
+    const buffer = buffers[key];
+    if (buffer === null) return;
+    const src = startSource(ctx, buffer, live.graph.channels[key]);
+    live.graph.sources[key] = src;
   };
+
+  beginBufferLoads(ctx, fetchImpl, buffers, tryStartSource);
+
+  const unlock = async (): Promise<void> => {
+    if (state.kind !== 'pre_gesture') return;
+    gesture.teardown();
+    await ctx.resume();
+    // After await, state may have been mutated (e.g. dispose).
+    // Re-widen to the base union to drop the narrow from the early-return above.
+    const after: State = state;
+    if (after.kind !== 'pre_gesture') return;
+    state = { kind: 'ready', graph: buildGraph(ctx) };
+    for (const key of SOURCE_KEYS) tryStartSource(key);
+  };
+
+  const gesture = installGestureUnlock(unlock);
+
+  return buildPublicApi({
+    pending,
+    onDispose: (): void => {
+      gesture.teardown();
+      state = { kind: 'disposed' };
+    },
+  });
 };
