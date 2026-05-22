@@ -24,13 +24,16 @@ const NOOP_AUDIO: SpaceshipAudio = {
 
 vi.mock('@react-three/fiber', () => {
   const fakeCamera = {
+    position: { x: 0, y: 0, z: 0 },
     getWorldDirection: <T extends { set: (x: number, y: number, z: number) => T }>(target: T): T =>
       target.set(0, 0, -1),
   };
+  const fakeClock = { elapsedTime: 0 };
   return {
     useFrame: (): null => null,
-    useThree: <T,>(selector: (state: { camera: typeof fakeCamera }) => T): T =>
-      selector({ camera: fakeCamera }),
+    useThree: <T,>(
+      selector: (state: { camera: typeof fakeCamera; clock: typeof fakeClock }) => T,
+    ): T => selector({ camera: fakeCamera, clock: fakeClock }),
   };
 });
 
@@ -66,7 +69,7 @@ vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
-  Trail: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
+  Trail: (): null => null,
   useGLTF: Object.assign(
     (): { readonly scene: MockScene } => ({ scene: mockScene }),
     { preload: (): void => {} },
