@@ -307,3 +307,36 @@ describe('createSpaceshipAudio — setVolume', () => {
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.24, 5);
   });
 });
+
+type FetchResponse = { ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> };
+
+const noopResolve = (_response: FetchResponse): void => {};
+
+describe('createSpaceshipAudio — late buffer arrival', () => {
+  it('starts the music source after the gesture if the music buffer decodes later', async () => {
+    const handle = createFakeAudioContext();
+    let resolveMusic: (response: FetchResponse) => void = noopResolve;
+    const musicPromise = new Promise<FetchResponse>((resolve) => {
+      resolveMusic = resolve;
+    });
+    const fetchStub: FetchLike = (url) => {
+      if (url.endsWith('/audio/theme.mp3')) return musicPromise;
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(8)),
+      });
+    };
+    createSpaceshipAudio({ fetch: fetchStub, createContext: () => handle.ctx });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const startedBeforeMusic = handle.sources.filter((src) => src.started).length;
+    expect(startedBeforeMusic).toBe(2);
+    resolveMusic({
+      ok: true,
+      arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(8)),
+    });
+    await flushMicrotasks();
+    const startedAfterMusic = handle.sources.filter((src) => src.started).length;
+    expect(startedAfterMusic).toBe(3);
+  });
+});
