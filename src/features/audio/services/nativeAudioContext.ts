@@ -6,6 +6,24 @@ import type {
   GainNodeLike,
 } from '../types/audio-context';
 
+// Wrappers carry a hidden reference to the native node they wrap so that a
+// downstream wrapper.connect(otherWrapper) can resolve to the native graph
+// edge. Without this, every wrapper-to-wrapper connect would no-op (since
+// the wrapper object is not an `instanceof AudioNode`), leaving the only
+// working edge to be the one terminating at `ctx.destination` — the rest of
+// the graph would be silently disconnected.
+const NATIVE_NODE = '__nativeNode__' as const;
+
+type NativeRef<T extends AudioNode> = { readonly [NATIVE_NODE]: T };
+
+const nativeOf = (value: unknown): AudioNode | null => {
+  if (value instanceof AudioNode) return value;
+  if (typeof value !== 'object' || value === null) return null;
+  if (!(NATIVE_NODE in value)) return null;
+  const inner = (value as Record<string, unknown>)[NATIVE_NODE];
+  return inner instanceof AudioNode ? inner : null;
+};
+
 const wrapNativeParam = (param: AudioParam): AudioParamLike => ({
   get value(): number {
     return param.value;
@@ -20,16 +38,21 @@ const wrapNativeParam = (param: AudioParam): AudioParamLike => ({
   cancelScheduledValues: (cancelTime: number): unknown => param.cancelScheduledValues(cancelTime),
 });
 
-const wrapNativeGain = (node: GainNode): GainNodeLike => ({
+const wrapNativeGain = (node: GainNode): GainNodeLike & NativeRef<GainNode> => ({
+  [NATIVE_NODE]: node,
   gain: wrapNativeParam(node.gain),
   connect: (destination: unknown): unknown => {
-    if (destination instanceof AudioNode) return node.connect(destination);
-    return node;
+    const target = nativeOf(destination);
+    if (target === null) return node;
+    return node.connect(target);
   },
   disconnect: (): void => node.disconnect(),
 });
 
-const wrapNativeBufferSource = (node: AudioBufferSourceNode): AudioBufferSourceNodeLike => ({
+const wrapNativeBufferSource = (
+  node: AudioBufferSourceNode,
+): AudioBufferSourceNodeLike & NativeRef<AudioBufferSourceNode> => ({
+  [NATIVE_NODE]: node,
   get buffer(): AudioBufferLike | null {
     return node.buffer;
   },
@@ -43,8 +66,9 @@ const wrapNativeBufferSource = (node: AudioBufferSourceNode): AudioBufferSourceN
     node.loop = next;
   },
   connect: (destination: unknown): unknown => {
-    if (destination instanceof AudioNode) return node.connect(destination);
-    return node;
+    const target = nativeOf(destination);
+    if (target === null) return node;
+    return node.connect(target);
   },
   disconnect: (): void => node.disconnect(),
   start: (when?: number): void => node.start(when),
