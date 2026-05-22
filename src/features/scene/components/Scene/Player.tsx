@@ -19,6 +19,7 @@ import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
 import type { Intent, IntentStream } from '../../types/intent';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
 import { ShipRig } from './ShipRig';
 import type { BoostSignal, PlanetActivations, SphereColliders } from '../../types/scene-refs';
 
@@ -31,6 +32,7 @@ type PlayerProps = {
   readonly sphereCollidersRef: RefObject<SphereColliders>;
   readonly planetActivationsRef: RefObject<PlanetActivations>;
   readonly boostSignalRef: RefObject<BoostSignal>;
+  readonly audio: SpaceshipAudio;
 };
 
 // Engine trail — two stacked Trails cross-faded by the smoothed boost factor.
@@ -204,6 +206,7 @@ const usePlayerFrame = (
 
     orientationController.tick(mesh, visualRef.current, next, basis, state.clock.elapsedTime);
     writeTrailOpacities(trailMats, boost.factor, isThrusting(props.intents.current));
+    props.audio.setBoost(boost.kind === 'active', boost.factor);
   });
 };
 

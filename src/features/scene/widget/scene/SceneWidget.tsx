@@ -25,6 +25,7 @@ export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
     revealProjection,
     routeProjection,
     kinematicsRef,
+    audio,
   } = useScene();
 
   return (
@@ -39,6 +40,7 @@ export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
           onEvent={onEvent}
           kinematicsRef={kinematicsRef}
           routeProjection={routeProjection}
+          audio={audio}
         />
       </Canvas>
       <CompanyInfoPanel projection={revealProjection} />

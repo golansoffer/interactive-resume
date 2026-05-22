@@ -8,8 +8,18 @@ import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
 import { INITIAL_KINEMATICS, type Kinematics } from '../../types/kinematics';
 import { Scene } from './Scene';
+
+const noop = (): void => {};
+const NOOP_AUDIO: SpaceshipAudio = {
+  setSceneAlive: noop,
+  setBoost: noop,
+  setMuted: noop,
+  setVolume: noop,
+  dispose: noop,
+};
 
 vi.mock('@react-three/fiber', () => {
   const fakeCamera = {
@@ -214,6 +224,7 @@ const mount = (
       onEvent={onEvent}
       kinematicsRef={createKinematicsRef()}
       routeProjection={EMPTY_ROUTE}
+      audio={NOOP_AUDIO}
     />,
   );
 };

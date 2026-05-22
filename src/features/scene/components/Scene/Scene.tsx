@@ -8,6 +8,7 @@ import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
 import type { ShipEntry } from '../../../ships/types/ship';
+import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
 import type { Kinematics } from '../../types/kinematics';
 import { CelestialTraffic } from './CelestialTraffic';
 import { Companies } from './Companies';
@@ -30,6 +31,7 @@ type SceneProps = {
   readonly onEvent: (event: SceneEvent) => void;
   readonly kinematicsRef: RefObject<Kinematics>;
   readonly routeProjection: RouteProjection;
+  readonly audio: SpaceshipAudio;
 };
 
 const projectLabel = (entry: CompanyEntry): ReadonlyArray<LabelProjection> => {
@@ -88,6 +90,7 @@ export const Scene = (props: SceneProps): JSX.Element => {
         sphereCollidersRef={sphereCollidersRef}
         planetActivationsRef={planetActivationsRef}
         boostSignalRef={boostSignalRef}
+        audio={props.audio}
       />
       <Companies
         entries={props.entries}
