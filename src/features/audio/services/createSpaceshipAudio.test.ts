@@ -57,6 +57,11 @@ describe('createSpaceshipAudio — pre-gesture', () => {
     expect(deps.handle.sources.length).toBe(0);
   });
 
+  it('leaves the AudioContext in suspended state before a gesture', () => {
+    const deps = setupDeps();
+    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    expect(deps.handle.ctx.state).toBe('suspended');
+  });
 });
 
 const flushMicrotasks = async (): Promise<void> => {
@@ -99,23 +104,15 @@ describe('createSpaceshipAudio — gesture unlock', () => {
     expect(startedCount).toBeGreaterThanOrEqual(2);
   });
 
-  it('eager unlock on construction calls resume once; subsequent keydowns do not re-trigger it', async () => {
+  it('subsequent keydown events do not re-trigger resume', async () => {
     const deps = setupDeps();
-    const resumeSpy = vi.spyOn(deps.handle.ctx, 'resume');
     createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    const resumeSpy = vi.spyOn(deps.handle.ctx, 'resume');
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }));
     await flushMicrotasks();
     expect(resumeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('eager unlock on construction builds the graph without any gesture', async () => {
-    const deps = setupDeps();
-    createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
-    await flushMicrotasks();
-    expect(deps.handle.gains.length).toBe(5);
-    expect(deps.handle.sources.filter((src) => src.started).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -342,12 +339,13 @@ describe('createSpaceshipAudio — late buffer arrival', () => {
 });
 
 describe('createSpaceshipAudio — dispose', () => {
-  it('dispose() before the eager unlock resolves prevents graph construction', async () => {
+  it('dispose() before gesture: subsequent gesture is a no-op (state stays suspended)', async () => {
     const deps = setupDeps();
     const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
     audio.dispose();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
     await flushMicrotasks();
+    expect(deps.handle.ctx.state).toBe('suspended');
     expect(deps.handle.gains.length).toBe(0);
     expect(deps.handle.sources.length).toBe(0);
   });
