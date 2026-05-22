@@ -118,3 +118,69 @@ describe('createSpaceshipAudio — gesture unlock', () => {
     expect(resumeSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+const findChannelGains = (
+  handle: FakeContextHandle,
+): { music: number; engine: number; boost: number; master: number; mute: number } => {
+  // Graph build order in the service: muteGain, masterGain, music, engine, boost.
+  const [mute, master, music, engine, boost] = handle.gains;
+  return {
+    mute: mute?.gain.value ?? -1,
+    master: master?.gain.value ?? -1,
+    music: music?.gain.value ?? -1,
+    engine: engine?.gain.value ?? -1,
+    boost: boost?.gain.value ?? -1,
+  };
+};
+
+describe('createSpaceshipAudio — setSceneAlive', () => {
+  it('after unlock with sceneAlive=true, engine and music channel gains equal their settings values', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setSceneAlive(true);
+    audio.setVolume('engine', 0.4);
+    audio.setVolume('music', 0.5);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const gains = findChannelGains(deps.handle);
+    expect(gains.engine).toBeCloseTo(0.4, 5);
+    expect(gains.music).toBeCloseTo(0.5, 5);
+  });
+
+  it('after unlock with sceneAlive=false, engine and music channel gains are 0', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setSceneAlive(false);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    const gains = findChannelGains(deps.handle);
+    expect(gains.engine).toBeCloseTo(0, 5);
+    expect(gains.music).toBeCloseTo(0, 5);
+  });
+
+  it('setSceneAlive(false) after ready ramps engine and music to 0', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setSceneAlive(true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setSceneAlive(false);
+    const gains = findChannelGains(deps.handle);
+    expect(gains.engine).toBeCloseTo(0, 5);
+    expect(gains.music).toBeCloseTo(0, 5);
+  });
+
+  it('setSceneAlive(true) after a previous false re-raises engine and music to settings values', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setVolume('engine', 0.4);
+    audio.setVolume('music', 0.5);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setSceneAlive(false);
+    audio.setSceneAlive(true);
+    const gains = findChannelGains(deps.handle);
+    expect(gains.engine).toBeCloseTo(0.4, 5);
+    expect(gains.music).toBeCloseTo(0.5, 5);
+  });
+});

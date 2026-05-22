@@ -23,6 +23,9 @@ const ASSET_PATHS: Readonly<Record<SourceKey, string>> = {
   music: '/audio/theme.mp3',
 };
 
+const CHANNEL_RAMP_SECONDS = 0.3;
+const MUTE_RAMP_SECONDS = 0.15;
+
 type State =
   | { readonly kind: 'pre_gesture' }
   | { readonly kind: 'ready'; readonly graph: ReadyGraph }
@@ -102,6 +105,38 @@ const buildGraph = (ctx: AudioContextLike): ReadyGraph => {
   };
 };
 
+const applyChannelGains = (graph: ReadyGraph, pending: Pending): void => {
+  const now = graph.ctx.currentTime;
+  const musicTarget = pending.sceneAlive ? pending.settings.music : 0;
+  const engineTarget = pending.sceneAlive ? pending.settings.engine : 0;
+  const boostTarget = pending.settings.boost * pending.boostFactor;
+  graph.channels.music.gain.linearRampToValueAtTime(musicTarget, now + CHANNEL_RAMP_SECONDS);
+  graph.channels.engine.gain.linearRampToValueAtTime(engineTarget, now + CHANNEL_RAMP_SECONDS);
+  graph.channels.boost.gain.setValueAtTime(boostTarget, now);
+};
+
+const applyMasterAndMute = (graph: ReadyGraph, pending: Pending): void => {
+  const now = graph.ctx.currentTime;
+  graph.masterGain.gain.setValueAtTime(pending.settings.master, now);
+  const muteTarget = pending.settings.muted ? 0 : 1;
+  graph.muteGain.gain.linearRampToValueAtTime(muteTarget, now + MUTE_RAMP_SECONDS);
+};
+
+const tryStartSourceFor = (
+  ctx: AudioContextLike,
+  buffers: Buffers,
+  getState: () => State,
+  key: SourceKey,
+): void => {
+  const live = getState();
+  if (live.kind !== 'ready') return;
+  if (live.graph.sources[key] !== null) return;
+  const buffer = buffers[key];
+  if (buffer === null) return;
+  const src = startSource(ctx, buffer, live.graph.channels[key]);
+  live.graph.sources[key] = src;
+};
+
 // Single async IIFE per key keeps the microtask chain flat: the load flows
 // inside one async frame, so a buffer can land and start its source within
 // the same microtask cycle the consumer awaits on. Splitting into chained
@@ -130,12 +165,15 @@ const beginBufferLoads = (
 
 type PublicApiDeps = {
   readonly pending: Pending;
+  readonly getState: () => State;
   readonly onDispose: () => void;
 };
 
 const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
   setSceneAlive: (alive: boolean): void => {
     api.pending.sceneAlive = alive;
+    const live = api.getState();
+    if (live.kind === 'ready') applyChannelGains(live.graph, api.pending);
   },
   setBoost: (_active: boolean, factor: number): void => {
     api.pending.boostFactor = factor;
@@ -178,16 +216,8 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): Space
     settings: DEFAULT_AUDIO_SETTINGS,
   };
   const buffers: Buffers = { engine: null, boost: null, music: null };
-
-  const tryStartSource = (key: SourceKey): void => {
-    const live: State = state;
-    if (live.kind !== 'ready') return;
-    if (live.graph.sources[key] !== null) return;
-    const buffer = buffers[key];
-    if (buffer === null) return;
-    const src = startSource(ctx, buffer, live.graph.channels[key]);
-    live.graph.sources[key] = src;
-  };
+  const tryStartSource = (key: SourceKey): void =>
+    tryStartSourceFor(ctx, buffers, () => state, key);
 
   beginBufferLoads(ctx, fetchImpl, buffers, tryStartSource);
 
@@ -195,11 +225,12 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): Space
     if (state.kind !== 'pre_gesture') return;
     gesture.teardown();
     await ctx.resume();
-    // After await, state may have been mutated (e.g. dispose).
-    // Re-widen to the base union to drop the narrow from the early-return above.
     const after: State = state;
     if (after.kind !== 'pre_gesture') return;
-    state = { kind: 'ready', graph: buildGraph(ctx) };
+    const graph = buildGraph(ctx);
+    state = { kind: 'ready', graph };
+    applyMasterAndMute(graph, pending);
+    applyChannelGains(graph, pending);
     for (const key of SOURCE_KEYS) tryStartSource(key);
   };
 
@@ -207,6 +238,7 @@ export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): Space
 
   return buildPublicApi({
     pending,
+    getState: () => state,
     onDispose: (): void => {
       gesture.teardown();
       state = { kind: 'disposed' };
