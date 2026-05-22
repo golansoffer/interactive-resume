@@ -216,3 +216,43 @@ describe('createSpaceshipAudio — setBoost', () => {
     expect(findChannelGains(deps.handle).boost).toBeCloseTo(0.7 * 0.8, 5);
   });
 });
+
+describe('createSpaceshipAudio — setMuted', () => {
+  it('setMuted(true) after ready ramps muteGain to 0', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setMuted(true);
+    expect(findChannelGains(deps.handle).mute).toBeCloseTo(0, 5);
+  });
+
+  it('setMuted(false) after ready ramps muteGain to 1', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setMuted(true);
+    audio.setMuted(false);
+    expect(findChannelGains(deps.handle).mute).toBeCloseTo(1, 5);
+  });
+
+  it('setMuted does not change master, engine, music, or boost gains', async () => {
+    const deps = setupDeps();
+    const audio = createSpaceshipAudio({ fetch: deps.fetch, createContext: deps.createContext });
+    audio.setSceneAlive(true);
+    audio.setVolume('master', 0.5);
+    audio.setVolume('music', 0.4);
+    audio.setVolume('engine', 0.3);
+    audio.setVolume('boost', 0.6);
+    audio.setBoost(true, 1);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    await flushMicrotasks();
+    audio.setMuted(true);
+    const gains = findChannelGains(deps.handle);
+    expect(gains.master).toBeCloseTo(0.5, 5);
+    expect(gains.music).toBeCloseTo(0.4, 5);
+    expect(gains.engine).toBeCloseTo(0.3, 5);
+    expect(gains.boost).toBeCloseTo(0.6, 5);
+  });
+});

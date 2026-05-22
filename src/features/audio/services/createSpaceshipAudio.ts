@@ -184,6 +184,11 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
   },
   setMuted: (muted: boolean): void => {
     api.pending.settings = { ...api.pending.settings, muted };
+    const live = api.getState();
+    if (live.kind !== 'ready') return;
+    const now = live.graph.ctx.currentTime;
+    const target = muted ? 0 : 1;
+    live.graph.muteGain.gain.linearRampToValueAtTime(target, now + MUTE_RAMP_SECONDS);
   },
   setVolume: (channel: AudioChannel, value: number): void => {
     api.pending.settings = { ...api.pending.settings, [channel]: value };
