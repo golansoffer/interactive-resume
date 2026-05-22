@@ -122,6 +122,28 @@ const applyMasterAndMute = (graph: ReadyGraph, pending: Pending): void => {
   graph.muteGain.gain.linearRampToValueAtTime(muteTarget, now + MUTE_RAMP_SECONDS);
 };
 
+const applyChannelVolume = (
+  graph: ReadyGraph,
+  channel: AudioChannel,
+  value: number,
+  pending: Pending,
+): void => {
+  const now = graph.ctx.currentTime;
+  switch (channel) {
+    case 'master':
+      graph.masterGain.gain.setValueAtTime(value, now);
+      return;
+    case 'music':
+      graph.channels.music.gain.setValueAtTime(pending.sceneAlive ? value : 0, now);
+      return;
+    case 'engine':
+      graph.channels.engine.gain.setValueAtTime(pending.sceneAlive ? value : 0, now);
+      return;
+    case 'boost':
+      graph.channels.boost.gain.setValueAtTime(value * pending.boostFactor, now);
+  }
+};
+
 const tryStartSourceFor = (
   ctx: AudioContextLike,
   buffers: Buffers,
@@ -192,6 +214,9 @@ const buildPublicApi = (api: PublicApiDeps): SpaceshipAudio => ({
   },
   setVolume: (channel: AudioChannel, value: number): void => {
     api.pending.settings = { ...api.pending.settings, [channel]: value };
+    const live = api.getState();
+    if (live.kind !== 'ready') return;
+    applyChannelVolume(live.graph, channel, value, api.pending);
   },
   dispose: api.onDispose,
 });
