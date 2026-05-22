@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { Scene } from '../../components/Scene/Scene';
 import { CompanyInfoPanel } from '../../components/CompanyInfoPanel/CompanyInfoPanel';
 import { CommsDockWidget } from '../../../comms/widget/dock/CommsDockWidget';
+import { AudioControlsWidget } from '../../../audio/widget/controls/AudioControlsWidget';
 import type { ShipEntry } from '../../../ships/types/ship';
 import { useScene } from './useScene';
 
@@ -45,6 +46,7 @@ export const SceneWidget = (props: SceneWidgetProps): JSX.Element => {
       </Canvas>
       <CompanyInfoPanel projection={revealProjection} />
       <CommsDockWidget kinematicsRef={kinematicsRef} sceneState={state} />
+      <AudioControlsWidget />
     </>
   );
 };
