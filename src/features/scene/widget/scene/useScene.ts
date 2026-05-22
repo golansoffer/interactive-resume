@@ -14,10 +14,19 @@ import type { IntentStream } from '../../types/intent';
 import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
-import { createSpaceshipAudio } from '../../../audio/services/createSpaceshipAudio';
-import { createNativeAudioContext } from '../../../audio/services/nativeAudioContext';
+import { createBrowserSpaceshipAudio } from '../../../audio/services/createBrowserSpaceshipAudio';
 import { useAudioSettings } from '../../../audio/widget/controls/useAudioSettings';
 import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
+
+const noop = (): void => {};
+
+const NOOP_AUDIO: SpaceshipAudio = {
+  setSceneAlive: noop,
+  setBoost: noop,
+  setMuted: noop,
+  setVolume: noop,
+  dispose: noop,
+};
 
 type UseSceneResult = {
   readonly state: SceneState;
@@ -48,9 +57,8 @@ export const useScene = (): UseSceneResult => {
   );
 
   const [audio] = useState<SpaceshipAudio>(() => {
-    const ctx = createNativeAudioContext();
-    if (ctx === null) return createSpaceshipAudio({});
-    return createSpaceshipAudio({ createContext: () => ctx });
+    const outcome = createBrowserSpaceshipAudio();
+    return outcome.kind === 'audio' ? outcome.audio : NOOP_AUDIO;
   });
 
   useEffect(() => audio.dispose, [audio]);

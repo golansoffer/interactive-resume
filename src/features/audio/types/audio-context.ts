@@ -1,8 +1,3 @@
-// AudioContextLike intentionally omits `state` — the service never reads it,
-// only the test harness does. Native `AudioContext.state` is `readonly` and
-// would not be assignable to a writable target, so keeping it off the
-// structural shape lets both native and fake satisfy it without casts.
-
 export type AudioParamLike = {
   value: number;
   setValueAtTime: (value: number, startTime: number) => unknown;

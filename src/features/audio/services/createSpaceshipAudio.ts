@@ -57,17 +57,7 @@ type Pending = {
 
 type CreateSpaceshipAudioDeps = {
   readonly fetch?: FetchLike;
-  readonly createContext?: () => AudioContextLike;
-};
-
-const noop = (): void => {};
-
-const NOOP_AUDIO: SpaceshipAudio = {
-  setSceneAlive: noop,
-  setBoost: noop,
-  setMuted: noop,
-  setVolume: noop,
-  dispose: noop,
+  readonly createContext: () => AudioContextLike;
 };
 
 const defaultFetch: FetchLike = (url) => globalThis.fetch(url);
@@ -245,9 +235,8 @@ const installGestureUnlock = (run: () => Promise<void>): GestureWiring => {
   return { teardown };
 };
 
-export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps = {}): SpaceshipAudio => {
+export const createSpaceshipAudio = (deps: CreateSpaceshipAudioDeps): SpaceshipAudio => {
   const fetchImpl = deps.fetch ?? defaultFetch;
-  if (deps.createContext === undefined) return NOOP_AUDIO;
   const ctx = deps.createContext();
 
   let state: State = { kind: 'pre_gesture' };
