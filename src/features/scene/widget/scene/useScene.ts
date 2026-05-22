@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { useActor } from '@xstate/react';
 import { getSceneState, getVisited, sceneMachine } from '../../../../core/scene/sceneMachine';
@@ -17,7 +17,7 @@ import type { SceneState } from '../../types/scene-state';
 import { createSpaceshipAudio } from '../../../audio/services/createSpaceshipAudio';
 import { createNativeAudioContext } from '../../../audio/services/nativeAudioContext';
 import { useAudioSettings } from '../../../audio/widget/controls/useAudioSettings';
-import type { AudioChannel, SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
+import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
 
 type UseSceneResult = {
   readonly state: SceneState;
@@ -47,40 +47,13 @@ export const useScene = (): UseSceneResult => {
     [visited],
   );
 
-  const audioRef = useRef<SpaceshipAudio | null>(null);
-  const audio = useMemo<SpaceshipAudio>(
-    () => ({
-      setSceneAlive: (alive: boolean): void => {
-        audioRef.current?.setSceneAlive(alive);
-      },
-      setBoost: (factor: number): void => {
-        audioRef.current?.setBoost(factor);
-      },
-      setMuted: (muted: boolean): void => {
-        audioRef.current?.setMuted(muted);
-      },
-      setVolume: (channel: AudioChannel, value: number): void => {
-        audioRef.current?.setVolume(channel, value);
-      },
-      dispose: (): void => {
-        audioRef.current?.dispose();
-      },
-    }),
-    [],
-  );
-
-  useEffect(() => {
+  const [audio] = useState<SpaceshipAudio>(() => {
     const ctx = createNativeAudioContext();
-    const instance =
-      ctx === null
-        ? createSpaceshipAudio({})
-        : createSpaceshipAudio({ createContext: () => ctx });
-    audioRef.current = instance;
-    return (): void => {
-      instance.dispose();
-      audioRef.current = null;
-    };
-  }, []);
+    if (ctx === null) return createSpaceshipAudio({});
+    return createSpaceshipAudio({ createContext: () => ctx });
+  });
+
+  useEffect(() => audio.dispose, [audio]);
 
   const { settings: audioSettings } = useAudioSettings();
   const sceneAlive = state.kind === 'playing' || state.kind === 'revealing';
