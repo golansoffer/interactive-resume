@@ -26,7 +26,17 @@ const subscribers = new Set<() => void>();
 
 const writeToStorage = (settings: AudioSettings): void => {
   window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  for (const notify of subscribers) notify();
+  // Defer the cross-instance notify so we never fire setSettings on one hook
+  // instance while React is still inside a state-update batch of another.
+  // Without this, React 19 logs "Cannot update a component while rendering a
+  // different component" because writeToStorage is invoked from inside a
+  // setSettings updater (which counts as the update phase of that instance),
+  // and the synchronous notify() then fires setSettings on every other
+  // subscribed instance.
+  const pending = Array.from(subscribers);
+  queueMicrotask((): void => {
+    for (const notify of pending) notify();
+  });
 };
 
 export type UseAudioSettingsResult = {

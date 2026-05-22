@@ -20,7 +20,7 @@ const PLANET_GRADIENT: Readonly<Record<string, string>> = {
   jupiter: 'radial-gradient(circle at 35% 30%, #e8b88a 0%, #b87a5a 35%, #6f4528 80%, #4a2e1a 100%)',
   mars: 'radial-gradient(circle at 35% 30%, #d97a4a 0%, #a04525 45%, #5a2412 100%)',
   earth: 'radial-gradient(circle at 35% 30%, #6fb5d6 0%, #2d7090 45%, #133c5a 100%)',
-  venus: 'radial-gradient(circle at 35% 30%, #f3d97a 0%, #c79c45 50%, #7a5c1f 100%)',
+  venus: 'radial-gradient(circle at 35% 30%, #ffc7d3 0%, #d96b8a 45%, #6b2a3e 100%)',
   mercury: 'radial-gradient(circle at 35% 30%, #c0bcb5 0%, #8a857d 50%, #4a463f 100%)',
   neptune: 'radial-gradient(circle at 35% 30%, #6fa3d6 0%, #3669a8 45%, #15315e 100%)',
   uranus: 'radial-gradient(circle at 35% 30%, #b8e6e0 0%, #5fa39a 45%, #2c5854 100%)',
