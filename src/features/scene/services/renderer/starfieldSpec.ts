@@ -11,7 +11,10 @@ export const PARALLAX_FACTOR_NEAR = 0.6;
 export const STAR_SIZE_MIN = 0.6;
 export const STAR_SIZE_MAX = 1.6;
 
-export const STAR_BRIGHTNESS_MIN = 0.6;
+// Narrow band so every star renders bright (never a dim/dark dot) while
+// preserving a small variation that lets the size-driven luminous-percentile
+// sort still rank-order stars for halo / spike treatment.
+export const STAR_BRIGHTNESS_MIN = 0.9;
 export const STAR_BRIGHTNESS_MAX = 1;
 
 export const LUMINOUS_PERCENTILE = 0.95;
@@ -212,7 +215,14 @@ export const buildStarfieldSpec = (params: StarfieldSpecParams): StarfieldSpec =
   for (let i = 0; i < count; i++) {
     const b = arrays.brightness[i] ?? 0;
     if (b < pThreshold) continue;
-    arrays.luminous[i] = Math.min(Math.max((b - pThreshold) / lumRange, 0), 1);
+    // Floor at a strictly-positive epsilon so the luminous flag's domain
+    // matches the amp-cap's domain exactly. Without this floor, stars at
+    // the percentile boundary (ties from a narrow brightness range) get
+    // luminous = 0 yet still receive the amp cap — the visual is
+    // unchanged (epsilon × haloStrength is sub-pixel) but the contract
+    // between "got capped" and "is luminous" is now total.
+    const normalized = (b - pThreshold) / lumRange;
+    arrays.luminous[i] = Math.min(Math.max(normalized, 1e-3), 1);
     const [cr, cg, cb] = sampleColor(PALETTE_LUMINOUS, recolorRng());
     arrays.colors[i * 3 + 0] = cr;
     arrays.colors[i * 3 + 1] = cg;

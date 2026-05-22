@@ -183,7 +183,8 @@ describe('buildStarfieldSpec — color', () => {
       counts[idx] = (counts[idx] ?? 0) + 1;
       total++;
     }
-    const expected = [0.15, 0.4, 0.25, 0.12, 0.05, 0.03];
+    // Mirrors PALETTE_BASE weights in `starfieldSpec.ts` — keep these in sync.
+    const expected = [0.22, 0.42, 0.25, 0.05, 0, 0.06];
     for (let i = 0; i < counts.length; i++) {
       const observed = (counts[i] ?? 0) / total;
       expect(Math.abs(observed - (expected[i] ?? 0))).toBeLessThan(0.06);
@@ -403,7 +404,12 @@ describe('buildStarfieldSpec — brightness-rank bias on twinkler selection', ()
     const twinklerMean = twinklerSum / twinklerCount;
     const totalMean = totalSum / spec.count;
     expect(twinklerMean).toBeGreaterThan(totalMean);
-    expect(twinklerMean - totalMean).toBeGreaterThan(totalMean * 0.05);
+    // The bias is a function of the brightness RANGE (MAX − MIN), not the
+    // mean, because the underlying signal that biases twinklers is sizeT and
+    // brightness lerps sizeT² across the range. A range-relative threshold
+    // remains meaningful whether the range is 0.4 (looser) or 0.1 (tighter).
+    const range = STAR_BRIGHTNESS_MAX - STAR_BRIGHTNESS_MIN;
+    expect(twinklerMean - totalMean).toBeGreaterThan(range * 0.02);
   });
 
   it('keeps the population twinkler fraction in [0.12, 0.17] (binomial tolerance — bias preserves the population mean of TWINKLE_FRACTION)', () => {

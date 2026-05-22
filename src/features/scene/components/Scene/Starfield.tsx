@@ -15,7 +15,10 @@ import {
 } from '../../services/renderer/starfieldSpec';
 import { buildStarfieldMaterial } from '../../services/renderer/starfieldMaterial';
 
-const STAR_COLOR = '#cfd9ff';
+// White uniform tint so per-vertex palette colors (cool blue-white, neutral,
+// warm white, orange, hot blue) render at their true hue. A coloured tint
+// here multiplies into every star and dulls warm tones — keep this neutral.
+const STAR_COLOR = '#ffffff';
 
 type StarLayerProps = {
   readonly spec: StarfieldSpec;
