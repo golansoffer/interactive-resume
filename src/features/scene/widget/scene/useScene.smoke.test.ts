@@ -47,3 +47,22 @@ describe('useScene — composition root smoke', () => {
     expect(result.current.intents).toBe(intentsBefore);
   });
 });
+
+describe('useScene — audio wiring', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exposes an audio handle with the SpaceshipAudio shape', () => {
+    const { result } = renderHook(() => useScene());
+    expect(typeof result.current.audio.setSceneAlive).toBe('function');
+    expect(typeof result.current.audio.setBoost).toBe('function');
+    expect(typeof result.current.audio.setMuted).toBe('function');
+    expect(typeof result.current.audio.setVolume).toBe('function');
+    expect(typeof result.current.audio.dispose).toBe('function');
+  });
+});

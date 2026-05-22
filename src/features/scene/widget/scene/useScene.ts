@@ -14,6 +14,10 @@ import type { IntentStream } from '../../types/intent';
 import type { RouteProjection } from '../../types/route-projection';
 import type { SceneEvent } from '../../types/scene-event';
 import type { SceneState } from '../../types/scene-state';
+import { createSpaceshipAudio } from '../../../audio/services/createSpaceshipAudio';
+import { createNativeAudioContext } from '../../../audio/services/nativeAudioContext';
+import { useAudioSettings } from '../../../audio/widget/controls/useAudioSettings';
+import type { SpaceshipAudio } from '../../../audio/types/audio-orchestrator';
 
 type UseSceneResult = {
   readonly state: SceneState;
@@ -24,6 +28,7 @@ type UseSceneResult = {
   readonly revealProjection: RevealProjection;
   readonly routeProjection: RouteProjection;
   readonly kinematicsRef: RefObject<Kinematics>;
+  readonly audio: SpaceshipAudio;
 };
 
 export const useScene = (): UseSceneResult => {
@@ -41,6 +46,29 @@ export const useScene = (): UseSceneResult => {
     () => projectRoute(visited, CAREER_ROUTE),
     [visited],
   );
+
+  const audio = useMemo<SpaceshipAudio>(() => {
+    const ctx = createNativeAudioContext();
+    if (ctx === null) return createSpaceshipAudio({});
+    return createSpaceshipAudio({ createContext: () => ctx });
+  }, []);
+  const { settings: audioSettings } = useAudioSettings();
+  const sceneAlive = state.kind === 'playing' || state.kind === 'revealing';
+
+  useEffect(() => {
+    audio.setSceneAlive(sceneAlive);
+    if (!sceneAlive) audio.setBoost(false, 0);
+  }, [audio, sceneAlive]);
+
+  useEffect(() => {
+    audio.setMuted(audioSettings.muted);
+    audio.setVolume('master', audioSettings.master);
+    audio.setVolume('music', audioSettings.music);
+    audio.setVolume('engine', audioSettings.engine);
+    audio.setVolume('boost', audioSettings.boost);
+  }, [audio, audioSettings]);
+
+  useEffect(() => () => audio.dispose(), [audio]);
 
   useEffect(() => {
     send({ type: 'start' });
@@ -68,5 +96,6 @@ export const useScene = (): UseSceneResult => {
     revealProjection,
     routeProjection,
     kinematicsRef,
+    audio,
   };
 };
