@@ -11,7 +11,7 @@ const BOOST_FACTOR_LERP_RATE = 6;
 // activation-radius mask.
 export type BoostStep =
   | { readonly kind: 'inactive'; readonly factor: number; readonly multiplier: 1 }
-  | { readonly kind: 'active'; readonly factor: number; readonly multiplier: 3 };
+  | { readonly kind: 'active'; readonly factor: number; readonly multiplier: 4.5 };
 
 // Stateful boost controller. Owns the smoothed factor and writes through
 // the shared signal on every tick. Tick takes three distinct positional
@@ -39,7 +39,7 @@ export const createBoostController = (signal: BoostSignal): BoostController => {
       const blend = 1 - Math.exp(-BOOST_FACTOR_LERP_RATE * delta);
       factor = factor + (target - factor) * blend;
       signal.write(active, factor);
-      if (active) return { kind: 'active', factor, multiplier: 3 };
+      if (active) return { kind: 'active', factor, multiplier: 4.5 };
       return { kind: 'inactive', factor, multiplier: 1 };
     },
   };

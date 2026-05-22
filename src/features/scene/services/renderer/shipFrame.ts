@@ -13,11 +13,11 @@ export const MAX_ROLL = Math.PI / 7;
 // ORIENT_LERP — ~300ms time-to-target; floaty and weighty.
 export const ORIENT_LERP = 0.1;
 
-// Top reference speed for idle damping — widened to MAX_SPEED * 3 so the
+// Top reference speed for idle damping — widened to MAX_SPEED * 4.5 so the
 // idle bob/sway still trends toward zero at full boost. Pitch/roll targets
 // stay clamped at the baseline MAX_SPEED inside computeRotationTargets so
 // the ship's tilt envelope never exceeds normal-flight max during boost.
-export const BOOST_TOP_SPEED = MAX_SPEED * 3;
+export const BOOST_TOP_SPEED = MAX_SPEED * 4.5;
 
 // Idle motion — sine oscillations always present, scaled down with speed
 // (see IDLE_RATIO_FLOOR in computeIdleMotion). The aircraft is the LIGHT

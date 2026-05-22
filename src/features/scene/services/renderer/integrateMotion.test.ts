@@ -248,21 +248,21 @@ describe('integrateMotion — boost multiplier', () => {
     expect(magnitude(stateMul1.velocity)).toBeCloseTo(MAX_SPEED, 5);
   });
 
-  it('with multiplier=3 and full-forward intent, velocity converges to MAX_SPEED × 3 along forward', () => {
+  it('with multiplier=4.5 and full-forward intent, velocity converges to MAX_SPEED × 4.5 along forward', () => {
     const dt = 1 / 60;
     let state: Kinematics = ZERO;
-    const timeToMax = (MAX_SPEED * 3) / ACCELERATION;
+    const timeToMax = (MAX_SPEED * 4.5) / ACCELERATION;
     const frames = Math.ceil(timeToMax / dt) + 2;
     for (let i = 0; i < frames; i += 1) {
-      state = integrateMotion(state, intents('move_forward'), dt, AXIS_BASIS, 3);
+      state = integrateMotion(state, intents('move_forward'), dt, AXIS_BASIS, 4.5);
     }
-    expect(magnitude(state.velocity)).toBeCloseTo(MAX_SPEED * 3, 5);
-    expect(state.velocity.z).toBeCloseTo(MAX_SPEED * 3, 5);
+    expect(magnitude(state.velocity)).toBeCloseTo(MAX_SPEED * 4.5, 5);
+    expect(state.velocity.z).toBeCloseTo(MAX_SPEED * 4.5, 5);
   });
 
-  it('with multiplier=3 and no intents, decelerates as if no input (multiplier scales target, not deceleration)', () => {
+  it('with multiplier=4.5 and no intents, decelerates as if no input (multiplier scales target, not deceleration)', () => {
     const state: Kinematics = { ...ZERO, velocity: { x: 0, y: 0, z: 10 } };
-    const result = integrateMotion(state, intents(), 0.016, AXIS_BASIS, 3);
+    const result = integrateMotion(state, intents(), 0.016, AXIS_BASIS, 4.5);
     const step = DECELERATION * 0.016;
     expect(result.velocity.z).toBeCloseTo(10 - step, 10);
   });

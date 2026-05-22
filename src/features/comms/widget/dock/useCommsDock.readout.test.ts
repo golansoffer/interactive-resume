@@ -31,10 +31,10 @@ describe('useCommsDock — velocity readout wiring', () => {
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(21, 0));
+      h.kinematics.push(sample(31.5, 0));
     });
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(21);
-    // Denominator is MAX_SPEED * 3 = 42 (full cruise-to-boost range); 21/42 = 0.5.
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(31.5);
+    // Denominator is MAX_SPEED * 4.5 = 63 (full cruise-to-boost range); 31.5/63 = 0.5.
     expect(result.current.readout.ratio).toBeCloseTo(0.5);
   });
 
@@ -56,10 +56,10 @@ describe('useCommsDock — velocity readout wiring', () => {
       useCommsDock({ kinematicsRef: createKinematicsRef(), sceneState: playing, deps: h.deps }),
     );
     act(() => {
-      h.kinematics.push(sample(42, 0));
+      h.kinematics.push(sample(63, 0));
     });
     expect(result.current.readout.ratio).toBe(1);
-    expect(result.current.readout.metersPerSecond).toBeCloseTo(42);
+    expect(result.current.readout.metersPerSecond).toBeCloseTo(63);
   });
 
   it('state.readout exposes only parsed Readout values (never raw Kinematics fields)', () => {

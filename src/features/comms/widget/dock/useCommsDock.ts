@@ -14,10 +14,10 @@ import type { VelocityReadout } from '../../types/velocity-readout';
 import type { DockVisibility } from '../../types/visibility';
 import { MAX_SPEED, type Kinematics } from '../../../scene/types/kinematics';
 
-// Denominator for the velocity bar. Matches the boost multiplier (3×) in
+// Denominator for the velocity bar. Matches the boost multiplier (4.5×) in
 // boostController so the bar fills proportionally across the full
 // cruise-to-boost range instead of saturating at baseline cruise.
-const READOUT_TOP_SPEED = MAX_SPEED * 3;
+const READOUT_TOP_SPEED = MAX_SPEED * 4.5;
 import type { SceneState } from '../../../scene/types/scene-state';
 
 export type LinkOpenRequest = {

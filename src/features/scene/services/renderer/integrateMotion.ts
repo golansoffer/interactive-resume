@@ -52,7 +52,7 @@ export const integrateMotion = (
   intents: ReadonlySet<Intent['kind']>,
   dt: number,
   basis: CameraBasis,
-  multiplier: 1 | 3,
+  multiplier: 1 | 4.5,
 ): Kinematics => {
   const direction = desiredDirection(intents, basis);
   const targetVelocity: Vec3 = {

@@ -12,12 +12,12 @@ describe('createBoostController', () => {
     expect(step.factor).toBeCloseTo(0, 6);
   });
 
-  it('returns an active step with multiplier 3 when boost is pressed and no new planet entry', () => {
+  it('returns an active step with multiplier 4.5 when boost is pressed and no new planet entry', () => {
     const signal = createBoostSignal();
     const controller = createBoostController(signal);
     const step = controller.tick(true, false, 0.016);
     expect(step.kind).toBe('active');
-    expect(step.multiplier).toBe(3);
+    expect(step.multiplier).toBe(4.5);
     expect(step.factor).toBeGreaterThan(0);
   });
 
@@ -61,7 +61,7 @@ describe('createBoostController', () => {
     controller.tick(false, false, 0.016);
     const reArmed = controller.tick(true, false, 0.016);
     expect(reArmed.kind).toBe('active');
-    expect(reArmed.multiplier).toBe(3);
+    expect(reArmed.multiplier).toBe(4.5);
   });
 
   it('engages on first press even when a new planet entry occurred while not holding', () => {

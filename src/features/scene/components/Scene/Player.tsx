@@ -140,7 +140,7 @@ const stepKinematics = (
   current: Kinematics,
   intents: IntentStream,
   basis: CameraBasis,
-  multiplier: 1 | 3,
+  multiplier: 1 | 4.5,
   delta: number,
   colliders: ReadonlyArray<Sphere>,
 ): Kinematics => {
