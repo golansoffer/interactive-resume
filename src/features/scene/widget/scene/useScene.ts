@@ -56,12 +56,22 @@ export const useScene = (): UseSceneResult => {
     [visited],
   );
 
-  const [audio] = useState<SpaceshipAudio>(() => {
-    const outcome = createBrowserSpaceshipAudio();
-    return outcome.kind === 'audio' ? outcome.audio : NOOP_AUDIO;
-  });
+  // The instance is constructed inside `useEffect` (not `useState` lazy init)
+  // so React Strict Mode's mount→unmount→remount cycle re-creates a fresh
+  // instance on the second mount instead of leaving the consumer with a
+  // disposed one. NOOP_AUDIO seeds the state so consumers always see a
+  // non-null `SpaceshipAudio` between the first paint and the first effect.
+  const [audio, setAudio] = useState<SpaceshipAudio>(NOOP_AUDIO);
 
-  useEffect(() => audio.dispose, [audio]);
+  useEffect(() => {
+    const outcome = createBrowserSpaceshipAudio();
+    const instance = outcome.kind === 'audio' ? outcome.audio : NOOP_AUDIO;
+    setAudio(instance);
+    return (): void => {
+      instance.dispose();
+      setAudio(NOOP_AUDIO);
+    };
+  }, []);
 
   const { settings: audioSettings } = useAudioSettings();
   const sceneAlive = state.kind === 'playing' || state.kind === 'revealing';
