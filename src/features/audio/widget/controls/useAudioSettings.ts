@@ -15,8 +15,18 @@ const readFromStorage = (): AudioSettings => {
   }
 };
 
+// In-tab subscriber registry. Same-tab `localStorage.setItem` does NOT fire
+// the `storage` event (only cross-tab does), so any hook instance other than
+// the one that called the setter would miss the update. The registry lets
+// every mounted instance of the hook re-read on every write, regardless of
+// which instance issued the write — so two consumers in the same tab (e.g.
+// the audio service push side in `useScene` and the UI side in the controls
+// widget) stay in lockstep.
+const subscribers = new Set<() => void>();
+
 const writeToStorage = (settings: AudioSettings): void => {
   window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  for (const notify of subscribers) notify();
 };
 
 export type UseAudioSettingsResult = {
@@ -30,13 +40,16 @@ export const useAudioSettings = (): UseAudioSettingsResult => {
   const [settings, setSettings] = useState<AudioSettings>(readFromStorage);
 
   useEffect(() => {
-    const handler = (event: StorageEvent): void => {
+    const refresh = (): void => setSettings(readFromStorage());
+    subscribers.add(refresh);
+    const storageHandler = (event: StorageEvent): void => {
       if (event.key !== AUDIO_SETTINGS_STORAGE_KEY) return;
-      setSettings(readFromStorage());
+      refresh();
     };
-    window.addEventListener('storage', handler);
+    window.addEventListener('storage', storageHandler);
     return (): void => {
-      window.removeEventListener('storage', handler);
+      subscribers.delete(refresh);
+      window.removeEventListener('storage', storageHandler);
     };
   }, []);
 
