@@ -97,6 +97,6 @@ export const createSunHaloMaterial = (): SunBillboardMaterial =>
     // glow reads as a separate band, not a continuation of the corona.
     uColorRim: { value: new Vector3(1.0, 0.6, 0.23) },
     uFalloff: { value: 1.4 },
-    uPeakOpacity: { value: 0.45 },
+    uPeakOpacity: { value: 0.7 },
     uOpacityScale: { value: 1.0 },
   });

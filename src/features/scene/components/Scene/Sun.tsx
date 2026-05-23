@@ -35,7 +35,12 @@ const SUN_POSITION: readonly [number, number, number] = [-380, 0, 1150];
 // ~367 world units away, this reads as a large but clearly-distant sun.
 const SUN_BODY_SCALE = 17;
 const CORONA_SCALE_OF_DIAMETER = 1.5;
-const HALO_SCALE_OF_DIAMETER = 4.5;
+// Halo width as a multiple of the body diameter. Wider than the original
+// 4.5× because the sun now sits at ~1200 world units away (vs. ~367 when
+// the prior value was tuned); the bigger multiplier restores the outer
+// glow's angular size so it still reads against the dark sky at this
+// distance.
+const HALO_SCALE_OF_DIAMETER = 6.5;
 
 // Emissive intensity tuned to feel sun-bright while still letting the
 // colorsheet texture read on the body — full-bright washes the surface,

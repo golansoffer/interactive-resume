@@ -35,11 +35,17 @@ const rootClassName = cn(
   'flex-col-reverse md:flex-row',
 );
 
+// Desktop uses overflow-x-hidden (not -visible) alongside overflow-y-auto.
+// Per the CSS overflow spec, when one axis is `visible` and the other is
+// not, `visible` is coerced to `auto` — which would let a stray sub-pixel
+// overflow surface a horizontal scrollbar whenever the y-scrollbar appears
+// on shorter viewports. Hiding the x-axis pins the strip to a single
+// vertical scroll dimension.
 const stripClassName = cn(
   'flex shrink-0 min-h-0 min-w-0',
   'w-full flex-row gap-1 overflow-x-auto',
   'md:w-auto md:basis-[26%] md:flex-col',
-  'md:overflow-x-visible md:overflow-y-auto',
+  'md:overflow-x-hidden md:overflow-y-auto',
 );
 
 const heroSlotClassName = cn('flex min-h-0 min-w-0 flex-1 flex-col');
