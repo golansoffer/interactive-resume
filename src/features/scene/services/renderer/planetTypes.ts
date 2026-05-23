@@ -22,16 +22,21 @@ export type RimSpec = {
 export type PulseSpec = {
   readonly amplitude: number;
   readonly frequencyHz: number;
+  // Emissive intensity floor — the trough of the pulse. Per-planet because
+  // active-capable planets sit visibly brighter at rest than body-only
+  // planets; folding both into one type kills the prior module-level
+  // PULSE_FLOOR / PLAIN_EMISSIVE_INTENSITY split.
+  readonly floor: number;
   readonly emissiveTint: readonly [number, number, number];
 };
 
-// PlanetLook is the per-asset configured effect bundle. Every "looking"
-// planet carries both a body pulse (baseline aliveness — always on) and a
-// rim (gated on activation by an external 0..1 factor at animation time).
-// Unconfigured asset ids resolve to 'plain' (no effects).
+// Every planet has a body pulse — baseline aliveness. Some are also
+// "active-capable" and additionally carry a rim spec (the fresnel
+// atmosphere that fades in on proximity). The discriminator encodes rim
+// presence; there is no optional rim field.
 export type PlanetLook =
-  | { readonly kind: 'plain' }
-  | { readonly kind: 'effects'; readonly pulse: PulseSpec; readonly rim: RimSpec };
+  | { readonly kind: 'body_only'; readonly pulse: PulseSpec }
+  | { readonly kind: 'body_and_rim'; readonly pulse: PulseSpec; readonly rim: RimSpec };
 
 export type PoleAxis = 'x' | 'y' | 'z';
 
@@ -69,13 +74,26 @@ export type AtmospherePlan = {
   readonly scalePulse: RimScalePulse;
 };
 
+// `no_body` is the degenerate fallback when extractBody could not pick a
+// body mesh out of the GLTF (no spherical candidate). In that case
+// nothing animates, no outline, no atmosphere — just the raw cloned
+// scene. For every real planet asset shipped here the plan is body_only
+// or body_and_rim. The outline mesh is attached to the body during
+// buildVisualPlan as a side effect and never referenced again; it is
+// intentionally not stored in the plan.
 export type PlanetVisualPlan =
-  | { readonly kind: 'plain'; readonly scene: Object3D }
+  | { readonly kind: 'no_body'; readonly scene: Object3D }
   | {
-      readonly kind: 'effects';
+      readonly kind: 'body_only';
       readonly scene: Object3D;
-      readonly atmosphere: AtmospherePlan;
       readonly pulse: PulseSpec;
+      readonly standardMaterials: ReadonlyArray<MeshStandardMaterial>;
+    }
+  | {
+      readonly kind: 'body_and_rim';
+      readonly scene: Object3D;
+      readonly pulse: PulseSpec;
+      readonly atmosphere: AtmospherePlan;
       readonly standardMaterials: ReadonlyArray<MeshStandardMaterial>;
     };
 

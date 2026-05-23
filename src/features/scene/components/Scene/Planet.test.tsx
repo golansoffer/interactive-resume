@@ -6,8 +6,8 @@ import { resolvePlanetLook } from '../../services/renderer/planetAssets';
 describe('resolvePlanetLook', () => {
   it('returns effects for jupiter_b with both pulse and rim and a warm cream rim tint', () => {
     const look = resolvePlanetLook('jupiter_b');
-    expect(look.kind).toBe('effects');
-    if (look.kind !== 'effects') throw new Error('expected effects variant');
+    expect(look.kind).toBe('body_and_rim');
+    if (look.kind !== 'body_and_rim') throw new Error('expected body_and_rim variant');
     expect(look.rim.tint).toEqual([1.0, 0.65, 0.28]);
     expect(look.rim.scale).toBeGreaterThan(1);
     expect(look.rim.opacity).toBeGreaterThan(0);
@@ -16,35 +16,38 @@ describe('resolvePlanetLook', () => {
     expect(look.pulse.amplitude).toBeGreaterThan(0);
     expect(look.pulse.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.emissiveTint).toHaveLength(3);
+    expect(look.pulse.floor).toBe(0.5);
   });
 
   it('returns effects for saturn_b with warm gold rim tint and a pulse emissive tint', () => {
     const look = resolvePlanetLook('saturn_b');
-    expect(look.kind).toBe('effects');
-    if (look.kind !== 'effects') throw new Error('expected effects variant');
+    expect(look.kind).toBe('body_and_rim');
+    if (look.kind !== 'body_and_rim') throw new Error('expected body_and_rim variant');
     expect(look.rim.tint).toEqual([1.0, 0.5, 0.08]);
     expect(look.rim.breath.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.amplitude).toBeGreaterThan(0);
     expect(look.pulse.emissiveTint).toHaveLength(3);
+    expect(look.pulse.floor).toBe(0.5);
   });
 
   it('returns effects for mars_b with a warm pulse emissive tint preserved', () => {
     const look = resolvePlanetLook('mars_b');
-    expect(look.kind).toBe('effects');
-    if (look.kind !== 'effects') throw new Error('expected effects variant');
+    expect(look.kind).toBe('body_and_rim');
+    if (look.kind !== 'body_and_rim') throw new Error('expected body_and_rim variant');
     expect(look.pulse.frequencyHz).toBeCloseTo(0.17);
     expect(look.pulse.amplitude).toBeCloseTo(0.68);
     expect(look.pulse.emissiveTint).toEqual([1.0, 0.3, 0.12]);
     const [r, g, b] = look.pulse.emissiveTint;
     expect(r).toBeGreaterThan(g);
     expect(r).toBeGreaterThan(b);
+    expect(look.pulse.floor).toBe(0.5);
   });
 
   it('returns effects for earth_b with a blue rim tint and oceanic pulse emissive tint', () => {
     const look = resolvePlanetLook('earth_b');
-    expect(look.kind).toBe('effects');
-    if (look.kind !== 'effects') throw new Error('expected effects variant');
+    expect(look.kind).toBe('body_and_rim');
+    if (look.kind !== 'body_and_rim') throw new Error('expected body_and_rim variant');
     expect(look.rim.tint).toEqual([0.3, 0.65, 1.0]);
     expect(look.rim.breath.frequencyHz).toBeGreaterThan(0);
     expect(look.pulse.amplitude).toBeGreaterThan(0);
@@ -53,12 +56,19 @@ describe('resolvePlanetLook', () => {
     const [r, g, b] = look.pulse.emissiveTint;
     expect(b).toBeGreaterThan(r);
     expect(b).toBeGreaterThan(g);
+    expect(look.pulse.floor).toBe(0.5);
   });
 
-  it('returns plain for an unconfigured asset id', () => {
-    expect(resolvePlanetLook('mercury_a')).toEqual({ kind: 'plain' });
-    expect(resolvePlanetLook('neptune_b')).toEqual({ kind: 'plain' });
-    expect(resolvePlanetLook('sun_a')).toEqual({ kind: 'plain' });
+  it('returns DEFAULT_BODY_ONLY for any unconfigured asset id (every planet has a pulse)', () => {
+    for (const id of ['mercury_a', 'neptune_b', 'sun_a'] as const) {
+      const look = resolvePlanetLook(id);
+      expect(look.kind).toBe('body_only');
+      if (look.kind !== 'body_only') throw new Error('expected body_only variant');
+      expect(look.pulse.amplitude).toBe(0.12);
+      expect(look.pulse.frequencyHz).toBe(0.05);
+      expect(look.pulse.floor).toBe(0.3);
+      expect(look.pulse.emissiveTint).toEqual([1.0, 0.95, 0.85]);
+    }
   });
 });
 

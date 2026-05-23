@@ -1,5 +1,5 @@
-import { Color, Mesh, MeshStandardMaterial } from 'three';
-import type { Object3D, Texture } from 'three';
+import { BackSide, Color, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import type { Material, Object3D, Texture } from 'three';
 import { computeBandNormal } from './bandNormal';
 import { createPlanetAtmosphereMaterial } from './planetAtmosphereMaterial';
 import type {
@@ -21,6 +21,16 @@ type Candidate = {
   readonly dz: number;
 };
 
+// Silhouette outline. A slightly-inflated shell of the body geometry,
+// rendered with BackSide so the body's own depth occludes everything
+// except the rim around the silhouette — classic NPR outline. Always-on,
+// never animated. Sits at radius 1.025 (well inside the active rim's
+// 1.12–1.14) so it reads as the planet's own edge, not a halo. Additive
+// active rim brightens over it naturally; outline reads clean at rest.
+const OUTLINE_SCALE = 1.025;
+const OUTLINE_OPACITY = 0.55;
+const OUTLINE_COLOR = 0x080808;
+
 const ROTATION_RAD_PER_SEC_BASE = 0.07;
 const ROTATION_VARIANCE = 0.25;
 
@@ -29,17 +39,6 @@ const ROTATION_VARIANCE = 0.25;
 // Calibrated against the planet asset set: pure spheres land at 0.97–0.99,
 // merged-mesh ringed bodies (Saturn ~0.59, Uranus ~0.45) land well below 0.8.
 const SPHERICITY_THRESHOLD = 0.8;
-
-// Static emissive contribution for plain-look bodies. Effects-look bodies
-// pulse between [PULSE_FLOOR, PULSE_FLOOR + amplitude] (PULSE_FLOOR=0.5)
-// with a tinted emissive that attenuates the colorsheet sample; without
-// this floor, plain bodies sat at intensity=0 and rendered substantially
-// darker than effects bodies even at their pulse trough — the moon and
-// the plain filler planets read as meteors, not bodies. A neutral-white
-// emissive at this intensity keeps the colorsheet's authored color
-// visible while staying below an effects body's tinted baseline so the
-// activation pulse still reads as a distinct boost.
-const PLAIN_EMISSIVE_INTENSITY = 0.3;
 
 export const rotationRateFor = (phase: number): number =>
   ROTATION_RAD_PER_SEC_BASE * (1 + ROTATION_VARIANCE * Math.sin(phase));
@@ -172,19 +171,64 @@ export const cloneAndDress = (
     m.metalness = 0.0;
     m.flatShading = true;
     m.emissiveMap = texture;
-    if (look.kind === 'effects') {
-      const [r, g, b] = look.pulse.emissiveTint;
-      m.emissive = new Color(r, g, b);
-      m.emissiveIntensity = 0;
-    } else {
-      m.emissive = new Color(1, 1, 1);
-      m.emissiveIntensity = PLAIN_EMISSIVE_INTENSITY;
-    }
+    // Every PlanetLook variant carries a pulse — the body emissive is
+    // always tinted by pulse.emissiveTint, and intensity is driven every
+    // frame by animatePulse. Initial intensity 0 is a placeholder that
+    // animatePulse overwrites on the first frame.
+    const [r, g, b] = look.pulse.emissiveTint;
+    m.emissive = new Color(r, g, b);
+    m.emissiveIntensity = 0;
     m.needsUpdate = true;
     obj.material = m;
     standardMaterials.push(m);
   });
   return { scene: cloned, extraction: extractBody(cloned), standardMaterials };
+};
+
+// Builds a shell-mesh child for a planet body — geometry cloned from the
+// body, re-centered on the body's bounding-sphere origin (so uniform
+// scaling expands evenly), smoothed normals (kills flat-shading silhouette
+// discontinuities that would otherwise read as sharp lines on the shell).
+// Material, scale, and renderOrder are caller-supplied because the two
+// callers (outline and atmosphere) need different materials and different
+// distances past the body. The mesh is added as a child of the body and
+// returned for any additional caller-side configuration.
+const attachShell = (
+  body: Mesh,
+  material: Material,
+  scale: number,
+  renderOrder: number,
+): Mesh => {
+  const sphere = body.geometry.boundingSphere;
+  if (sphere === null) {
+    throw new Error('attachShell: body geometry has no bounding sphere');
+  }
+  const geometry = body.geometry.clone();
+  geometry.translate(-sphere.center.x, -sphere.center.y, -sphere.center.z);
+  geometry.computeVertexNormals();
+  const mesh = new Mesh(geometry, material);
+  mesh.position.copy(sphere.center);
+  mesh.scale.setScalar(scale);
+  mesh.renderOrder = renderOrder;
+  body.add(mesh);
+  return mesh;
+};
+
+// Attaches an outline shell to the body. Uniform near-black color at low
+// opacity; back-side rendering so the body's own depth occludes everything
+// except the rim around the silhouette (classic NPR outline). Always-on,
+// never animated. Sits inside the active rim's scale so it reads as the
+// planet's own edge, not a halo; the additive active rim brightens over
+// it naturally when the planet activates.
+export const attachOutline = (body: Mesh): void => {
+  const material = new MeshBasicMaterial({
+    color: OUTLINE_COLOR,
+    side: BackSide,
+    transparent: true,
+    opacity: OUTLINE_OPACITY,
+    depthWrite: false,
+  });
+  attachShell(body, material, OUTLINE_SCALE, 0);
 };
 
 // Mutates the cloned scene: attaches a shell mesh as a child of the body
@@ -196,23 +240,13 @@ export const cloneAndDress = (
 // re-centered on its bounding-sphere center so uniform scaling expands the
 // rim evenly around the body content, not from an arbitrary local origin.
 const attachAtmosphere = (body: Mesh, rim: RimSpec, phase: number): AtmospherePlan => {
-  const sphere = body.geometry.boundingSphere;
-  if (sphere === null) {
-    throw new Error('attachAtmosphere: body geometry has no bounding sphere');
-  }
-  const geometry = body.geometry.clone();
-  geometry.translate(-sphere.center.x, -sphere.center.y, -sphere.center.z);
-  geometry.computeVertexNormals();
   const material = createPlanetAtmosphereMaterial({
     tint: rim.tint,
     power: rim.power,
     opacity: rim.opacity,
     phase,
   });
-  const mesh = new Mesh(geometry, material);
-  mesh.position.copy(sphere.center);
-  mesh.scale.setScalar(rim.scale);
-  body.add(mesh);
+  const mesh = attachShell(body, material, rim.scale, 1);
 
   const opacityUniform = material.uniforms['uOpacity'];
   const timeUniform = material.uniforms['uTime'];
@@ -237,15 +271,18 @@ export const buildVisualPlan = (
 ): PlanetVisualPlan => {
   const scene = cloned.scene;
   const mats = cloned.standardMaterials;
-  if (look.kind === 'plain') return { kind: 'plain', scene };
   if (cloned.extraction.kind === 'no_body' || mats.length === 0) {
-    return { kind: 'plain', scene };
+    return { kind: 'no_body', scene };
+  }
+  attachOutline(cloned.extraction.mesh);
+  if (look.kind === 'body_only') {
+    return { kind: 'body_only', scene, pulse: look.pulse, standardMaterials: mats };
   }
   return {
-    kind: 'effects',
+    kind: 'body_and_rim',
     scene,
-    atmosphere: attachAtmosphere(cloned.extraction.mesh, look.rim, phase),
     pulse: look.pulse,
+    atmosphere: attachAtmosphere(cloned.extraction.mesh, look.rim, phase),
     standardMaterials: mats,
   };
 };

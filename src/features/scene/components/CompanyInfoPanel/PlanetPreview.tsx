@@ -11,7 +11,7 @@ import {
   configureColorsheet,
   resolvePlanetLook,
 } from '../../services/renderer/planetAssets';
-import { cloneAndDress } from '../../services/renderer/planetVisualPlan';
+import { cloneAndDress, attachOutline } from '../../services/renderer/planetVisualPlan';
 import type { PulseSpec } from '../../services/renderer/planetTypes';
 import { animatePulse } from '../../services/renderer/planetAnimation';
 import { planetPoseFor } from '../../services/renderer/planetPose';
@@ -29,21 +29,13 @@ type PlanetPreviewProps = {
   readonly assetId: PlanetAssetId;
 };
 
-type DressedScene =
-  | {
-      readonly kind: 'plain';
-      readonly scene: Object3D;
-      readonly pose: PlanetPose;
-      readonly fit: PlanetPreviewFit;
-    }
-  | {
-      readonly kind: 'effects';
-      readonly scene: Object3D;
-      readonly materials: ReadonlyArray<MeshStandardMaterial>;
-      readonly pulse: PulseSpec;
-      readonly pose: PlanetPose;
-      readonly fit: PlanetPreviewFit;
-    };
+type DressedScene = {
+  readonly scene: Object3D;
+  readonly materials: ReadonlyArray<MeshStandardMaterial>;
+  readonly pulse: PulseSpec;
+  readonly pose: PlanetPose;
+  readonly fit: PlanetPreviewFit;
+};
 
 // Pulse phase offset per-asset so different planets aren't in lockstep when
 // shown back-to-back across reveals.
@@ -64,11 +56,10 @@ const useDressedScene = (assetId: PlanetAssetId): DressedScene => {
     const dressed = cloneAndDress(scene, colorsheet, look);
     const pose = planetPoseFor(dressed.extraction);
     const fit = computePlanetPreviewFit(dressed.scene, pose.alignQuaternion);
-    if (look.kind === 'plain') {
-      return { kind: 'plain', scene: dressed.scene, pose, fit };
+    if (dressed.extraction.kind !== 'no_body') {
+      attachOutline(dressed.extraction.mesh);
     }
     return {
-      kind: 'effects',
       scene: dressed.scene,
       materials: dressed.standardMaterials,
       pulse: look.pulse,
@@ -91,9 +82,7 @@ const usePreviewFrame = (
     const g = groupRef.current;
     if (g === null) return;
     g.rotation.y += ROTATION_RATE_RAD_PER_SEC * delta;
-    if (dressed.kind === 'effects') {
-      animatePulse(dressed.materials, dressed.pulse, state.clock.elapsedTime, phase);
-    }
+    animatePulse(dressed.materials, dressed.pulse, state.clock.elapsedTime, phase);
   });
 };
 
