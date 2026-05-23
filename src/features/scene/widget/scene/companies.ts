@@ -14,7 +14,7 @@ export const CAREER_ROUTE: readonly [
   {
     id: asCompanyId('mave'),
     shortCode: asShortCode('MAV'),
-    planet: { assetId: 'saturn_b', placement: [80, 0, 80] },
+    planet: { assetId: 'saturn_b', placement: [80, 0, 80], satellites: [] },
     info: {
       companyName: 'Mave',
       logo: { kind: 'with_icon', src: '/icons/mave.svg', backdrop: 'light' },
@@ -39,7 +39,7 @@ export const CAREER_ROUTE: readonly [
   {
     id: asCompanyId('8fig'),
     shortCode: asShortCode('8FG'),
-    planet: { assetId: 'jupiter_b', placement: [60, 0, 180] },
+    planet: { assetId: 'jupiter_b', placement: [60, 0, 180], satellites: [] },
     info: {
       companyName: '8fig',
       logo: { kind: 'with_icon', src: '/icons/8fig.svg', backdrop: 'light' },
@@ -64,7 +64,7 @@ export const CAREER_ROUTE: readonly [
   {
     id: asCompanyId('riverside'),
     shortCode: asShortCode('RVS'),
-    planet: { assetId: 'mars_b', placement: [30, 0, 290] },
+    planet: { assetId: 'mars_b', placement: [30, 0, 290], satellites: [] },
     info: {
       companyName: 'Riverside.fm',
       logo: { kind: 'with_icon', src: '/icons/riverside.svg', backdrop: 'light' },
@@ -93,7 +93,18 @@ export const CAREER_ROUTE: readonly [
   {
     id: asCompanyId('streamelements'),
     shortCode: asShortCode('STE'),
-    planet: { assetId: 'earth_b', placement: [-10, 0, 400] },
+    planet: {
+      assetId: 'earth_b',
+      placement: [-10, 0, 400],
+      satellites: [
+        {
+          id: 'earth_b:moon',
+          assetId: 'moon_a',
+          scale: 0.3,
+          orbit: { radius: 14, periodSeconds: 10, phase: 0, inclinationDeg: 30 },
+        },
+      ],
+    },
     info: {
       companyName: 'StreamElements',
       logo: { kind: 'with_icon', src: '/icons/streamelements.svg', backdrop: 'dark' },
@@ -118,7 +129,7 @@ export const CAREER_ROUTE: readonly [
   {
     id: asCompanyId('tgs'),
     shortCode: asShortCode('TGS'),
-    planet: { assetId: 'venus_b', placement: [-50, 0, 510] },
+    planet: { assetId: 'venus_b', placement: [-50, 0, 510], satellites: [] },
     info: {
       companyName: 'TGS',
       logo: { kind: 'text_label', text: 'TGS', backdrop: 'light' },

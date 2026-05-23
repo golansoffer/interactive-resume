@@ -30,6 +30,17 @@ const ROTATION_VARIANCE = 0.25;
 // merged-mesh ringed bodies (Saturn ~0.59, Uranus ~0.45) land well below 0.8.
 const SPHERICITY_THRESHOLD = 0.8;
 
+// Static emissive contribution for plain-look bodies. Effects-look bodies
+// pulse between [PULSE_FLOOR, PULSE_FLOOR + amplitude] (PULSE_FLOOR=0.5)
+// with a tinted emissive that attenuates the colorsheet sample; without
+// this floor, plain bodies sat at intensity=0 and rendered substantially
+// darker than effects bodies even at their pulse trough — the moon and
+// the plain filler planets read as meteors, not bodies. A neutral-white
+// emissive at this intensity keeps the colorsheet's authored color
+// visible while staying below an effects body's tinted baseline so the
+// activation pulse still reads as a distinct boost.
+const PLAIN_EMISSIVE_INTENSITY = 0.3;
+
 export const rotationRateFor = (phase: number): number =>
   ROTATION_RAD_PER_SEC_BASE * (1 + ROTATION_VARIANCE * Math.sin(phase));
 
@@ -160,11 +171,14 @@ export const cloneAndDress = (
     m.roughness = 1.0;
     m.metalness = 0.0;
     m.flatShading = true;
+    m.emissiveMap = texture;
     if (look.kind === 'effects') {
       const [r, g, b] = look.pulse.emissiveTint;
-      m.emissiveMap = texture;
       m.emissive = new Color(r, g, b);
       m.emissiveIntensity = 0;
+    } else {
+      m.emissive = new Color(1, 1, 1);
+      m.emissiveIntensity = PLAIN_EMISSIVE_INTENSITY;
     }
     m.needsUpdate = true;
     obj.material = m;

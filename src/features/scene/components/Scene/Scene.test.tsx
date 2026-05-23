@@ -65,13 +65,18 @@ const mockTexture: MockTexture = {
   needsUpdate: false,
 };
 
+const gltfRequests: Array<string> = [];
+
 vi.mock('@react-three/drei', () => ({
   PerspectiveCamera: (): null => null,
   Html: (): null => null,
   Center: ({ children }: { readonly children?: ReactNode }): ReactNode => children,
   Trail: (): null => null,
   useGLTF: Object.assign(
-    (): { readonly scene: MockScene } => ({ scene: mockScene }),
+    (url: string): { readonly scene: MockScene } => {
+      gltfRequests.push(url);
+      return { scene: mockScene };
+    },
     { preload: (): void => {} },
   ),
   useTexture: Object.assign(
@@ -83,10 +88,39 @@ vi.mock('@react-three/drei', () => ({
 const acme = asCompanyId('acme');
 const globex = asCompanyId('globex');
 
+const earthWithMoonEntry: CompanyEntry = {
+  id: acme,
+  shortCode: asShortCode('ACM'),
+  planet: {
+    assetId: 'earth_b',
+    placement: [5, 0, 0],
+    satellites: [
+      {
+        id: 'earth_b:moon',
+        assetId: 'moon_a',
+        scale: 0.3,
+        orbit: { radius: 6, periodSeconds: 10, phase: 0, inclinationDeg: 15 },
+      },
+    ],
+  },
+  info: {
+    companyName: 'Acme',
+    logo: { kind: 'with_icon', src: '/icons/acme.svg', backdrop: 'light' },
+    website: { kind: 'has_website', url: 'https://acme.test/' },
+    role: 'Engineer',
+    period: { kind: 'ongoing', start: { year: 2024, month: 1 } },
+    oneLiner: 'Acme one-liner.',
+    hook: 'Acme hook.',
+    decision: { kind: 'none' },
+    work: ['Acme work.'],
+    departure: { kind: 'current_role' },
+  },
+};
+
 const acmeEntry: CompanyEntry = {
   id: acme,
   shortCode: asShortCode('ACM'),
-  planet: { assetId: 'earth_b', placement: [5, 0, 0] },
+  planet: { assetId: 'earth_b', placement: [5, 0, 0], satellites: [] },
   info: {
     companyName: 'Acme',
     logo: { kind: 'with_icon', src: '/icons/acme.svg', backdrop: 'light' },
@@ -109,7 +143,7 @@ const EMPTY_ROUTE: RouteProjection = {
 const globexEntry: CompanyEntry = {
   id: globex,
   shortCode: asShortCode('GLX'),
-  planet: { assetId: 'saturn_b', placement: [-5, 0, 0] },
+  planet: { assetId: 'saturn_b', placement: [-5, 0, 0], satellites: [] },
   info: {
     companyName: 'Globex',
     logo: { kind: 'with_icon', src: '/icons/globex.svg', backdrop: 'light' },
@@ -136,7 +170,7 @@ const hooli = asCompanyId('hooli');
 const initechEntry: CompanyEntry = {
   id: initech,
   shortCode: asShortCode('INI'),
-  planet: { assetId: 'mars_b', placement: [0, 0, 7] },
+  planet: { assetId: 'mars_b', placement: [0, 0, 7], satellites: [] },
   info: {
     companyName: 'Initech',
     logo: { kind: 'no_icon' },
@@ -154,7 +188,7 @@ const initechEntry: CompanyEntry = {
 const umbrellaEntry: CompanyEntry = {
   id: umbrella,
   shortCode: asShortCode('UMB'),
-  planet: { assetId: 'venus_b', placement: [0, 0, -7] },
+  planet: { assetId: 'venus_b', placement: [0, 0, -7], satellites: [] },
   info: {
     companyName: 'Umbrella',
     logo: { kind: 'with_icon', src: '/icons/umbrella.svg', backdrop: 'dark' },
@@ -172,7 +206,7 @@ const umbrellaEntry: CompanyEntry = {
 const soylentEntry: CompanyEntry = {
   id: soylent,
   shortCode: asShortCode('SOY'),
-  planet: { assetId: 'uranus_b', placement: [7, 0, 0] },
+  planet: { assetId: 'uranus_b', placement: [7, 0, 0], satellites: [] },
   info: {
     companyName: 'Soylent',
     logo: { kind: 'with_icon', src: '/icons/soylent.svg', backdrop: 'dark' },
@@ -190,7 +224,7 @@ const soylentEntry: CompanyEntry = {
 const hooliEntry: CompanyEntry = {
   id: hooli,
   shortCode: asShortCode('HOO'),
-  planet: { assetId: 'neptune_b', placement: [0, 0, 11] },
+  planet: { assetId: 'neptune_b', placement: [0, 0, 11], satellites: [] },
   info: {
     companyName: 'Hooli',
     logo: { kind: 'text_label', text: 'HOO', backdrop: 'light' },
@@ -343,5 +377,27 @@ describe('Scene — logo variant mixes', () => {
     cleanup();
     mount({ kind: 'playing' }, withTextLabel, emptyIntents(), onEvent);
     expect(onEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe('Scene — satellites', () => {
+  it('mounts without throwing when an entry declares one satellite (earth_b with a moon_a)', () => {
+    expect(() =>
+      mount({ kind: 'playing' }, [earthWithMoonEntry], emptyIntents(), vi.fn()),
+    ).not.toThrow();
+  });
+
+  it('requests the moon_a GLB when an entry with a moon mounts', () => {
+    gltfRequests.length = 0;
+    mount({ kind: 'playing' }, [earthWithMoonEntry], emptyIntents(), vi.fn());
+    const requestedMoon = gltfRequests.some((url) => url.includes('Moon_01a'));
+    expect(requestedMoon).toBe(true);
+  });
+
+  it('does not request the moon_a GLB when no entry declares a moon', () => {
+    gltfRequests.length = 0;
+    mount({ kind: 'playing' }, [acmeEntry], emptyIntents(), vi.fn());
+    const requestedMoon = gltfRequests.some((url) => url.includes('Moon_01a'));
+    expect(requestedMoon).toBe(false);
   });
 });

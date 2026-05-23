@@ -21,7 +21,7 @@ const entryFor = (
 ): CompanyEntry => ({
   id,
   shortCode: asShortCode(code),
-  planet: { assetId, placement: placement(z) },
+  planet: { assetId, placement: placement(z), satellites: [] },
   info: {
     companyName: 'X',
     logo: { kind: 'no_icon' },

@@ -14,7 +14,7 @@ const placement = (z: number): readonly [number, number, number] => [0, 0, z];
 const entryFor = (id: CompanyEntry['id'], z: number): CompanyEntry => ({
   id,
   shortCode: asShortCode('XYZ'),
-  planet: { assetId: 'mars_b', placement: placement(z) },
+  planet: { assetId: 'mars_b', placement: placement(z), satellites: [] },
   info: {
     companyName: 'X',
     logo: { kind: 'no_icon' },

@@ -17,6 +17,7 @@ export const Companies = (props: CompaniesProps): JSX.Element => (
         key={entry.id}
         assetId={entry.planet.assetId}
         placement={entry.planet.placement}
+        satellites={entry.planet.satellites}
         sphereCollidersRef={props.sphereCollidersRef}
         wiring={{
           kind: 'active',

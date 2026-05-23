@@ -6,25 +6,18 @@ import type { Object3D } from 'three';
 import { assetUrl } from '@/lib/assetUrl';
 import type { PlanetAssetId } from '../../types/planet';
 import type { PlanetRole } from '../../types/planet-role';
-import {
-  buildVisualPlan,
-  cloneAndDress,
-  extractBody,
-  rotationRateFor,
-} from '../../services/renderer/planetVisualPlan';
+import type { SatelliteSpec } from '../../types/satellite';
+import { rotationRateFor } from '../../services/renderer/planetVisualPlan';
 import type { BodyExtraction, PlanetVisualPlan } from '../../services/renderer/planetTypes';
 import { planetCollider } from '../../services/renderer/planetCollider';
 import { animatePlan } from '../../services/renderer/planetAnimation';
-import {
-  COLORSHEET_PATH,
-  PLANET_PATHS,
-  configureColorsheet,
-  resolvePlanetLook,
-} from '../../services/renderer/planetAssets';
-import { planetPoseFor } from '../../services/renderer/planetPose';
-import type { PlanetPose } from '../../services/renderer/planetPose';
+import { COLORSHEET_PATH, PLANET_PATHS } from '../../services/renderer/planetAssets';
+import { phaseFromId } from '../../services/renderer/phaseFromId';
+import { PLANET_BASE_SCALE } from '../../services/renderer/planetScale';
 import type { CompanyInfo } from '../../types/company-info';
 import type { PlanetActivations, PlanetRadii, SphereColliders } from '../../types/scene-refs';
+import { usePlanetVisual } from './usePlanetVisual';
+import { Satellite } from './Satellite';
 
 // Component-local wiring shape — pairs the pure PlanetRole with the React refs
 // that only 'active' planets need plus the descriptor data the planet pushes
@@ -45,13 +38,13 @@ type PlanetWiring =
 type PlanetProps = {
   readonly assetId: PlanetAssetId;
   readonly placement: readonly [number, number, number];
+  readonly satellites: ReadonlyArray<SatelliteSpec>;
   readonly sphereCollidersRef: RefObject<SphereColliders>;
   readonly wiring: PlanetWiring;
 };
 
 export type { PlanetWiring };
 
-const PLANET_BASE_SCALE = 1.5;
 const PLANET_SWAY_AMPLITUDE = Math.PI / 220;
 const PLANET_SWAY_FREQ_HZ = 0.05;
 const SCALE_BREATH_AMP = 0.025;
@@ -60,25 +53,9 @@ const ACTIVATION_LERP_RATE = 4.0;
 const ACTIVATION_RADIUS_MULTIPLIER = 6.0;
 const TWO_PI = Math.PI * 2;
 
-const idEncoder = new TextEncoder();
-const phaseFromId = (id: string): number => {
-  let hash = 0;
-  for (const byte of idEncoder.encode(id)) hash = (hash * 31 + byte) % 1000;
-  return (hash / 1000) * TWO_PI;
-};
-
-type BodyDerivations = {
-  readonly activeRadius: number;
-  readonly pose: PlanetPose;
-  readonly extraction: BodyExtraction;
-};
-
-const deriveBodyValues = (scene: Object3D): BodyDerivations => {
-  const extraction = extractBody(scene);
-  const pose = planetPoseFor(extraction);
-  if (extraction.kind === 'no_body') return { activeRadius: 0, pose, extraction };
-  const activeRadius = extraction.radius * PLANET_BASE_SCALE * ACTIVATION_RADIUS_MULTIPLIER;
-  return { activeRadius, pose, extraction };
+const activeRadiusFor = (extraction: BodyExtraction): number => {
+  if (extraction.kind === 'no_body') return 0;
+  return extraction.radius * PLANET_BASE_SCALE * ACTIVATION_RADIUS_MULTIPLIER;
 };
 
 const usePlanetFrame = (
@@ -110,26 +87,19 @@ const usePlanetFrame = (
 };
 
 export const Planet = (props: PlanetProps): JSX.Element => {
-  const { scene } = useGLTF(assetUrl(PLANET_PATHS[props.assetId]));
-  const colorsheet = useTexture(assetUrl(COLORSHEET_PATH));
-  const look = useMemo(() => resolvePlanetLook(props.assetId), [props.assetId]);
   const phase = useMemo(() => phaseFromId(props.wiring.id), [props.wiring.id]);
-  const plan = useMemo<PlanetVisualPlan>(() => {
-    configureColorsheet(colorsheet);
-    return buildVisualPlan(look, cloneAndDress(scene, colorsheet, look), phase);
-  }, [scene, colorsheet, look, phase]);
-  const derived = useMemo(() => deriveBodyValues(scene), [scene]);
+  const { plan, pose, extraction } = usePlanetVisual(props.assetId, phase);
   if (props.wiring.kind === 'active') {
     const cell = props.wiring.planetRadiiRef.current.attach(
       props.wiring.id,
       props.wiring.info,
       props.wiring.placement,
     );
-    cell.value = derived.activeRadius;
+    cell.value = activeRadiusFor(extraction);
   }
   props.sphereCollidersRef.current.register(
     props.wiring.id,
-    planetCollider(derived.extraction, props.placement, PLANET_BASE_SCALE),
+    planetCollider(extraction, props.placement, PLANET_BASE_SCALE),
   );
   const meshRef = useRef<Object3D | null>(null);
   const rotationRate = useMemo(() => rotationRateFor(phase), [phase]);
@@ -139,12 +109,15 @@ export const Planet = (props: PlanetProps): JSX.Element => {
   return (
     <group position={props.placement}>
       <group ref={meshRef}>
-        <group quaternion={derived.pose.alignQuaternion}>
+        <group quaternion={pose.alignQuaternion}>
           <Center>
             <primitive object={plan.scene} />
           </Center>
         </group>
       </group>
+      {props.satellites.map((spec) => (
+        <Satellite key={spec.id} spec={spec} />
+      ))}
     </group>
   );
 };

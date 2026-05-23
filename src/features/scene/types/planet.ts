@@ -1,3 +1,5 @@
+import type { SatelliteSpec } from './satellite';
+
 export type PlanetAssetId =
   | 'earth_a'
   | 'earth_b'
@@ -25,6 +27,8 @@ export type PlanetAssetId =
 export type PlanetConfig = {
   readonly assetId: PlanetAssetId;
   readonly placement: readonly [number, number, number];
+  // [] means "no moons"
+  readonly satellites: ReadonlyArray<SatelliteSpec>;
 };
 
 export const planetDisplayName = (assetId: PlanetAssetId): string => {

@@ -15,6 +15,7 @@ export const FillerPlanets = (props: FillerPlanetsProps): JSX.Element => (
         key={entry.id}
         assetId={entry.assetId}
         placement={entry.placement}
+        satellites={[]}
         sphereCollidersRef={props.sphereCollidersRef}
         wiring={{ kind: 'filler', id: entry.id }}
       />
